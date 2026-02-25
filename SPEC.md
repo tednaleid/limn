@@ -171,14 +171,14 @@ interface MindMap {
   meta: {
     version: number;
     theme: string;
-    layoutMode: 'standard' | 'right' | 'down';
+    layoutMode: 'standard' | 'right' | 'down';  // standard: root center, children balanced left/right; right: all children to the right; down: top-to-bottom org chart
   };
 }
 ```
 
 ### File format (.mindmap)
 
-On disk, the flat map serializes as a nested tree for readability and clean diffs. Keys are sorted. No positions stored. The `parentId` field is omitted (parent is implicit from nesting). The `collapsed` field is omitted when `false` (the default) to reduce noise.
+On disk, the flat map serializes as a nested tree for readability and clean diffs. Keys are sorted. No positions stored. The `parentId` field is omitted (parent is implicit from nesting). The `children` field changes from an array of ID strings (runtime) to an array of inline node objects (file format). The `collapsed` field is omitted when `false` (the default) to reduce noise.
 
 ```json
 {
@@ -187,12 +187,10 @@ On disk, the flat map serializes as a nested tree for readability and clean diff
   "root": {
     "id": "n0",
     "text": "Project Plan",
-    "collapsed": false,
     "children": [
       {
         "id": "n1",
         "text": "Phase 1",
-        "collapsed": false,
         "children": [
           { "id": "n3", "text": "Research", "children": [] },
           {
@@ -403,8 +401,7 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 
 Arrow key navigation follows the visual layout, not the data structure:
 
-- **↓** moves to the next visually-below node (next sibling, or first child of next sibling if current is last)
-- **↑** moves to the previous visually-above node
+- **↓/↑** move through a flattened pre-order traversal of visible nodes (the order you'd read them top-to-bottom on screen). This naturally crosses parent boundaries -- e.g., moving down from the last child of one subtree lands on the next sibling of the parent.
 - **→** expands a collapsed node OR moves to first child
 - **←** collapses an expanded node OR moves to parent
 
@@ -531,7 +528,7 @@ Chunks 2 and 3 can be developed in parallel (they share types but are otherwise 
 | Chunk | Scope | Deliverables | Tests |
 |-------|-------|-------------|-------|
 | **8. Keyboard navigation** | Arrow key traversal, Tab/Enter creation, focus management, mode switching (nav/edit) | `web/src/input/keyboard.ts`; wired to Editor | TestEditor keyboard tests (the bulk of testing happens here) |
-| **9. Text editing** | Inline text edit in SVG (foreignObject textarea); F2 to enter, Escape to exit; auto-enter on node creation | `web/src/components/EditableNode.tsx` | TestEditor type() tests; Playwright text rendering verification |
+| **9. Text editing** | Absolutely-positioned textarea over canvas (not foreignObject); F2 to enter, Escape to exit; auto-enter on node creation; zoom-aware transforms | `web/src/components/EditableNode.tsx` | TestEditor type() tests; Playwright text rendering verification |
 | **10. Collapse/expand** | Toggle collapse, Space shortcut, animated transitions for showing/hiding children | Wired through Editor | TestEditor collapse state tests |
 | **11. Mouse interaction** | Click to select, double-click to edit, drag to pan (on canvas), drag to reparent (on nodes), scroll to zoom | `web/src/input/mouse.ts` | TestEditor pointer simulation tests |
 | **12. Image support** | Drag-and-drop images, paste from clipboard, resize handles, asset registry, sidecar storage | `core/src/model/assets.ts`; `web/src/components/ImageNode.tsx` | Unit tests for asset lifecycle; Playwright drag-drop E2E |
