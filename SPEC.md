@@ -99,7 +99,7 @@ Excalidraw proved this model: they deprecated their Electron app because the web
 1. **The Editor is the source of truth, not the DOM.** All state mutations flow through the Editor API. The DOM is a rendering target. This enables the TestEditor pattern.
 2. **Diff-based undo, not command-based.** The store captures diffs for every mutation automatically. Undo inverts the diff. No need to maintain Command classes for every operation.
 3. **Flat runtime model, nested file format.** In memory, nodes live in a flat Map keyed by ID with both `parentId` and `children[]` references (O(1) parent lookup, ordered child traversal). On disk, they serialize as a nested tree (clean diffs, human-readable).
-4. **Positions and dimensions are stored.** The layout engine (dagre) computes positions for newly created trees. Incremental mutations shift siblings to make or close space. Users can reposition nodes by dragging. Manual positions are never overridden by automatic layout. The file format includes x/y/width/height for every node. Width is user-adjustable (drag right edge of node); height is auto-computed from text content reflowed within the current width. No automatic word wrap on new nodes -- the user controls line breaks with Shift+Enter, and width grows to fit text until manually constrained.
+4. **Positions and dimensions are stored.** The layout engine (dagre) computes positions for newly created trees. Incremental mutations shift siblings to make or close space. Users can reposition nodes by dragging. Manual positions are never overridden by automatic layout. The file format includes x/y/width/height for every node. Node width behavior: new nodes have no fixed width -- text extends horizontally as the user types, and the node grows to fit. Once a user manually constrains the width (by dragging the right edge), text reflows within that width and height adjusts automatically. The `width` field in the file format stores either the measured single-line width or the user-constrained width. Default dimensions for newly created nodes are 120x30. Height is always auto-computed: from text content width when unconstrained, or from text reflow when width is constrained.
 5. **Multiple roots (forest).** A mind map can contain multiple independent root trees on the same canvas. Roots can be created and deleted freely. An empty canvas is a valid state.
 6. **Images stored as sidecar files.** Binary assets live in a `{name}.assets/` directory alongside the JSON file, referenced by relative path. This keeps the JSON diffable and the assets manageable in git.
 
@@ -112,6 +112,7 @@ packages/
       model/           # MindMapNode, MindMap types
       store/           # Reactive store with diff tracking
       editor/          # Editor class — all operations
+      keybindings/     # Key-to-action dispatch (shared by web input handler and TestEditor)
       layout/          # @dagrejs/dagre integration, position computation
       serialization/   # JSON ↔ model, markdown export
       test-editor/     # TestEditor subclass for testing
@@ -120,7 +121,7 @@ packages/
     src/
       components/      # SVG node renderer, edge renderer, viewport
       hooks/           # useEditor, useMindMap, useKeyboardNav
-      input/           # Keyboard handler, mouse handler → Editor dispatch
+      input/           # DOM event listeners → delegate to core/keybindings dispatch
       persistence/     # browser-fs-access integration, IndexedDB auto-save
       export/          # SVG export, PDF export, PNG export
       service-worker/  # Workbox offline caching
@@ -139,8 +140,9 @@ interface MindMapNode {
   collapsed: boolean;      // Whether children are hidden
   x: number;               // Horizontal position (stored, computed initially by layout engine)
   y: number;               // Vertical position (stored, computed initially by layout engine)
-  width: number;           // Node width (user-adjustable by dragging right edge; text reflows within)
-  height: number;          // Node height (auto-computed from text content and width)
+  width: number;           // Measured text width (unconstrained) or user-set width (constrained via drag)
+  height: number;          // Auto-computed: single line when unconstrained, text reflow when constrained
+  widthConstrained: boolean; // true if user has manually set width by dragging right edge
   style?: NodeStyle;       // Optional color, shape overrides
   image?: ImageRef;        // Optional attached image
 }
@@ -189,6 +191,7 @@ interface MindMapFileNode {
   y: number;
   width: number;
   height: number;
+  widthConstrained?: boolean;   // Omitted when false; true if user manually set width
   children: MindMapFileNode[];  // Inline nested nodes (not ID references)
   collapsed?: boolean;          // Omitted when false
   style?: NodeStyle;
@@ -292,7 +295,7 @@ class Editor {
   moveNode(nodeId: string, newParentId: string, index?: number): void;
   reorderNode(nodeId: string, direction: 'up' | 'down'): void;
   setNodePosition(nodeId: string, x: number, y: number): void;  // Manual repositioning
-  setNodeWidth(nodeId: string, width: number): void;  // Resize width; height recomputes from text reflow
+  setNodeWidth(nodeId: string, width: number): void;  // Resize width; sets widthConstrained=true; height recomputes from text reflow
   toggleCollapse(nodeId: string): void;
   setNodeImage(nodeId: string, asset: Asset): void;
   removeNodeImage(nodeId: string): void;
@@ -401,9 +404,11 @@ test('Cmd+Z undoes node creation', () => {
 
 The app has two distinct modes, following the MindNode/Excel paradigm:
 
-**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection spatially (direction relative to screen position, not tree structure). Tab creates child nodes. Enter enters edit mode. Shortcuts modify the selected node. When nothing is selected (empty canvas or after deselect), Enter creates a new root node. When nothing is selected, arrow keys will select the node closest to the center of the canvas. 
+**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection spatially (direction relative to screen position, not tree structure). Tab creates child nodes. Enter enters edit mode. Shortcuts modify the selected node. When nothing is selected (empty canvas or after deselect), Enter creates a new root node. When nothing is selected, arrow keys select the visible node closest to the center of the viewport.
 
 **Edit mode** (entered via Enter when node is selected, or double-click on node): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. If text is already in node, cursor starts at the end of the current text. Escape exits to navigation mode. Creating a new node (Tab) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child.
+
+**Empty node cleanup:** If a user exits edit mode (Escape) on a node with empty text, the node is automatically deleted. Selection falls back to the previous sibling if one exists, otherwise to the parent, otherwise to the nearest root by position, otherwise nothing is selected (empty canvas).
 
 ### Browser shortcut conflicts
 
@@ -414,7 +419,7 @@ Several shortcuts (⌘+S, ⌘+O, ⌘+0, ⌘+1, ⌘+=, ⌘+-) conflict with brows
 | Context | Action | Shortcut | Behavior |
 |---------|--------|----------|----------|
 | Node selected | Create child | Tab | New child of selected node; enters edit mode |
-| Node selected | Create sibling below | Shift+enter | New sibling after selected node; enters edit mode, no-op if current node is root |
+| Node selected | Create sibling below | Shift+enter | New sibling after selected node; enters edit mode. No-op on root nodes (roots have no parent, so "sibling" is undefined; use Escape then Enter to create a new root) |
 | Node selected | Navigate left | ← | Spatial: toward parent on right-side branches, toward children on left-side branches |
 | Node selected | Navigate right | → | Spatial: toward children on right-side branches, toward parent on left-side branches |
 | Node selected | Navigate down | ↓ | Move to next visually-below node (can cross parent and tree boundaries) |
@@ -465,9 +470,14 @@ The default direction for new children is rightward from their parent. If a user
 
 **Full layout (dagre):** Used when creating a brand-new tree or when the user explicitly requests reflow (future command). Dagre computes positions for all nodes in the tree from scratch.
 
-**Incremental layout:** Used for all structural mutations (add child, add sibling, delete, collapse, expand). Instead of re-running dagre, the engine shifts affected siblings and their entire subtrees to make or close vertical space. This preserves any manual positioning the user has done.
+**Incremental layout:** Used for all structural mutations (add child, add sibling, delete, collapse, expand). Instead of re-running dagre, the engine handles two concerns: horizontal placement of new depth levels, and vertical shifting of siblings.
 
-The algorithm: when a node is inserted or removed, compute the delta in the parent's visible subtree height (sum of visible descendant heights plus fixed inter-sibling gaps). Shift all siblings below the affected position by that delta, moving each sibling and its entire subtree as a unit. The inter-sibling gap is a fixed constant (e.g., 20px). Each root tree is adjusted independently. After adjusting a tree, check whether its bounding box overlaps any other root tree's bounding box; if so, push the overlapping tree apart by the overlap distance.
+The algorithm:
+- **Horizontal placement:** When a node gains its first child, the child is placed at a fixed horizontal offset from the parent (in the branch's direction -- rightward or leftward). This offset is a constant (e.g., 250px). Subsequent children at the same depth reuse the same x position.
+- **Vertical shifting:** When a node is inserted or removed, compute the delta in the parent's visible subtree height (sum of visible descendant heights plus fixed inter-sibling gaps). Shift all siblings below the affected position by that delta, moving each sibling and its entire subtree as a rigid unit. The inter-sibling gap is a fixed constant (e.g., 20px).
+- **Cross-tree overlap:** Each root tree is adjusted independently. After adjusting a tree, check whether its bounding box overlaps any other root tree's bounding box; if so, push the overlapping tree apart by the overlap distance.
+
+This preserves any manual positioning the user has done -- only the affected siblings and their subtrees are shifted.
 
 ### Viewport following
 
@@ -498,9 +508,14 @@ Following tldraw's architecture, undo/redo is automatic and diff-based rather th
 3. `editor.undo()` collects all diffs since the last mark, inverts them (swap added↔removed, reverse updated pairs), and applies the inverse diff.
 4. Continuous operations (like typing text or dragging) produce many small diffs that are **squashed** into a single undo entry when the operation completes.
 
-### What is excluded from undo history
+### Document state vs session state
 
-Selection state and camera position are not tracked in the diff history. Undo reverses data changes (node creation, deletion, text edits, etc.) but does not jump your selection or viewport. When undo removes the currently selected node, selection follows the same fallback rules as delete (nearest sibling, then parent, then nearest root).
+The store distinguishes two categories of state:
+
+- **Document state** (tracked by undo): nodes, tree structure, text content, positions, dimensions, collapse state, images, assets. These are the fields that get serialized to the file format.
+- **Session state** (not tracked by undo): selection, camera position, edit mode. These are ephemeral per-session concerns.
+
+Undo reverses document state changes only. It does not jump your selection or viewport. When undo removes the currently selected node, selection follows the same fallback rules as delete (nearest sibling, then parent, then nearest root).
 
 ### Benefits over command pattern
 
@@ -595,8 +610,6 @@ Each chunk is scoped to be completable in a single Claude Code session (~100–5
 | **3. Serialization** | JSON round-trip (nested file ↔ flat runtime); markdown export; file format validation with zod | `core/src/serialization/` | Serialize → deserialize → equality; snapshot tests for markdown output |
 | **4. Editor + TestEditor** | Editor class with store, mutation methods, history marks, diff-based undo/redo; TestEditor with simulated keyboard/pointer input and assertion methods | `core/src/editor/`, `core/src/test-editor/` | Undo/redo tests; keyboard simulation tests; history inspection tests |
 
-Chunks 2 and 3 can be developed in parallel (they share types but are otherwise independent).
-
 ### Phase 2 — Layout and rendering (Chunks 5–7)
 
 | Chunk | Scope | Deliverables | Tests |
@@ -630,14 +643,6 @@ Chunks 2 and 3 can be developed in parallel (they share types but are otherwise 
 | **16. Export** | SVG export, PNG export, markdown export, URL sharing (lz-string) | `web/src/export/` | Snapshot tests for SVG/markdown output; URL round-trip tests |
 | **17. Animations** | Smooth layout transitions on add/remove/collapse; spring physics or CSS transitions | `web/src/components/` | Visual regression tests |
 | **18. Performance + accessibility** | Viewport culling for large maps; screen reader audit; keyboard focus indicators; performance benchmarks at 500 and 1000 nodes | Across packages | Performance benchmarks; axe-core audit |
-
-### Parallelization opportunities
-
-- Chunks 2 + 3 (data model + serialization): independent
-- Chunks 8 + 11 (keyboard + mouse): independent input handlers
-- Chunks 13 + 16 (persistence + export): independent features
-
-This parallelization can cut total development time by ~20-25%.
 
 ---
 

@@ -57,14 +57,14 @@
 **Goal:** Core types and tree operations, fully tested.
 
 **Acceptance criteria:**
-- [ ] MindMapNode (with x/y), MindMap (with roots[]), Asset types defined
+- [ ] MindMapNode (with x/y, widthConstrained), MindMap (with roots[]), Asset types defined
 - [ ] Flat store (Map<string, MindMapNode>) with add root/add child/remove/reparent/reorder
 - [ ] Tree traversal utilities (getChildren, getParent, getSiblings, getRoots, getAncestors)
 - [ ] All operations maintain tree invariants (no orphans, no cycles, valid roots[])
 - [ ] Multi-root operations: add root, delete root, empty canvas state
 - [ ] 20+ unit tests covering normal and edge cases including multi-root
 
-### Then: Chunk 3 — Serialization (can parallel with Chunk 2)
+### Then: Chunk 3 — Serialization
 
 **Goal:** JSON round-trip and markdown export.
 

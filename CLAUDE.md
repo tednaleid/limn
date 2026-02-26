@@ -2,15 +2,6 @@
 
 MindForge — keyboard-first, offline-capable mind map PWA.
 
-## Stack
-
-- Core engine: TypeScript (strict), zero browser dependencies
-- Web app: React 19, Vite, SVG rendering, custom pan/zoom (pure math)
-- Layout: @dagrejs/dagre
-- Testing: Vitest (unit via TestEditor), Playwright (browser-dependent tests only)
-- File I/O: browser-fs-access
-- Package manager: Bun (Playwright uses Node.js)
-
 ## Development Methodology
 
 Testing is a first-class citizen. We are using red/green development practices. Everywhere possible, we want to have a failing (red) test
@@ -46,6 +37,10 @@ bun run build        # Production build
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
 - **Multiple roots supported.** A mind map is a forest of trees. Roots can be created and deleted freely. Empty canvas is valid.
 - **Multi-line node text.** Shift+Enter inserts newline in edit mode. Enter exits edit mode and creates sibling.
+- **Key-to-action routing lives in core.** DOM event listeners live in `web/`, but they delegate to a dispatch function in `core/` that maps keys to Editor actions. TestEditor uses the same dispatch, so keyboard behavior is testable without a browser.
+- **Undo tracks only document data.** Camera position and selection state are excluded from the diff/undo system. The store distinguishes "document state" (nodes, structure, text) from "session state" (camera, selection).
+- **Root nodes have no siblings.** Creating a sibling (Shift+Enter in nav mode, Enter in edit mode) is a no-op on root nodes. New roots are created only via Enter with nothing selected, or double-click on canvas.
+- **Empty nodes are auto-deleted.** If a user exits edit mode (Escape) on a node with empty text, the node is deleted and selection falls back to previous sibling, then parent.
 
 ## Specs and progress
 
