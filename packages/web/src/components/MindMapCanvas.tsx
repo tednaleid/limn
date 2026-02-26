@@ -1,7 +1,7 @@
 // ABOUTME: SVG canvas component with pan/zoom viewport for rendering mind maps.
 // ABOUTME: Renders all visible nodes and edges from Editor state.
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import type { MindMapNode } from "@mindforge/core";
 import { useEditor } from "../hooks/useEditor";
 import { useAssetUrls } from "../hooks/useAssetUrls";
@@ -26,7 +26,7 @@ export function MindMapCanvas() {
   const isDraggingNode = useRef(false);
 
   const camera = editor.getCamera();
-  const visibleNodes = editor.getVisibleNodes();
+  const allVisibleNodes = editor.getVisibleNodes();
   const selectedId = editor.getSelectedId();
   const isEditing = editor.isEditing();
   const isDragging = editor.isDragging();
@@ -34,18 +34,53 @@ export function MindMapCanvas() {
   const rootIds = new Set(editor.getRoots().map((r) => r.id));
   const assetUrls = useAssetUrls();
 
+  // Track viewport dimensions for culling
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const updateSize = () => {
+      if (svgRef.current) {
+        setViewportSize({
+          width: svgRef.current.clientWidth,
+          height: svgRef.current.clientHeight,
+        });
+      }
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  // Viewport culling: only render nodes within the visible area (with padding)
+  const CULL_PADDING = 200; // extra pixels beyond viewport to avoid pop-in
+  const visibleNodes = viewportSize.width > 0
+    ? allVisibleNodes.filter((node) => {
+        const screenX = node.x * camera.zoom + camera.x;
+        const screenY = node.y * camera.zoom + camera.y;
+        const screenW = node.width * camera.zoom;
+        const screenH = node.height * camera.zoom;
+        return (
+          screenX + screenW > -CULL_PADDING &&
+          screenX < viewportSize.width + CULL_PADDING &&
+          screenY + screenH > -CULL_PADDING &&
+          screenY < viewportSize.height + CULL_PADDING
+        );
+      })
+    : allVisibleNodes; // Render all until viewport size is known
+
   // Get the editing node for the TextEditor overlay
   const editingNode = isEditing && selectedId ? editor.getNode(selectedId) : null;
 
-  // Collect all parent-child edges for visible nodes
-  const edges: { parent: MindMapNode; child: MindMapNode }[] = [];
-  const nodeMap = new Map<string, MindMapNode>();
-  for (const node of visibleNodes) {
-    nodeMap.set(node.id, node);
+  // Build a map of all visible nodes (pre-cull) for edge lookups
+  const allNodeMap = new Map<string, MindMapNode>();
+  for (const node of allVisibleNodes) {
+    allNodeMap.set(node.id, node);
   }
+
+  // Collect edges: for each viewport node with a parent, draw the edge
+  const edges: { parent: MindMapNode; child: MindMapNode }[] = [];
   for (const node of visibleNodes) {
     if (node.parentId !== null) {
-      const parent = nodeMap.get(node.parentId);
+      const parent = allNodeMap.get(node.parentId);
       if (parent) {
         edges.push({ parent, child: node });
       }
@@ -286,6 +321,8 @@ export function MindMapCanvas() {
       <svg
         ref={svgRef}
         data-mindforge-canvas
+        role="group"
+        aria-label="Mind Map"
         style={{
           width: "100%",
           height: "100%",
@@ -308,10 +345,17 @@ export function MindMapCanvas() {
           ))}
           {visibleNodes.map((node) => {
             const shouldAnimate = !isDragging;
+            const depth = editor.getNodeDepth(node.id);
+            const hasChildren = node.children.length > 0;
             return (
               <g
                 key={node.id}
                 data-node-id={node.id}
+                role="treeitem"
+                aria-level={depth + 1}
+                aria-selected={node.id === selectedId}
+                aria-expanded={hasChildren ? !node.collapsed : undefined}
+                aria-label={node.text || "Empty node"}
                 onDoubleClick={() => handleNodeDoubleClick(node.id)}
                 style={{
                   cursor: isDragging ? "grabbing" : "pointer",

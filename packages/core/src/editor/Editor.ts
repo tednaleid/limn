@@ -111,6 +111,23 @@ export class Editor {
     return this.store.getVisibleNodes();
   }
 
+  /** Get the depth of a node (0 = root, 1 = child of root, etc.). */
+  getNodeDepth(id: string): number {
+    let depth = 0;
+    let node = this.store.getNode(id);
+    while (node.parentId !== null) {
+      depth++;
+      node = this.store.getNode(node.parentId);
+    }
+    return depth;
+  }
+
+  /** Check if a node has visible children (not collapsed and has children). */
+  hasVisibleChildren(id: string): boolean {
+    const node = this.store.getNode(id);
+    return node.children.length > 0 && !node.collapsed;
+  }
+
   isEditing(): boolean {
     return this.editing;
   }
