@@ -64,7 +64,7 @@ export function serialize(
 
     if (node.collapsed) fileNode.collapsed = true;
     if (node.widthConstrained) fileNode.widthConstrained = true;
-    if (node.style) fileNode.style = node.style;
+    if (node.style) fileNode.style = node.style as Record<string, unknown>;
     if (node.image) fileNode.image = node.image;
 
     return fileNode;

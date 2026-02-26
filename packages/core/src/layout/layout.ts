@@ -53,9 +53,9 @@ export function positionNewChild(store: MindMapStore, childId: string): void {
 
   // Determine direction: from existing siblings, or from parent's branch direction
   let direction = 1;
-  const existingSiblings = siblings.filter((s) => s.id !== childId);
-  if (existingSiblings.length > 0) {
-    direction = branchDirection(store, existingSiblings[0].id);
+  const firstSibling = siblings.filter((s) => s.id !== childId)[0];
+  if (firstSibling) {
+    direction = branchDirection(store, firstSibling.id);
   } else {
     // No existing siblings: infer direction from parent's branch
     direction = branchDirection(store, child.parentId);
@@ -111,6 +111,7 @@ export function centerChildren(store: MindMapStore, parentId: string): void {
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
     const childHeight = heights[i];
+    if (!child || childHeight === undefined) continue;
 
     // The child's y is at the center of its subtree band
     const targetY = currentY + childHeight / 2 - child.height / 2;

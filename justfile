@@ -32,9 +32,9 @@ dev:
 build:
     bun run build
 
-# Run tests and lint (CI check)
-check: test lint
+# Run tests, lint, and type-check (CI check)
+check: test lint typecheck
 
-# Type-check with TypeScript (note: some strict errors may exist)
+# Type-check with TypeScript (builds core declarations, checks web)
 typecheck:
-    bunx tsc -b --noEmit
+    bunx tsc -b

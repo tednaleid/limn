@@ -101,7 +101,7 @@ export class MindMapStore {
     this.nodes.set(node.id, node);
     // Advance ID counter past any loaded numeric IDs to prevent collisions
     const match = /^n(\d+)$/.exec(node.id);
-    if (match) {
+    if (match?.[1]) {
       const num = parseInt(match[1], 10) + 1;
       if (num > nextIdCounter) {
         nextIdCounter = num;
@@ -282,14 +282,20 @@ export class MindMapStore {
 
     if (direction === "up" && idx > 0) {
       const swapIdx = idx - 1;
-      const temp = parent.children[swapIdx];
-      parent.children[swapIdx] = parent.children[idx];
-      parent.children[idx] = temp;
+      const a = parent.children[swapIdx];
+      const b = parent.children[idx];
+      if (a !== undefined && b !== undefined) {
+        parent.children[swapIdx] = b;
+        parent.children[idx] = a;
+      }
     } else if (direction === "down" && idx < parent.children.length - 1) {
       const swapIdx = idx + 1;
-      const temp = parent.children[swapIdx];
-      parent.children[swapIdx] = parent.children[idx];
-      parent.children[idx] = temp;
+      const a = parent.children[swapIdx];
+      const b = parent.children[idx];
+      if (a !== undefined && b !== undefined) {
+        parent.children[swapIdx] = b;
+        parent.children[idx] = a;
+      }
     }
   }
 }

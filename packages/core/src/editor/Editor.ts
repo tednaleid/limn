@@ -485,12 +485,12 @@ export class Editor {
     if (current.parentId === null) {
       // Root node: go to first left-side child
       const children = this.store.getChildren(this.selectedId);
-      const leftChildren = children.filter((c) => c.x < current.x);
-      if (leftChildren.length > 0) {
+      const firstLeft = children.filter((c) => c.x < current.x)[0];
+      if (firstLeft) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = leftChildren[0].id;
+        this.selectedId = firstLeft.id;
         this.notify();
       }
       return;
@@ -504,12 +504,12 @@ export class Editor {
       this.notify();
     } else {
       // Left-side branch: Left goes toward children (deeper)
-      const children = this.store.getChildren(this.selectedId);
-      if (children.length > 0) {
+      const firstChild = this.store.getChildren(this.selectedId)[0];
+      if (firstChild) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = children[0].id;
+        this.selectedId = firstChild.id;
         this.notify();
       }
     }
@@ -522,12 +522,12 @@ export class Editor {
     if (current.parentId === null) {
       // Root node: go to first right-side child
       const children = this.store.getChildren(this.selectedId);
-      const rightChildren = children.filter((c) => c.x >= current.x);
-      if (rightChildren.length > 0) {
+      const firstRight = children.filter((c) => c.x >= current.x)[0];
+      if (firstRight) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = rightChildren[0].id;
+        this.selectedId = firstRight.id;
         this.notify();
       }
       return;
@@ -537,12 +537,12 @@ export class Editor {
     const dir = branchDirection(this.store, this.selectedId);
     if (dir >= 0) {
       // Right-side branch: Right goes toward children (deeper)
-      const children = this.store.getChildren(this.selectedId);
-      if (children.length > 0) {
+      const firstChild = this.store.getChildren(this.selectedId)[0];
+      if (firstChild) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = children[0].id;
+        this.selectedId = firstChild.id;
         this.notify();
       }
     } else {
@@ -851,17 +851,13 @@ export class Editor {
       // Root node: select nearest remaining root by position
       const roots = this.store.getRoots();
       const otherRoots = roots.filter((r) => r.id !== nodeId);
-      if (otherRoots.length > 0) {
-        otherRoots.sort(
-          (a, b) =>
-            Math.abs(a.x - node.x) +
-            Math.abs(a.y - node.y) -
-            (Math.abs(b.x - node.x) + Math.abs(b.y - node.y)),
-        );
-        this.selectedId = otherRoots[0].id;
-      } else {
-        this.selectedId = null;
-      }
+      otherRoots.sort(
+        (a, b) =>
+          Math.abs(a.x - node.x) +
+          Math.abs(a.y - node.y) -
+          (Math.abs(b.x - node.x) + Math.abs(b.y - node.y)),
+      );
+      this.selectedId = otherRoots[0]?.id ?? null;
     }
     this.editing = false;
   }

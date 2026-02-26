@@ -21,10 +21,13 @@ packages/web/     # React PWA — rendering, input handling, persistence
 ```bash
 bun install          # Install dependencies
 bun run test         # Vitest unit tests
-bun run test:e2e     # Playwright visual regression
+bun run lint         # ESLint
+bunx tsc -b          # Type-check (builds core declarations, checks web)
 bun run dev          # Vite dev server
 bun run build        # Production build
 ```
+
+A `justfile` is provided for convenience (`just check` runs tests + lint + typecheck).
 
 - Use `bunx` instead of `npx` for running package binaries (this is a Bun project).
 
