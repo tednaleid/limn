@@ -184,6 +184,8 @@ const bindings: KeyBinding[] = [
       if (!sel) return;
       const node = editor.getNode(sel);
       editor.exitEditMode();
+      // If the node was deleted (empty text), don't try to add a sibling
+      if (editor.getSelectedId() !== sel) return;
       if (node.parentId === null) {
         // Root node: just exit edit mode, no sibling
         return;
@@ -198,6 +200,8 @@ const bindings: KeyBinding[] = [
       const sel = editor.getSelectedId();
       if (!sel) return;
       editor.exitEditMode();
+      // If the node was deleted (empty text), don't try to add a child
+      if (editor.getSelectedId() !== sel) return;
       editor.addChild(sel);
     },
   },

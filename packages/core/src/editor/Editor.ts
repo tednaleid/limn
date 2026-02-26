@@ -484,19 +484,34 @@ export class Editor {
     }
   }
 
+  /** Find the child nearest in y to the current node's center. */
+  private nearestChildByY(children: MindMapNode[], parentCenterY: number): MindMapNode | null {
+    let best: MindMapNode | null = null;
+    let bestDist = Infinity;
+    for (const child of children) {
+      const dist = Math.abs(child.y + child.height / 2 - parentCenterY);
+      if (dist < bestDist) {
+        best = child;
+        bestDist = dist;
+      }
+    }
+    return best;
+  }
+
   navigateLeft(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const current = this.store.getNode(this.selectedId);
+    const currentCenterY = current.y + current.height / 2;
 
     if (current.parentId === null) {
-      // Root node: go to first left-side child
-      const children = this.store.getChildren(this.selectedId);
-      const firstLeft = children.filter((c) => c.x < current.x)[0];
-      if (firstLeft) {
+      // Root node: go to nearest left-side child by y
+      const leftChildren = this.store.getChildren(this.selectedId).filter((c) => c.x < current.x);
+      const target = this.nearestChildByY(leftChildren, currentCenterY);
+      if (target) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = firstLeft.id;
+        this.selectedId = target.id;
         this.notify();
       }
       return;
@@ -510,12 +525,13 @@ export class Editor {
       this.notify();
     } else {
       // Left-side branch: Left goes toward children (deeper)
-      const firstChild = this.store.getChildren(this.selectedId)[0];
-      if (firstChild) {
+      const children = this.store.getChildren(this.selectedId);
+      const target = this.nearestChildByY(children, currentCenterY);
+      if (target) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = firstChild.id;
+        this.selectedId = target.id;
         this.notify();
       }
     }
@@ -524,16 +540,17 @@ export class Editor {
   navigateRight(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const current = this.store.getNode(this.selectedId);
+    const currentCenterY = current.y + current.height / 2;
 
     if (current.parentId === null) {
-      // Root node: go to first right-side child
-      const children = this.store.getChildren(this.selectedId);
-      const firstRight = children.filter((c) => c.x >= current.x)[0];
-      if (firstRight) {
+      // Root node: go to nearest right-side child by y
+      const rightChildren = this.store.getChildren(this.selectedId).filter((c) => c.x >= current.x);
+      const target = this.nearestChildByY(rightChildren, currentCenterY);
+      if (target) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = firstRight.id;
+        this.selectedId = target.id;
         this.notify();
       }
       return;
@@ -543,12 +560,13 @@ export class Editor {
     const dir = branchDirection(this.store, this.selectedId);
     if (dir >= 0) {
       // Right-side branch: Right goes toward children (deeper)
-      const firstChild = this.store.getChildren(this.selectedId)[0];
-      if (firstChild) {
+      const children = this.store.getChildren(this.selectedId);
+      const target = this.nearestChildByY(children, currentCenterY);
+      if (target) {
         if (current.collapsed) {
           this.toggleCollapse(this.selectedId);
         }
-        this.selectedId = firstChild.id;
+        this.selectedId = target.id;
         this.notify();
       }
     } else {

@@ -262,10 +262,12 @@ describe("Spatial navigation", () => {
       editor.loadJSON(rootWithThreeChildren());
     });
 
-    test("navigateRight from root selects first child", () => {
+    test("navigateRight from root selects nearest child by y", () => {
+      // root center y=16, c1 center=-36, c2 center=16, c3 center=68
+      // c2 is nearest to root's y-center
       editor.select("root");
       editor.navigateRight();
-      expect(editor.getSelectedId()).toBe("c1");
+      expect(editor.getSelectedId()).toBe("c2");
     });
 
     test("navigateLeft from c1 selects parent (root)", () => {
@@ -364,9 +366,9 @@ describe("Spatial navigation", () => {
 
       editor.select("root");
       editor.navigateRight();
-      // Should expand and select first child
+      // Should expand and select nearest child by y (c2 is at same y-center as root)
       expect(editor.isCollapsed("root")).toBe(false);
-      expect(editor.getSelectedId()).toBe("c1");
+      expect(editor.getSelectedId()).toBe("c2");
     });
   });
 
@@ -423,7 +425,7 @@ describe("Spatial navigation", () => {
     test("ArrowRight key triggers navigateRight", () => {
       editor.select("root");
       editor.pressKey("ArrowRight");
-      expect(editor.getSelectedId()).toBe("c1");
+      expect(editor.getSelectedId()).toBe("c2");
     });
 
     test("ArrowLeft key triggers navigateLeft", () => {

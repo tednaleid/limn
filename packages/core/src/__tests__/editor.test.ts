@@ -345,6 +345,26 @@ describe("Editor", () => {
       editor.expectNotEditing();
     });
 
+    test("Tab on empty node does not create child of deleted node", () => {
+      editor.select("n0");
+      const childId = editor.addChild("n0");
+      editor.expectEditing(childId);
+      // Tab on empty node: should exit edit (delete empty node), not crash
+      editor.pressKey("Tab");
+      editor.expectNodeCount(4);
+      editor.expectNotEditing();
+    });
+
+    test("Enter on empty node does not create sibling of deleted node", () => {
+      editor.select("n1");
+      const childId = editor.addChild("n1");
+      editor.expectEditing(childId);
+      // Enter on empty node: should exit edit (delete empty node), not crash
+      editor.pressKey("Enter");
+      editor.expectNodeCount(4);
+      editor.expectNotEditing();
+    });
+
     test("Escape on non-empty node keeps it", () => {
       editor.select("n0");
       editor.pressKey("Enter"); // enter edit mode
