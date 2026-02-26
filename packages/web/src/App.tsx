@@ -7,6 +7,7 @@ import type { MindMapFileFormat } from "@mindforge/core";
 import { EditorContext } from "./hooks/useEditor";
 import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { setupAutoSave, loadFromIDB } from "./persistence/local";
 import { saveToFile, openFile } from "./persistence/file";
@@ -183,6 +184,7 @@ export function App() {
       <AssetUrlContext.Provider value={assetUrls}>
         <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
           <MindMapCanvas />
+          <UpdateBanner />
         </div>
       </AssetUrlContext.Provider>
     </EditorContext.Provider>

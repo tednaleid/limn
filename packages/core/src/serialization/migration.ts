@@ -36,7 +36,9 @@ export function migrateToLatest(data: MindMapFileFormat): MindMapFileFormat {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let migrated: any = { ...data, version };
   for (let v = version; v < CURRENT_FORMAT_VERSION; v++) {
-    migrated = migrations[v - 1](migrated);
+    const migrate = migrations[v - 1];
+    if (!migrate) throw new Error(`Missing migration for version ${v}`);
+    migrated = migrate(migrated);
     migrated.version = v + 1;
   }
 

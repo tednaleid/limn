@@ -5,7 +5,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "jsx": "react-jsx",
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite-plugin-pwa/react", "vite-plugin-pwa/client"]
   },
   "include": ["src"],
   "references": [{ "path": "../core" }]
