@@ -321,7 +321,7 @@ export function MindMapCanvas() {
       <svg
         ref={svgRef}
         data-mindforge-canvas
-        role="group"
+        role="tree"
         aria-label="Mind Map"
         style={{
           width: "100%",

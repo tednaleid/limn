@@ -4,7 +4,7 @@
 
 **Phase**: All chunks complete (1-17), plus post-spec polish
 **Last updated**: 2026-02-26
-**Tests**: 209 passing across 11 test files, lint clean
+**Tests**: 217 passing across 11 test files, lint clean
 
 ---
 
@@ -362,21 +362,35 @@
 - Uses stored viewport dimensions and camera state to compute world-space center
 - 2 tests added
 
+**Viewport following:**
+- Camera pans minimally to keep newly created nodes on-screen
+- Applied to addChild, addSibling, addRoot
+- 3 tests added
+
+**Asset registry moved to MindMapStore:**
+- Assets live in Store, not Editor (fixes architectural asymmetry)
+- All image mutations route through Store methods
+- 4 store-level asset tests added
+
+**Editor.toMarkdown():**
+- Wired toMarkdown() through Editor API per spec
+- 1 test added
+
+**ARIA role="tree":**
+- Changed SVG container from role="group" to role="tree" per spec Appendix D
+
 ---
 
 ## Remaining gaps (not blocking, could be future work)
-- Image resize handles (spec: dot in upper-right corner for proportional resize)
+- Image resize handles (spec H7: dot in upper-right corner for proportional resize)
 - Drag right edge of node to resize width (spec: widthConstrained mode)
+- Keyboard focus indicators (visible focus ring for keyboard navigation)
 - Zip fallback for maps with images on non-Chromium browsers (fflate)
 - PDF export (spec soft requirement S1)
 - Performance benchmarks at 500 and 1000 nodes
 - axe-core accessibility audit
-- Keyboard focus indicators (visible focus ring)
 - Playwright visual regression and offline simulation tests
 - Edge animation (edges currently snap, nodes animate)
-- Assets should live in Store rather than Editor (minor asymmetry)
-- Image mutations bypass store abstraction (direct node mutation)
-- ARIA role="tree" on root tree groups (spec Appendix D)
 
 ---
 
