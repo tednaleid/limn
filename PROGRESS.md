@@ -2,10 +2,9 @@
 
 ## Current status
 
-**Phase**: Phase 4 -- Persistence
-**Next chunk**: Chunk 13 (File save/load)
+**Phase**: All chunks complete (1-17)
 **Last updated**: 2026-02-26
-**Tests**: 169 passing, lint clean
+**Tests**: 190 passing across 11 test files, lint clean
 
 ---
 
@@ -293,54 +292,62 @@
 
 ---
 
-## Remaining work
+## Completed chunks 13-17
 
-Reference: SPEC.md chunks 14-18. Each entry includes the spec's scope description.
+### Chunk 13: File save/load (2026-02-26)
+- Migration pipeline: CURRENT_FORMAT_VERSION, migrateToLatest(), version validation
+- browser-fs-access for Cmd+S save and Cmd+O open (File System Access API + fallback)
+- File handle reuse for subsequent saves on Chromium
+- Cmd+S/Cmd+O dispatch through core keybindings
+- 8 tests (migration pipeline + dispatch)
 
-### Chunk 13: File save/load
-- browser-fs-access integration for Cmd+S save and file open workflows
-- `showSaveFilePicker()` on Chromium, `<a download>` fallback on Safari/Firefox
-- Zip fallback for maps with images on non-Chromium browsers
-- File format versioning and forward migrations
-- Deliverable: `web/src/persistence/file.ts`
-- Tests: integration tests, Playwright file dialog tests
+### Chunk 14: Service worker (2026-02-26)
+- vite-plugin-pwa with Workbox for offline app shell caching
+- PWA manifest with app name, colors, icon placeholders
+- UpdateBanner component: non-blocking "new version available" prompt
+- registerType: "prompt" so users control reload timing
 
-### Chunk 14: Service worker
-- Workbox setup for offline caching of app shell
-- Update notification banner when new version available
-- Deliverable: `web/src/service-worker/`
-- Tests: Playwright offline simulation tests
+### Chunk 15: Export (2026-02-26)
+- SVG export via XMLSerializer on data-mindforge-canvas element
+- PNG export via SVG to Canvas to toDataURL (2x retina)
+- Markdown export already in core (toMarkdown)
+- URL sharing: lz-string compress/decompress for URL hash (#data=...)
+- Load from URL hash on startup (before IDB fallback)
+- Shift+Cmd+E dispatch for export
+- 7 tests (URL round-trip + dispatch)
 
-### Chunk 15: Export
-- SVG export (serialize rendered SVG element)
-- PNG export (SVG to Canvas to toDataURL)
-- Markdown export (already implemented in core, needs UI trigger)
-- URL sharing via lz-string compressed JSON in URL hash
-- Deliverable: `web/src/export/`
-- Tests: snapshot tests for SVG/markdown output, URL round-trip tests
+### Chunk 16: Animations (2026-02-26)
+- CSS transition (200ms ease-out) on node position transforms
+- Position transform moved from NodeView to wrapper <g> in MindMapCanvas
+- Transitions disabled during drag for instant feedback
+- Edges snap instantly (acceptable for v1)
 
-### Chunk 16: Animations
-- Smooth layout transitions on add/remove/collapse/expand
-- Spring physics or CSS transitions
-- Tests: visual regression tests
+### Chunk 17: Performance and accessibility (2026-02-26)
+- ARIA attributes per spec Appendix D: role=treeitem, aria-level, aria-expanded, aria-selected, aria-label
+- SVG canvas: role=group, aria-label="Mind Map"
+- getNodeDepth() and hasVisibleChildren() on Editor
+- Viewport culling: only render nodes within visible area (200px padding)
+- Resize listener for viewport dimension tracking
+- 6 tests (node depth + hasVisibleChildren)
 
-### Chunk 17: Performance and accessibility
-- Viewport culling for large maps (only render visible nodes)
-- Screen reader audit (ARIA roles, labels)
-- Keyboard focus indicators
-- Performance benchmarks at 500 and 1000 nodes
-- Tests: performance benchmarks, axe-core audit
+---
 
-### Gaps in completed chunks (not blocking, but noted)
+## Remaining gaps (not blocking, could be future work)
 - Image resize handles (spec: dot in upper-right corner for proportional resize)
 - Drag right edge of node to resize width (spec: widthConstrained mode)
-- Animated transitions for collapse/expand (currently instant)
+- Zip fallback for maps with images on non-Chromium browsers (fflate)
+- PDF export (spec soft requirement S1)
+- Performance benchmarks at 500 and 1000 nodes
+- axe-core accessibility audit
+- Keyboard focus indicators (visible focus ring)
+- Playwright visual regression and offline simulation tests
+- Edge animation (edges currently snap, nodes animate)
 
 ---
 
 ## Known issues
 
-(None yet)
+(None)
 
 ---
 
