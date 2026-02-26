@@ -109,7 +109,7 @@ Excalidraw proved this model: they deprecated their Electron app because the web
 packages/
   core/               # Zero-dependency TypeScript library
     src/
-      model/           # MindMapNode, MindMap, CrossLink types
+      model/           # MindMapNode, MindMap types
       store/           # Reactive store with diff tracking
       editor/          # Editor class — all operations
       layout/          # @dagrejs/dagre integration, position computation
@@ -153,13 +153,6 @@ interface NodeStyle {
   // TODO - font, size, color, etc
 }
 
-interface CrossLink {
-  id: string;
-  sourceId: string;        // Node ID
-  targetId: string;        // Node ID
-  label?: string;
-}
-
 interface Asset {
   id: string;
   filename: string;        // Relative path in sidecar directory
@@ -168,11 +161,17 @@ interface Asset {
   height: number;
 }
 
+interface Camera {
+  x: number;               // Viewport offset X
+  y: number;               // Viewport offset Y
+  zoom: number;            // Zoom level (1.0 = 100%)
+}
+
 interface MindMap {
   roots: string[];         // Root node IDs (multiple independent trees)
   nodes: Map<string, MindMapNode>;  // Flat node map (runtime)
-  crossLinks: CrossLink[];
   assets: Asset[];
+  camera: Camera;          // Persisted viewport state
   meta: {
     version: number;
     theme: string; // "default", this is a placeholder
@@ -197,8 +196,8 @@ interface MindMapFileFormat {
   meta: {
     theme: string;
   };
+  camera: Camera;
   roots: MindMapFileNode[];
-  crossLinks: CrossLink[];
   assets: Asset[];
 }
 ```
@@ -211,6 +210,7 @@ On disk, the flat map serializes as a nested tree for readability and clean diff
 {
   "version": 1,
   "meta": { "theme": "default" },
+  "camera": { "x": 0, "y": 0, "zoom": 1.0 },
   "roots": [
     {
       "id": "n0",
@@ -248,9 +248,6 @@ On disk, the flat map serializes as a nested tree for readability and clean diff
       ]
     }
   ],
-  "crossLinks": [
-    { "id": "cl1", "sourceId": "n3", "targetId": "n5", "label": "informs" }
-  ],
   "assets": [
     { "id": "a1", "filename": "assets/arch-diagram.png", "mimeType": "image/png", "width": 1200, "height": 900 }
   ]
@@ -267,7 +264,6 @@ class Editor {
   getNode(id: string): MindMapNode;
   getChildren(id: string): MindMapNode[];
   getParent(id: string): MindMapNode | null;
-  getSiblings(id: string): MindMapNode[];
   getRoots(): MindMapNode[];            // All root nodes
   getSelectedId(): string | null;       // null when nothing selected (valid state)
   isCollapsed(id: string): boolean;
@@ -276,7 +272,7 @@ class Editor {
   // Mutations (all produce tracked diffs for undo)
   addRoot(text?: string, x?: number, y?: number): string;  // Returns new root ID
   addChild(parentId: string, text?: string): string;        // Returns new node ID
-  addSibling(parentId: string, index: number, text?: string): string;  // Insert new node as child of parentId at position index. If index > children length, inserts at end
+  insertChild(parentId: string, index: number, text?: string): string;  // Insert new node as child of parentId at position index. If index > children length, inserts at end
   deleteNode(nodeId: string): void;     // Deletes root and subtree; empty canvas if last
   setText(nodeId: string, text: string): void;
   moveNode(nodeId: string, newParentId: string, index?: number): void;
@@ -303,10 +299,6 @@ class Editor {
   undo(): void;
   redo(): void;
   markHistory(label: string): void;  // Named undo boundary
-
-  // Cross-links
-  addCrossLink(sourceId: string, targetId: string, label?: string): void;
-  removeCrossLink(id: string): void;
 
   // Camera
   setCamera(x: number, y: number, zoom: number): void;
@@ -394,7 +386,7 @@ test('Cmd+Z undoes node creation', () => {
 
 The app has two distinct modes, following the MindNode/Excel paradigm:
 
-**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection spatially (direction relative to screen position, not tree structure). Tab creates child nodes. Enter enters edit mode. Shortcuts modify the selected node. When nothing is selected (empty canvas or after deselect), Enter creates a new root node. When nothing is selected, arrow keys will select the node closest to the center of the canvas if no nodes are directly in the center, find the closest node in the direction of the arrow key.
+**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection spatially (direction relative to screen position, not tree structure). Tab creates child nodes. Enter enters edit mode. Shortcuts modify the selected node. When nothing is selected (empty canvas or after deselect), Enter creates a new root node. When nothing is selected, arrow keys will select the node closest to the center of the canvas. 
 
 **Edit mode** (entered via Enter when node is selected, or double-click on node): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. If text is already in node, cursor starts at the end of the current text. Escape exits to navigation mode. Creating a new node (Tab) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child.
 
@@ -415,7 +407,7 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 | Node selected | Move node down | ⌘+↓ | Reorder among siblings |
 | Node selected | Deselect | Escape | Deselect currently selected node |
 | Nothing selected | Create root | Enter | New root node at canvas center; enters edit mode |
-| Any | Move canvas | Shift+(←/→/↓/↑) | Move canvas in the direction of the arrow 10% of the current zoom level |
+| Any Navigation Mode | Move canvas | Shift+(←/→/↓/↑) | Move canvas in the direction of the arrow 10% of the current zoom level |
 | Any | Undo | ⌘+Z | Invert last diff |
 | Any | Redo | ⇧+⌘+Z | Reapply last undone diff |
 | Any | Zoom to fit | ⌘+0 | Fit all visible nodes in viewport |

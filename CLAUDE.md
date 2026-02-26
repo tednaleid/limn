@@ -11,6 +11,13 @@ MindForge — keyboard-first, offline-capable mind map PWA.
 - File I/O: browser-fs-access
 - Package manager: Bun (Playwright uses Node.js)
 
+## Development Methodology
+
+Testing is a first-class citizen. We are using red/green development practices. Everywhere possible, we want to have a failing (red) test
+first, then make it pass (green).
+
+For this project, you are allowed to commit, and are actually REQUIRED to commit your progress after every significant change. Commits should only happen when tests and linting are green.
+
 ## Structure
 
 ```
