@@ -2,9 +2,9 @@
 
 ## Current status
 
-**Phase**: All chunks complete (1-17)
+**Phase**: All chunks complete (1-17), plus post-spec polish
 **Last updated**: 2026-02-26
-**Tests**: 190 passing across 11 test files, lint clean
+**Tests**: 209 passing across 11 test files, lint clean
 
 ---
 
@@ -330,6 +330,38 @@
 - Resize listener for viewport dimension tracking
 - 6 tests (node depth + hasVisibleChildren)
 
+### Post-spec polish (2026-02-26)
+
+**Bug fixes:**
+- Fixed camera position lost on save: Editor.toJSON() was not passing camera to serialize()
+- 2 tests added
+
+**Undo squashing:**
+- Consecutive setText calls on the same node now produce a single undo entry
+- Squashing breaks on different node, different mutation type, undo/redo, or loadJSON
+- 3 tests added
+
+**Keyboard zoom/pan shortcuts:**
+- Cmd+= zoom in, Cmd+- zoom out (1.25x step, clamped to 0.1-3.0)
+- Cmd+0 zoom to fit all visible nodes
+- Cmd+1 zoom to selected node
+- Shift+arrows pan canvas 10% of viewport dimension
+- Editor stores viewport dimensions (set by web layer) for zoom-to-fit calculations
+- Browser default shortcuts prevented for these key combos
+- 10 tests added
+
+**DOM text measurer:**
+- Web layer provides DomTextMeasurer using an off-screen div element
+- Editor.setText() now calls the text measurer to update node width/height
+- Supports both unconstrained and width-constrained measurement
+- Core tests verify stub measurer updates dimensions correctly
+- 2 tests added
+
+**Nothing-selected arrow key behavior:**
+- When no node is selected, any arrow key selects the visible node closest to the viewport center
+- Uses stored viewport dimensions and camera state to compute world-space center
+- 2 tests added
+
 ---
 
 ## Remaining gaps (not blocking, could be future work)
@@ -342,6 +374,9 @@
 - Keyboard focus indicators (visible focus ring)
 - Playwright visual regression and offline simulation tests
 - Edge animation (edges currently snap, nodes animate)
+- Assets should live in Store rather than Editor (minor asymmetry)
+- Image mutations bypass store abstraction (direct node mutation)
+- ARIA role="tree" on root tree groups (spec Appendix D)
 
 ---
 
