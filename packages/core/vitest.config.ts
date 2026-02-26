@@ -5,5 +5,6 @@ export default defineConfig({
     name: "core",
     globals: true,
     environment: "node",
+    exclude: ["dist/**", "node_modules/**"],
   },
 });

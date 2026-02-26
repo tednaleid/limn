@@ -3,7 +3,7 @@
 ## Current status
 
 **Phase**: Phase 1 -- Foundation
-**Next chunk**: Chunk 2 (Data model)
+**Next chunk**: Chunk 3 (Serialization)
 **Last updated**: 2026-02-26
 
 ---
@@ -35,23 +35,30 @@
 **Notes/decisions:**
 - Vitest 4.x does not need `--project` filter; `vitest run` picks up workspace config automatically
 
+### Chunk 2: Data model (2026-02-26)
+
+**What was done:**
+- Core types: MindMapNode, MindMap, MindMapMeta, Camera, Asset, ImageRef, NodeStyle, TextMeasurer
+- MindMapStore with flat Map storage and full tree operations
+- Operations: addRoot, addChild, insertChild, deleteNode, setText, setNodePosition, setNodeWidth, toggleCollapse, moveNode (reparent), reorderNode
+- Traversal: getChildren, getParent, getSiblings, getRoots, getAncestors, getVisibleNodes, isDescendant
+- Invariant enforcement: cycle prevention on reparent, subtree deletion, orphan cleanup
+
+**Files changed:**
+- `packages/core/src/model/types.ts` -- all data model interfaces
+- `packages/core/src/store/MindMapStore.ts` -- flat store with tree operations
+- `packages/core/src/index.ts` -- re-exports types and store
+- `packages/core/vitest.config.ts` -- exclude dist/ from test discovery
+- `eslint.config.js` -- fix dist/ glob pattern
+
+**Tests added:**
+- 46 unit tests covering all store operations, tree traversal, edge cases, multi-root
+
 ---
 
 ## Chunk details
 
-### Up next: Chunk 2 — Data model
-
-**Goal:** Core types and tree operations, fully tested.
-
-**Acceptance criteria:**
-- [ ] MindMapNode (with x/y, widthConstrained), MindMap (with roots[]), Asset types defined
-- [ ] Flat store (Map<string, MindMapNode>) with add root/add child/remove/reparent/reorder
-- [ ] Tree traversal utilities (getChildren, getParent, getSiblings, getRoots, getAncestors)
-- [ ] All operations maintain tree invariants (no orphans, no cycles, valid roots[])
-- [ ] Multi-root operations: add root, delete root, empty canvas state
-- [ ] 20+ unit tests covering normal and edge cases including multi-root
-
-### Then: Chunk 3 — Serialization
+### Up next: Chunk 3 — Serialization
 
 **Goal:** JSON round-trip and markdown export.
 
