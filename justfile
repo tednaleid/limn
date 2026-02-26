@@ -35,6 +35,11 @@ build:
 # Run tests, lint, and type-check (CI check)
 check: test lint typecheck
 
+# Install pre-commit hook that runs `just check`
+install-hooks:
+    echo '#!/bin/sh\njust check' > .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+
 # Type-check with TypeScript (builds core declarations, checks web)
 typecheck:
     bunx tsc -b

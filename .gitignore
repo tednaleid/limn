@@ -5,6 +5,5 @@ node_modules/
 dist/
 *.tsbuildinfo
 .vite/
-mindmap-after-edit.png mindmap-collapsed.png mindmap-editing.png mindmap-nav-down.png mindmap-nav-right.png mindmap-render.png mindmap-selected.png mindmap-styled-selected.png mindmap-styled.png mindmap-tab-child.png
 .playwright-mcp
 *.png

@@ -30,6 +30,7 @@ bun run build        # Production build
 A `justfile` is provided for convenience (`just check` runs tests + lint + typecheck).
 
 - Use `bunx` instead of `npx` for running package binaries (this is a Bun project).
+- Save Playwright MCP screenshots to `/tmp`, not the project directory.
 
 ## Architecture invariants
 
