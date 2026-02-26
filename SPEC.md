@@ -79,6 +79,7 @@ The core thesis is that by building the engine as a framework-agnostic TypeScrip
 | File I/O | browser-fs-access | File System Access API with Safari/Firefox fallback |
 | Offline | Service worker (Workbox) | Cache app shell for offline use |
 | Local storage | IndexedDB (via idb-keyval) | Auto-save between sessions |
+| Archive | fflate | Zip/unzip for Safari/Firefox image export fallback |
 | Package manager | Bun | Fast installs; Node.js used by Playwright at test time |
 
 ### Why not React Flow?
@@ -177,6 +178,29 @@ interface MindMap {
     theme: string; // "default", this is a placeholder
   };
 }
+
+// File format types (on-disk representation)
+interface MindMapFileNode {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  children: MindMapFileNode[];  // Inline nested nodes (not ID references)
+  collapsed?: boolean;          // Omitted when false
+  style?: NodeStyle;
+  image?: ImageRef;
+  // parentId is NOT stored — implicit from nesting
+}
+
+interface MindMapFileFormat {
+  version: number;
+  meta: {
+    theme: string;
+  };
+  roots: MindMapFileNode[];
+  crossLinks: CrossLink[];
+  assets: Asset[];
+}
 ```
 
 ### File format (.mindmap)
@@ -186,7 +210,7 @@ On disk, the flat map serializes as a nested tree for readability and clean diff
 ```json
 {
   "version": 1,
-  "meta": { "theme": "default", "layoutMode": "horizontal" },
+  "meta": { "theme": "default" },
   "roots": [
     {
       "id": "n0",
@@ -252,7 +276,7 @@ class Editor {
   // Mutations (all produce tracked diffs for undo)
   addRoot(text?: string, x?: number, y?: number): string;  // Returns new root ID
   addChild(parentId: string, text?: string): string;        // Returns new node ID
-  addSibling(parentId: string, index: number, text?: string): string;  // On a root no-op. If index > parent's children, inserts at end, <0 is error
+  addSibling(parentId: string, index: number, text?: string): string;  // Insert new node as child of parentId at position index. If index > children length, inserts at end
   deleteNode(nodeId: string): void;     // Deletes root and subtree; empty canvas if last
   setText(nodeId: string, text: string): void;
   moveNode(nodeId: string, newParentId: string, index?: number): void;
@@ -385,7 +409,7 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 | Node selected | Navigate down | ↓ | Move to next visually-below node (can cross parent and tree boundaries) |
 | Node selected | Navigate up | ↑ | Move to previous visually-above node (can cross parent and tree boundaries) |
 | Node selected | Enter edit mode | Enter | Cursor at end of node's text |
-| Node selected | Delete node | Backspace | Remove node and entire subtree; no-op if nothing selected, select parent (if any) |
+| Node selected | Delete node | Backspace | Remove node and entire subtree; select parent if it exists, otherwise nearest remaining root by position; nothing selected if canvas becomes empty |
 | Node selected | Collapse/expand | Space | Toggle selected node's collapsed state |
 | Node selected | Move node up | ⌘+↑ | Reorder among siblings |
 | Node selected | Move node down | ⌘+↓ | Reorder among siblings |
@@ -407,7 +431,7 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 | Context | Action | Shortcut | Behavior |
 |---------|--------|----------|----------|
 | Editing | Exit edit mode | Escape | Return to navigation mode |
-| Editing | Create sibling | Enter | Exit edit mode and create sibling node; enters edit mode on new node |
+| Editing | Create sibling | Enter | Exit edit mode and create sibling node; enters edit mode on new node. If editing a root node, just exits edit mode (no sibling created) |
 | Editing | Create child | Tab | Exit edit mode and create child node; enters edit mode on new node |
 | Editing | Newline | Shift+Enter | Adds a newline to the text at cursor position, stays in edit mode |
 
@@ -424,7 +448,7 @@ Direction of a branch is inferred from stored positions: if a child's x coordina
 
 ### Layout direction
 
-In `horizontal` layout mode, the default direction for new children is rightward. If a user drags a first-level child of a root to the left side of that root, its descendants will extend further leftward. The direction is inferred from positions, not stored explicitly.
+The default direction for new children is rightward from their parent. If a user drags a first-level child of a root to the left side of that root, its descendants will extend further leftward. The direction is inferred from positions, not stored explicitly.
 
 ### Auto-reflow
 
@@ -464,7 +488,7 @@ Following tldraw's architecture, undo/redo is automatic and diff-based rather th
 - Drag an image onto the canvas (not a node) → creates a new node with the image
 - Paste an image from clipboard → attaches to selected node, if no node selected creates a new node with the image
 - Resize handles on the image corners; constrained aspect ratio by default, hold shift to free resize
-- Backspace key on a selected image removes the image from the node (not the node itself)
+- Image selection and deletion interaction (how users select an image within a node to resize or delete it) is designed during Chunk 12 implementation
 
 ### Storage
 
@@ -492,7 +516,7 @@ In the browser (before explicit save), images are held in memory as Blob URLs an
 
 ### Auto-save (IndexedDB)
 
-Every mutation is debounced (500ms) and auto-saved to IndexedDB via `idb-keyval`. This survives tab closes and browser restarts. A `persistenceKey` identifies each document. Cross-tab sync uses BroadcastChannel with last-write-wins (timestamp comparison) to keep multiple tabs consistent. No merge logic for v1.
+Every mutation is debounced (500ms) and auto-saved to IndexedDB via `idb-keyval`. This survives tab closes and browser restarts. A `persistenceKey` identifies each document. Cross-tab sync uses BroadcastChannel with a monotonic revision counter stored alongside the document in IndexedDB. When a tab saves, it increments the revision and broadcasts the new value. Tabs that receive a higher revision reload the document state and show a non-blocking toast: "Document updated from another tab." No merge logic for v1.
 
 ### Explicit save (File System Access API)
 
@@ -641,14 +665,6 @@ When the file format version changes, a migration function transforms old format
 const migrations = [
   {
     version: 2,
-    description: 'Add layoutMode to meta',
-    up: (data: any) => {
-      data.meta.layoutMode = data.meta.layoutMode ?? 'horizontal';
-      return data;
-    }
-  },
-  {
-    version: 3,
     description: 'Add style field to nodes',
     up: (data: any) => {
       function addStyle(node: any) {
