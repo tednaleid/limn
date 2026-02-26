@@ -71,6 +71,7 @@ export class Editor {
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
   private redoStack: HistoryEntry[] = [];
+  private lastUndoLabel: string | null = null;
 
   // Change notification for reactive UI (useSyncExternalStore)
   private version = 0;
@@ -288,7 +289,10 @@ export class Editor {
   }
 
   setText(nodeId: string, text: string): void {
-    this.pushUndo("set-text");
+    const squashLabel = `set-text:${nodeId}`;
+    if (this.lastUndoLabel !== squashLabel) {
+      this.pushUndo(squashLabel);
+    }
     this.store.setText(nodeId, text);
     this.notify();
   }
@@ -585,6 +589,7 @@ export class Editor {
     if (!entry) return;
     this.redoStack.push(this.captureState("redo"));
     this.restoreState(entry);
+    this.lastUndoLabel = null;
     this.notify();
   }
 
@@ -593,6 +598,7 @@ export class Editor {
     if (!entry) return;
     this.undoStack.push(this.captureState("undo"));
     this.restoreState(entry);
+    this.lastUndoLabel = null;
     this.notify();
   }
 
@@ -607,6 +613,7 @@ export class Editor {
     this.editing = false;
     this.undoStack = [];
     this.redoStack = [];
+    this.lastUndoLabel = null;
     this.notify();
   }
 
@@ -621,6 +628,7 @@ export class Editor {
   private pushUndo(label: string): void {
     this.undoStack.push(this.captureState(label));
     this.redoStack = []; // Clear redo on new mutation
+    this.lastUndoLabel = label;
   }
 
   private captureState(label: string): HistoryEntry {

@@ -359,6 +359,33 @@ describe("Editor", () => {
       editor.setText("n0", "Updated Root");
       editor.expectText("n0", "Updated Root");
     });
+
+    test("consecutive setText calls produce single undo entry", () => {
+      editor.setText("n0", "H");
+      editor.setText("n0", "He");
+      editor.setText("n0", "Hel");
+      editor.setText("n0", "Hell");
+      editor.setText("n0", "Hello");
+      editor.expectText("n0", "Hello");
+      editor.undo();
+      editor.expectText("n0", "Root");
+    });
+
+    test("setText on different node breaks squash", () => {
+      editor.setText("n0", "Changed Root");
+      editor.setText("n1", "Changed Child");
+      editor.undo();
+      editor.expectText("n1", "Child 1");
+      editor.expectText("n0", "Changed Root");
+    });
+
+    test("non-setText mutation breaks squash", () => {
+      editor.setText("n0", "Changed");
+      editor.addChild("n0");
+      editor.undo(); // undo addChild
+      editor.undo(); // undo setText
+      editor.expectText("n0", "Root");
+    });
   });
 
   describe("toggleCollapse", () => {
