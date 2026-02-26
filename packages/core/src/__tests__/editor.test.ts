@@ -552,6 +552,16 @@ describe("Editor", () => {
     });
   });
 
+  describe("toMarkdown", () => {
+    test("exports markdown outline from current state", () => {
+      const md = editor.toMarkdown();
+      expect(md).toContain("# Root");
+      expect(md).toContain("## Child 1");
+      expect(md).toContain("## Child 2");
+      expect(md).toContain("- Grandchild");
+    });
+  });
+
   describe("toJSON", () => {
     test("preserves camera position", () => {
       editor.setCamera(100, 200, 1.5);

@@ -3,7 +3,7 @@
 
 import type { MindMapNode, TextMeasurer, MindMapMeta, Camera, Asset } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
-import { deserialize, serialize } from "../serialization/serialization";
+import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
 import type { MindMapFileFormat } from "../serialization/schema";
 import {
   branchDirection,
@@ -688,6 +688,10 @@ export class Editor {
     this.redoStack = [];
     this.lastUndoLabel = null;
     this.notify();
+  }
+
+  toMarkdown(): string {
+    return storeToMarkdown(this.store);
   }
 
   toJSON(): MindMapFileFormat {
