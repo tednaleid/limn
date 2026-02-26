@@ -15,3 +15,15 @@ export type {
 } from "./model/types";
 
 export { MindMapStore, resetIdCounter } from "./store/MindMapStore";
+
+export {
+  serialize,
+  deserialize,
+  toMarkdown,
+  validateFileFormat,
+} from "./serialization/serialization";
+
+export type {
+  MindMapFileFormat,
+  MindMapFileNode,
+} from "./serialization/schema";

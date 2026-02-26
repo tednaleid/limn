@@ -3,7 +3,7 @@
 ## Current status
 
 **Phase**: Phase 1 -- Foundation
-**Next chunk**: Chunk 3 (Serialization)
+**Next chunk**: Chunk 4 (Editor + TestEditor)
 **Last updated**: 2026-02-26
 
 ---
@@ -58,20 +58,27 @@
 
 ## Chunk details
 
-### Up next: Chunk 3 — Serialization
+### Chunk 3: Serialization (2026-02-26)
 
-**Goal:** JSON round-trip and markdown export.
+**What was done:**
+- Zod schema for .mindmap file format validation
+- Serialize: flat MindMapStore to nested JSON file format
+- Deserialize: nested JSON file format to flat MindMapStore
+- Round-trip preserves structure, positions, collapsed state, widthConstrained
+- Markdown export (H1 for roots, H2 for depth 1, bullets for deeper)
+- File format types (MindMapFileNode, MindMapFileFormat)
+- Added loadNode/addRootId methods to MindMapStore for deserialization
 
-**Acceptance criteria:**
-- [ ] Nested JSON (with roots[] and x/y) → flat runtime model (deserialize)
-- [ ] Flat runtime model → nested JSON (serialize)
-- [ ] Round-trip: serialize(deserialize(json)) === json (positions preserved)
-- [ ] Zod schema validates file format
-- [ ] Markdown export generates indented outline
-- [ ] Version field included; migration system scaffolded
-- [ ] 15+ unit tests including edge cases (empty map, single root, multiple roots, deep nesting)
+**Files changed:**
+- `packages/core/src/serialization/schema.ts` -- zod schema and file format types
+- `packages/core/src/serialization/serialization.ts` -- serialize, deserialize, toMarkdown, validateFileFormat
+- `packages/core/src/store/MindMapStore.ts` -- added loadNode, addRootId
+- `packages/core/src/index.ts` -- re-exports serialization module
 
-### Then: Chunk 4 — Editor + TestEditor
+**Tests added:**
+- 24 unit tests covering deserialize, serialize, round-trip, validation, markdown export
+
+### Up next: Chunk 4 — Editor + TestEditor
 
 **Goal:** Editor class with all core operations, diff-based undo, key-to-action dispatch, and TestEditor for simulated interaction.
 

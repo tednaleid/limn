@@ -95,6 +95,16 @@ export class MindMapStore {
     return false;
   }
 
+  /** Load a pre-built node (used by deserialization). */
+  loadNode(node: MindMapNode): void {
+    this.nodes.set(node.id, node);
+  }
+
+  /** Register a node ID as a root (used by deserialization). */
+  addRootId(id: string): void {
+    this.rootIds.push(id);
+  }
+
   addRoot(text = "", x = 0, y = 0): string {
     const id = generateId();
     const node: MindMapNode = {
