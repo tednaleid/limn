@@ -25,7 +25,7 @@ lint:
     bun run lint
 
 # Start the Vite dev server
-start:
+serve:
     bun run dev
 
 # Production build
