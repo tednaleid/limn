@@ -4,7 +4,7 @@
 
 **Phase**: All chunks complete (1-17), plus post-spec polish
 **Last updated**: 2026-02-26
-**Tests**: 229 passing across 12 test files, lint clean
+**Tests**: 238 passing across 13 test files, lint and typecheck clean
 
 ---
 
@@ -401,6 +401,13 @@
 - 500-node tree: build <500ms, navigate <50ms, collapse <50ms, serialize <100ms, deserialize <100ms
 - 1000-node tree: build <2s, navigate <100ms, serialize <200ms, undo/redo <50ms
 - 9 benchmarks, all passing within thresholds
+
+**TypeScript strict typecheck pipeline:**
+- Root tsconfig is a solution file (files: []) referencing core and web
+- Core builds to dist/ (composite), web is noEmit (Vite builds it)
+- Tests excluded from core build output
+- `bunx tsc -b` type-checks both packages cleanly
+- justfile `check` recipe runs tests + lint + typecheck
 
 ---
 
