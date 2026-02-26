@@ -1,0 +1,180 @@
+// ABOUTME: Key-to-action dispatch table for keyboard shortcuts.
+// ABOUTME: Shared by web input handler and TestEditor for consistent behavior.
+
+import type { Editor } from "../editor/Editor";
+
+export interface Modifiers {
+  meta?: boolean;
+  shift?: boolean;
+  ctrl?: boolean;
+  alt?: boolean;
+}
+
+interface KeyBinding {
+  key: string;
+  modifiers?: Modifiers;
+  mode: "nav" | "edit" | "both";
+  action: (editor: Editor) => void;
+}
+
+function modifiersMatch(
+  required: Modifiers | undefined,
+  actual: Modifiers,
+): boolean {
+  const req = required ?? {};
+  return (
+    (req.meta ?? false) === (actual.meta ?? false) &&
+    (req.shift ?? false) === (actual.shift ?? false) &&
+    (req.ctrl ?? false) === (actual.ctrl ?? false) &&
+    (req.alt ?? false) === (actual.alt ?? false)
+  );
+}
+
+const bindings: KeyBinding[] = [
+  // --- Nav mode ---
+  {
+    key: "Tab",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.addChild(sel);
+    },
+  },
+  {
+    key: "Enter",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) {
+        editor.enterEditMode();
+      } else {
+        editor.addRoot();
+      }
+    },
+  },
+  {
+    key: "Enter",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.addSibling(sel);
+    },
+  },
+  {
+    key: "Escape",
+    mode: "nav",
+    action: (editor) => {
+      editor.deselect();
+    },
+  },
+  {
+    key: "Backspace",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.deleteNode(sel);
+    },
+  },
+  {
+    key: " ",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.toggleCollapse(sel);
+    },
+  },
+  {
+    key: "ArrowUp",
+    modifiers: { meta: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.reorderNode(sel, "up");
+    },
+  },
+  {
+    key: "ArrowDown",
+    modifiers: { meta: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.reorderNode(sel, "down");
+    },
+  },
+
+  // --- Edit mode ---
+  {
+    key: "Escape",
+    mode: "edit",
+    action: (editor) => {
+      editor.exitEditMode();
+    },
+  },
+  {
+    key: "Enter",
+    mode: "edit",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (!sel) return;
+      const node = editor.getNode(sel);
+      editor.exitEditMode();
+      if (node.parentId === null) {
+        // Root node: just exit edit mode, no sibling
+        return;
+      }
+      editor.addSibling(sel);
+    },
+  },
+  {
+    key: "Tab",
+    mode: "edit",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (!sel) return;
+      editor.exitEditMode();
+      editor.addChild(sel);
+    },
+  },
+
+  // --- Both modes ---
+  {
+    key: "z",
+    modifiers: { meta: true },
+    mode: "both",
+    action: (editor) => {
+      editor.undo();
+    },
+  },
+  {
+    key: "z",
+    modifiers: { meta: true, shift: true },
+    mode: "both",
+    action: (editor) => {
+      editor.redo();
+    },
+  },
+];
+
+/**
+ * Dispatch a key event to the appropriate Editor action.
+ * Returns true if the key was handled, false otherwise.
+ */
+export function dispatch(
+  editor: Editor,
+  key: string,
+  modifiers: Modifiers = {},
+): boolean {
+  const mode = editor.isEditing() ? "edit" : "nav";
+
+  for (const binding of bindings) {
+    if (binding.key !== key) continue;
+    if (binding.mode !== mode && binding.mode !== "both") continue;
+    if (!modifiersMatch(binding.modifiers, modifiers)) continue;
+
+    binding.action(editor);
+    return true;
+  }
+
+  return false;
+}

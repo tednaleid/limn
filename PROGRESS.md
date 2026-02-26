@@ -3,7 +3,7 @@
 ## Current status
 
 **Phase**: Phase 1 -- Foundation
-**Next chunk**: Chunk 4 (Editor + TestEditor)
+**Next chunk**: Chunk 5 (Layout engine)
 **Last updated**: 2026-02-26
 
 ---
@@ -78,21 +78,33 @@
 **Tests added:**
 - 24 unit tests covering deserialize, serialize, round-trip, validation, markdown export
 
-### Up next: Chunk 4 — Editor + TestEditor
+### Chunk 4: Editor + TestEditor (2026-02-26)
 
-**Goal:** Editor class with all core operations, diff-based undo, key-to-action dispatch, and TestEditor for simulated interaction.
+**What was done:**
+- Editor class wrapping MindMapStore with selection, nav/edit mode state machine, undo/redo
+- Snapshot-based undo/redo (captures full document state at each mutation)
+- Key-to-action dispatch table in `core/src/keybindings/dispatch.ts`
+- TestEditor extends Editor with pressKey() and assertion methods
+- All keyboard shortcuts from spec implemented: Tab, Enter, Escape, Backspace, Space, Shift+Enter, Cmd+Z, Shift+Cmd+Z, Cmd+Up/Down
+- Empty node cleanup on Escape (exit edit mode with empty text deletes the node)
+- Simple position heuristics for new children and siblings
+- Stub TextMeasurer for tests (character-count-based estimates)
 
-**Acceptance criteria:**
-- [ ] Editor wraps store, exposes full mutation API
-- [ ] Editor accepts a TextMeasurer interface (DI); tests use a stub measurer
-- [ ] Every mutation produces a tracked diff
-- [ ] markHistory/undo/redo work correctly
-- [ ] Selection and navigation methods work
-- [ ] Nav mode / edit mode state machine
-- [ ] Key-to-action dispatch table in `core/src/keybindings/` (maps keys to Editor methods; shared by web input handler and TestEditor)
-- [ ] Simple position heuristics for node creation (child offset from parent, siblings stacked vertically); replaced by proper layout engine in Chunk 5
-- [ ] TestEditor simulates keyDown/keyUp/pressKey/pointerDown/type (routed through dispatch)
-- [ ] TestEditor assertion methods (expectSelected, expectEditing, etc.)
+**Files changed:**
+- `packages/core/src/editor/Editor.ts` -- Editor class
+- `packages/core/src/keybindings/dispatch.ts` -- key-to-action dispatch
+- `packages/core/src/test-editor/TestEditor.ts` -- TestEditor for testing
+- `packages/core/src/index.ts` -- re-exports editor, dispatch, TestEditor
+- `eslint.config.js` -- allow non-null assertions in test files
+
+**Tests added:**
+- 40 unit tests covering selection, edit mode, addChild, deleteNode, undo/redo, keyboard dispatch, empty node cleanup, setText, toggleCollapse
+
+**Notes/decisions:**
+- Undo uses full-state snapshots rather than fine-grained diffs for initial simplicity; can optimize later if performance requires it
+- Empty node cleanup on Escape is not tracked by undo (it's part of the exit-edit-mode flow, not a separate user action)
+
+### Up next: Chunk 5
 - [ ] 30+ tests covering operations, undo/redo, keyboard simulation via dispatch
 
 ---

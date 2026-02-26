@@ -27,3 +27,8 @@ export type {
   MindMapFileFormat,
   MindMapFileNode,
 } from "./serialization/schema";
+
+export { Editor, stubTextMeasurer } from "./editor/Editor";
+export { dispatch } from "./keybindings/dispatch";
+export type { Modifiers } from "./keybindings/dispatch";
+export { TestEditor } from "./test-editor/TestEditor";
