@@ -369,4 +369,22 @@ describe("Editor", () => {
       editor.expectExpanded("n1");
     });
   });
+
+  describe("toJSON", () => {
+    test("preserves camera position", () => {
+      editor.setCamera(100, 200, 1.5);
+      const data = editor.toJSON();
+      expect(data.camera).toEqual({ x: 100, y: 200, zoom: 1.5 });
+    });
+
+    test("preserves camera through load and save round-trip", () => {
+      const fileWithCamera: MindMapFileFormat = {
+        ...sampleMap,
+        camera: { x: 50, y: -75, zoom: 0.8 },
+      };
+      editor.loadJSON(fileWithCamera);
+      const data = editor.toJSON();
+      expect(data.camera).toEqual({ x: 50, y: -75, zoom: 0.8 });
+    });
+  });
 });

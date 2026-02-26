@@ -611,7 +611,7 @@ export class Editor {
   }
 
   toJSON(): MindMapFileFormat {
-    const data = serialize(this.store, this.meta);
+    const data = serialize(this.store, this.meta, this.camera);
     data.assets = this.assets.map((a) => ({ ...a }));
     return data;
   }
