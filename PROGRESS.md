@@ -57,24 +57,25 @@
 **Goal:** Core types and tree operations, fully tested.
 
 **Acceptance criteria:**
-- [ ] MindMapNode, MindMap, CrossLink, Asset types defined
-- [ ] Flat store (Map<string, MindMapNode>) with add/remove/reparent/reorder
-- [ ] Tree traversal utilities (getChildren, getParent, getSiblings, getAncestors)
-- [ ] All operations maintain tree invariants (no orphans, no cycles)
-- [ ] 20+ unit tests covering normal and edge cases
+- [ ] MindMapNode (with x/y), MindMap (with roots[]), CrossLink, Asset types defined
+- [ ] Flat store (Map<string, MindMapNode>) with add root/add child/remove/reparent/reorder
+- [ ] Tree traversal utilities (getChildren, getParent, getSiblings, getRoots, getAncestors)
+- [ ] All operations maintain tree invariants (no orphans, no cycles, valid roots[])
+- [ ] Multi-root operations: add root, delete root, empty canvas state
+- [ ] 20+ unit tests covering normal and edge cases including multi-root
 
 ### Then: Chunk 3 — Serialization (can parallel with Chunk 2)
 
 **Goal:** JSON round-trip and markdown export.
 
 **Acceptance criteria:**
-- [ ] Nested JSON → flat runtime model (deserialize)
+- [ ] Nested JSON (with roots[] and x/y) → flat runtime model (deserialize)
 - [ ] Flat runtime model → nested JSON (serialize)
-- [ ] Round-trip: serialize(deserialize(json)) === json
+- [ ] Round-trip: serialize(deserialize(json)) === json (positions preserved)
 - [ ] Zod schema validates file format
 - [ ] Markdown export generates indented outline
 - [ ] Version field included; migration system scaffolded
-- [ ] 15+ unit tests including edge cases (empty map, single node, deep nesting)
+- [ ] 15+ unit tests including edge cases (empty map, single root, multiple roots, deep nesting)
 
 ### Then: Chunk 4 — Editor + TestEditor
 
@@ -108,3 +109,9 @@
 | (date) | Web-first PWA over Electron/Tauri | Best Playwright support; zero-install; Tauri available as later escape hatch |
 | (date) | Sidecar assets over embedded base64 | Git-friendly diffs; manageable image storage; Obsidian-compatible |
 | (date) | Flat runtime model, nested file format | Fast lookups in memory; readable diffs on disk |
+| 2026-02-25 | Stored positions over computed-only | Enables user repositioning via drag; direction inferred from positions |
+| 2026-02-25 | Multiple roots (forest) over single root | More flexible canvas; roots can be created/deleted freely; empty canvas valid |
+| 2026-02-25 | Spatial arrow navigation over structural | Left/Right follow screen direction, not parent/child; matches MindNode; intuitive for bidirectional layout |
+| 2026-02-25 | Enter=edit mode, not create sibling | In nav mode Enter edits; in edit mode Enter creates sibling; two keystrokes for sibling from nav is acceptable |
+| 2026-02-25 | Auto-reflow siblings on add/remove | Keeps layout clean; each root tree reflows independently |
+| 2026-02-25 | Direction inferred from positions | No explicit side property; child.x < parent.x means left-side branch; simpler data model |

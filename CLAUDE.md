@@ -33,11 +33,11 @@ bun run build        # Production build
 - **Editor is the sole source of truth.** All mutations go through Editor methods. DOM renders from Editor state, never writes to it.
 - **Core has zero browser dependencies.** Nothing in `packages/core/` imports React, DOM APIs, or browser globals.
 - **Diff-based undo.** Store captures diffs automatically. No Command classes.
-- **Positions are computed, never stored.** Layout engine derives x/y from tree structure. The file format stores only structure and metadata.
+- **Positions are stored.** Layout engine computes initial positions; users can reposition nodes by dragging. File format includes x/y coordinates.
 - **Images use sidecar storage.** `file.mindmap` + `file.assets/` directory. Never base64 in JSON.
 - **TestEditor for logic tests.** Playwright is only for visual regression and browser-API integration. If it can be tested without a browser, it must be.
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
-- **Root node cannot be deleted.** Delete operations are no-ops on the root.
+- **Multiple roots supported.** A mind map is a forest of trees. Roots can be created and deleted freely. Empty canvas is valid.
 - **Multi-line node text.** Shift+Enter inserts newline in edit mode. Enter exits edit mode and creates sibling.
 
 ## Specs and progress

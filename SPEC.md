@@ -27,8 +27,8 @@ The core thesis is that by building the engine as a framework-agnostic TypeScrip
 | # | Requirement | Notes |
 |---|-------------|-------|
 | H1 | Works on macOS | Web-first PWA; installable via Chrome "Add to Dock" or Safari 17+ |
-| H2 | Git-friendly file format | JSON with computed positions, sorted keys, sidecar directory for images |
-| H3 | First-class keyboard support | MindNode-style: Tab=child, Enter=sibling, arrows=navigate, distinct nav/edit modes |
+| H2 | Git-friendly file format | JSON with stored positions, sorted keys, sidecar directory for images |
+| H3 | First-class keyboard support | Tab=child, Enter=edit, arrows=spatial navigate, distinct nav/edit modes |
 | H4 | High testability by Claude Code | TestEditor pattern (tldraw-inspired) — all interactions simulatable without a browser |
 | H5 | Collapsible nodes | Toggle collapse with keyboard shortcut; collapsed state persisted in file |
 | H6 | Automated test suite | Unit tests via Vitest + TestEditor; Playwright for visual regression only |
@@ -65,7 +65,7 @@ The core thesis is that by building the engine as a framework-agnostic TypeScrip
 |-------|-----------|---------|
 | Language | TypeScript (strict mode) | Type safety, IDE support, Claude Code compatibility |
 | Test runner | Vitest | Fast, ESM-native, compatible with TestEditor pattern |
-| Layout | @dagrejs/dagre | Sugiyama-style tree layout; computes node positions from tree structure |
+| Layout | @dagrejs/dagre | Sugiyama-style tree layout; computes initial node positions, reflows on structural changes |
 | Validation | zod | Runtime schema validation for file format |
 
 ### Web application
@@ -98,8 +98,9 @@ Excalidraw proved this model: they deprecated their Electron app because the web
 1. **The Editor is the source of truth, not the DOM.** All state mutations flow through the Editor API. The DOM is a rendering target. This enables the TestEditor pattern.
 2. **Diff-based undo, not command-based.** The store captures diffs for every mutation automatically. Undo inverts the diff. No need to maintain Command classes for every operation.
 3. **Flat runtime model, nested file format.** In memory, nodes live in a flat Map keyed by ID with both `parentId` and `children[]` references (O(1) parent lookup, ordered child traversal). On disk, they serialize as a nested tree (clean diffs, human-readable).
-4. **Positions are computed, never stored.** The layout algorithm produces positions from the tree structure at render time. The file stores only structure, text, and metadata — never coordinates.
-5. **Images stored as sidecar files.** Binary assets live in a `{name}.assets/` directory alongside the JSON file, referenced by relative path. This keeps the JSON diffable and the assets manageable in git.
+4. **Positions are stored.** The layout engine computes initial positions for new nodes and reflows siblings on structural changes. Users can reposition nodes by dragging. The file format includes x/y coordinates for every node.
+5. **Multiple roots (forest).** A mind map can contain multiple independent root trees on the same canvas. Roots can be created and deleted freely. An empty canvas is a valid state.
+6. **Images stored as sidecar files.** Binary assets live in a `{name}.assets/` directory alongside the JSON file, referenced by relative path. This keeps the JSON diffable and the assets manageable in git.
 
 ### Package/module structure
 
@@ -132,10 +133,12 @@ The `core` package has zero browser or React dependencies. It can be used in Nod
 ```typescript
 interface MindMapNode {
   id: string;              // Stable unique ID (nanoid)
-  parentId: string | null; // null for root node only
+  parentId: string | null; // null for root nodes
   text: string;            // Node content (supports multi-line via Shift+Enter)
   children: string[];      // Ordered child IDs (sibling order matters)
   collapsed: boolean;      // Whether children are hidden
+  x: number;               // Horizontal position (stored, computed initially by layout engine)
+  y: number;               // Vertical position (stored, computed initially by layout engine)
   style?: NodeStyle;       // Optional color, shape overrides
   image?: ImageRef;        // Optional attached image
 }
@@ -166,53 +169,63 @@ interface Asset {
 }
 
 interface MindMap {
-  root: string;            // Root node ID
+  roots: string[];         // Root node IDs (multiple independent trees)
   nodes: Map<string, MindMapNode>;  // Flat node map (runtime)
   crossLinks: CrossLink[];
   assets: Asset[];
   meta: {
     version: number;
     theme: string;
-    layoutMode: 'standard' | 'right' | 'down';  // standard: root center, children balanced left/right; right: all children to the right; down: top-to-bottom org chart
+    layoutMode: 'horizontal' | 'down';  // horizontal: children extend rightward by default, user can drag branches left; down: top-to-bottom org chart
   };
 }
 ```
 
 ### File format (.mindmap)
 
-On disk, the flat map serializes as a nested tree for readability and clean diffs. Keys are sorted. No positions stored. The `parentId` field is omitted (parent is implicit from nesting). The `children` field changes from an array of ID strings (runtime) to an array of inline node objects (file format). The `collapsed` field is omitted when `false` (the default) to reduce noise.
+On disk, the flat map serializes as a nested tree for readability and clean diffs. Keys are sorted. Each node includes its stored x/y position. The `parentId` field is omitted (parent is implicit from nesting). The `children` field changes from an array of ID strings (runtime) to an array of inline node objects (file format). The `collapsed` field is omitted when `false` (the default) to reduce noise. The top-level `roots` array holds one or more independent root trees.
 
 ```json
 {
   "version": 1,
-  "meta": { "theme": "default", "layoutMode": "standard" },
-  "root": {
-    "id": "n0",
-    "text": "Project Plan",
-    "children": [
-      {
-        "id": "n1",
-        "text": "Phase 1",
-        "children": [
-          { "id": "n3", "text": "Research", "children": [] },
-          {
-            "id": "n4",
-            "text": "Architecture",
-            "children": [],
-            "image": { "assetId": "a1", "width": 400, "height": 300 }
-          }
-        ]
-      },
-      {
-        "id": "n2",
-        "text": "Phase 2",
-        "collapsed": true,
-        "children": [
-          { "id": "n5", "text": "Implementation", "children": [] }
-        ]
-      }
-    ]
-  },
+  "meta": { "theme": "default", "layoutMode": "horizontal" },
+  "roots": [
+    {
+      "id": "n0",
+      "text": "Project Plan",
+      "x": 0,
+      "y": 0,
+      "children": [
+        {
+          "id": "n1",
+          "text": "Phase 1",
+          "x": 250,
+          "y": -60,
+          "children": [
+            { "id": "n3", "text": "Research", "x": 480, "y": -90, "children": [] },
+            {
+              "id": "n4",
+              "text": "Architecture",
+              "x": 480,
+              "y": -30,
+              "children": [],
+              "image": { "assetId": "a1", "width": 400, "height": 300 }
+            }
+          ]
+        },
+        {
+          "id": "n2",
+          "text": "Phase 2",
+          "x": 250,
+          "y": 60,
+          "collapsed": true,
+          "children": [
+            { "id": "n5", "text": "Implementation", "x": 480, "y": 60, "children": [] }
+          ]
+        }
+      ]
+    }
+  ],
   "crossLinks": [
     { "id": "cl1", "sourceId": "n3", "targetId": "n5", "label": "informs" }
   ],
@@ -233,28 +246,32 @@ class Editor {
   getChildren(id: string): MindMapNode[];
   getParent(id: string): MindMapNode | null;
   getSiblings(id: string): MindMapNode[];
-  getSelectedId(): string | null;
+  getRoots(): MindMapNode[];            // All root nodes
+  getSelectedId(): string | null;       // null when nothing selected (valid state)
   isCollapsed(id: string): boolean;
-  getVisibleNodes(): MindMapNode[];  // Respects collapsed state
+  getVisibleNodes(): MindMapNode[];     // Respects collapsed state, spans all trees
 
   // Mutations (all produce tracked diffs for undo)
-  addChild(parentId: string, text?: string): string;      // Returns new node ID
-  addSibling(nodeId: string, text?: string): string;
+  addRoot(text?: string, x?: number, y?: number): string;  // Returns new root ID
+  addChild(parentId: string, text?: string): string;        // Returns new node ID
+  addSibling(nodeId: string, text?: string): string;        // On a root, creates another root
   addSiblingAbove(nodeId: string, text?: string): string;
-  deleteNode(nodeId: string): void;
+  deleteNode(nodeId: string): void;     // Deletes root and subtree; empty canvas if last
   setText(nodeId: string, text: string): void;
   moveNode(nodeId: string, newParentId: string, index?: number): void;
   reorderNode(nodeId: string, direction: 'up' | 'down'): void;
+  setNodePosition(nodeId: string, x: number, y: number): void;  // Manual repositioning
   toggleCollapse(nodeId: string): void;
   setNodeImage(nodeId: string, asset: Asset): void;
   removeNodeImage(nodeId: string): void;
 
-  // Navigation and selection
+  // Navigation and selection (spatial — direction relative to screen, not tree structure)
   select(nodeId: string): void;
-  selectParent(): void;
-  selectFirstChild(): void;
-  selectNextSibling(): void;
-  selectPrevSibling(): void;
+  deselect(): void;                     // Nothing selected
+  navigateLeft(): void;                 // Toward parent on right-side branches, toward children on left-side
+  navigateRight(): void;                // Toward children on right-side branches, toward parent on left-side
+  navigateUp(): void;                   // Visually above; can cross tree boundaries
+  navigateDown(): void;                 // Visually below; can cross tree boundaries
 
   // Edit mode
   enterEditMode(): void;
@@ -314,12 +331,10 @@ class TestEditor extends Editor {
 
   // Convenience
   selectAndTab(): string;  // Select current + Tab to create child
-  selectAndEnter(): string; // Select current + Enter to create sibling
 
   // State inspection
   getCommandHistory(): HistoryEntry[];
   getEventLog(): EditorEvent[];
-  getLayoutPositions(): Map<string, {x: number, y: number}>;
 }
 ```
 
@@ -358,28 +373,29 @@ test('Cmd+Z undoes node creation', () => {
 
 The app has two distinct modes, following the MindNode/Excel paradigm:
 
-**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection. Tab/Enter create nodes. Shortcuts modify the selected node.
+**Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection spatially (direction relative to screen position, not tree structure). Tab creates child nodes. Enter enters edit mode. Shortcuts modify the selected node. When nothing is selected (empty canvas or after deselect), Enter creates a new root node.
 
-**Edit mode** (entered via Enter when node is highlighted or double-click on node): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. If text is already in node, cursor starts at the end of the current text. Escape exits to navigation mode. Creating a new node (Tab/Enter) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child. 
+**Edit mode** (entered via Enter when node is selected, or double-click on node): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. If text is already in node, cursor starts at the end of the current text. Escape exits to navigation mode. Creating a new node (Tab) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child.
 
 ### Keyboard shortcuts (navigation mode)
 
-| Context | Action | macOS shortcut | Behavior |
-|--------|---------------|----------|
-| Node highlighted | Create child | Tab | New child of selected node; enters edit mode; if children already this child follows other children |
-| Node highlighted | Left | ← | move to parent |
-| Node highlighted | Right | → | move to first child |
-| Node highlighted | Down | ↓ | Move to next sibling. If last sibling, move to next visually-below node (can cross parent boundaries) |
-| Node highlighted | Up | ↑ | Move to previous sibling. If first sibling, visually-above node (can cross parent boundaries) |
-| Node highlighted | Enter edit mode | Enter | Cursor at end of node's text |
-| Node highlighted | Delete node and children | Backspace | Remove entire subtree; if at root, deletes full tree |
-| Node highlighted | Collapse/expand | Space | Toggle selected node's collapsed state |
-| Node highlighted | Move node up | ⌘+↑ | Reorder among siblings |
-| Node highlighted | Move node down | ⌘+↓ | Reorder among siblings |
+| Context | Action | Shortcut | Behavior |
+|---------|--------|----------|----------|
+| Node selected | Create child | Tab | New child of selected node; enters edit mode |
+| Node selected | Navigate left | ← | Spatial: toward parent on right-side branches, toward children on left-side branches |
+| Node selected | Navigate right | → | Spatial: toward children on right-side branches, toward parent on left-side branches |
+| Node selected | Navigate down | ↓ | Move to next visually-below node (can cross parent and tree boundaries) |
+| Node selected | Navigate up | ↑ | Move to previous visually-above node (can cross parent and tree boundaries) |
+| Node selected | Enter edit mode | Enter | Cursor at end of node's text |
+| Node selected | Delete node | Backspace | Remove node and entire subtree; no-op if nothing selected |
+| Node selected | Collapse/expand | Space | Toggle selected node's collapsed state |
+| Node selected | Move node up | ⌘+↑ | Reorder among siblings |
+| Node selected | Move node down | ⌘+↓ | Reorder among siblings |
+| Nothing selected | Create root | Enter | New root node at canvas center; enters edit mode |
 | Any | Undo | ⌘+Z | Invert last diff |
 | Any | Redo | ⇧+⌘+Z | Reapply last undone diff |
 | Any | Zoom to fit | ⌘+0 | Fit all visible nodes in viewport |
-| Node Highlighted | Zoom to selection | ⌘+1 | Center and zoom to selected node |
+| Node selected | Zoom to selection | ⌘+1 | Center and zoom to selected node |
 | Any | Zoom in | ⌘+= | Increase zoom |
 | Any | Zoom out | ⌘+- | Decrease zoom |
 | Any | Save | ⌘+S | Save to current file (or download) |
@@ -388,14 +404,35 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 
 ### Keyboard shortcuts (edit mode)
 
-| Context | Action | macOS shortcut | Behavior |
-|--------|---------------|----------|
-| Exit edit mode | Escape | Return to navigation mode |
-| Newline in edit text | Shift+Enter | Adds a newline to the text at cursor position, stays in edit mode |
+| Context | Action | Shortcut | Behavior |
+|---------|--------|----------|----------|
+| Editing | Exit edit mode | Escape | Return to navigation mode |
+| Editing | Create sibling | Enter | Exit edit mode and create sibling node; enters edit mode on new node |
+| Editing | Create child | Tab | Exit edit mode and create child node; enters edit mode on new node |
+| Editing | Newline | Shift+Enter | Adds a newline to the text at cursor position, stays in edit mode |
 
-### Navigation traversal rules
+### Spatial navigation rules
 
-When a node is created (Tab or Enter), the map automatically scrolls to keep the new node visible and the layout smoothly animates to accommodate the new position.
+Arrow keys navigate spatially based on screen position, not tree structure. The direction of Left/Right flips depending on which side of its parent a node is on:
+
+- **Right-side branches** (child.x > parent.x): Left moves toward parent, Right moves toward first child.
+- **Left-side branches** (child.x < parent.x): Right moves toward parent, Left moves toward first child.
+- **At a root node**: Left goes to first left-side child (if any), Right goes to first right-side child (if any).
+- **Up/Down**: Move to the nearest visible node above/below the current node by y position. Can cross parent boundaries and tree boundaries.
+
+Direction of a branch is inferred from stored positions: if a child's x coordinate is less than its parent's x, it is a left-side branch.
+
+### Layout direction
+
+In `horizontal` layout mode, the default direction for new children is rightward. If a user drags a first-level child of a root to the left side of that root, its descendants will extend further leftward. The direction is inferred from positions, not stored explicitly.
+
+### Auto-reflow
+
+When nodes are added or removed, the layout engine reflows sibling positions to maintain even spacing. Each root tree is laid out independently. Trees do not auto-reflow based on other trees' positions.
+
+### Viewport following
+
+When a node is created (Tab or Enter in edit mode), the map automatically scrolls to keep the new node visible and the layout smoothly animates to accommodate the new position.
 
 ---
 
@@ -499,7 +536,7 @@ Each chunk is scoped to be completable in a single Claude Code session (~100–5
 | Chunk | Scope | Deliverables | Tests |
 |-------|-------|-------------|-------|
 | **1. Scaffold** | TypeScript project with Vitest, build pipeline, CLAUDE.md, PROGRESS.md | `core/` and `web/` package structure; `bun install && bun run test` passes | Smoke test |
-| **2. Data model** | MindMapNode, MindMap types; flat store with parentId references; tree operations (add child, add sibling, delete, reparent, reorder) | `core/src/model/`, `core/src/store/` | Unit tests for all tree operations |
+| **2. Data model** | MindMapNode (with x/y), MindMap (with roots[]) types; flat store with parentId references; tree operations (add child, add sibling, add root, delete, reparent, reorder) | `core/src/model/`, `core/src/store/` | Unit tests for all tree operations including multi-root |
 | **3. Serialization** | JSON round-trip (nested file ↔ flat runtime); markdown export; file format validation with zod | `core/src/serialization/` | Serialize → deserialize → equality; snapshot tests for markdown output |
 | **4. Editor + TestEditor** | Editor class with store, mutation methods, history marks, diff-based undo/redo; TestEditor with simulated keyboard/pointer input and assertion methods | `core/src/editor/`, `core/src/test-editor/` | Undo/redo tests; keyboard simulation tests; history inspection tests |
 
@@ -509,7 +546,7 @@ Chunks 2 and 3 can be developed in parallel (they share types but are otherwise 
 
 | Chunk | Scope | Deliverables | Tests |
 |-------|-------|-------------|-------|
-| **5. Layout engine** | @dagrejs/dagre integration; compute positions from tree; handle collapsed subtrees; standard mind map layout (root center, children balanced left/right) | `core/src/layout/` | Position snapshot tests; collapsed subtree exclusion tests |
+| **5. Layout engine** | @dagrejs/dagre integration; compute initial positions; auto-reflow on add/remove; bidirectional layout (right-side LR, left-side RL); handle collapsed subtrees; independent layout per root tree | `core/src/layout/` | Position snapshot tests; collapsed subtree exclusion tests; bidirectional layout tests |
 | **6. SVG renderer** | React components for nodes, edges, labels; custom pan/zoom viewport; render from Editor state | `web/src/components/` | Playwright visual regression screenshots |
 | **7. Node styling** | Colors, shape variants, collapse indicators, selected/focused states; CSS | `web/src/components/` | Playwright screenshot comparisons |
 
@@ -517,10 +554,10 @@ Chunks 2 and 3 can be developed in parallel (they share types but are otherwise 
 
 | Chunk | Scope | Deliverables | Tests |
 |-------|-------|-------------|-------|
-| **8. Keyboard navigation** | Arrow key traversal, Tab/Enter creation, focus management, mode switching (nav/edit) | `web/src/input/keyboard.ts`; wired to Editor | TestEditor keyboard tests (the bulk of testing happens here) |
+| **8. Keyboard navigation** | Spatial arrow key traversal (direction-aware), Tab creates child, Enter enters edit mode, Enter with nothing selected creates root, focus management, mode switching (nav/edit) | `web/src/input/keyboard.ts`; wired to Editor | TestEditor keyboard tests (the bulk of testing happens here); spatial navigation tests across tree boundaries |
 | **9. Text editing** | Absolutely-positioned textarea over canvas (not foreignObject); F2 to enter, Escape to exit; auto-enter on node creation; zoom-aware transforms | `web/src/components/EditableNode.tsx` | TestEditor type() tests; Playwright text rendering verification |
 | **10. Collapse/expand** | Toggle collapse, Space shortcut, animated transitions for showing/hiding children | Wired through Editor | TestEditor collapse state tests |
-| **11. Mouse interaction** | Click to select, double-click to edit, drag to pan (on canvas), drag to reparent (on nodes), scroll to zoom | `web/src/input/mouse.ts` | TestEditor pointer simulation tests |
+| **11. Mouse interaction** | Click to select, double-click to edit (on node) or create root (on canvas), drag to pan (on canvas), drag to reposition nodes (updates stored x/y), drag to reparent, scroll to zoom | `web/src/input/mouse.ts` | TestEditor pointer simulation tests; drag-to-reposition tests |
 | **12. Image support** | Drag-and-drop images, paste from clipboard, resize handles, asset registry, sidecar storage | `core/src/model/assets.ts`; `web/src/components/ImageNode.tsx` | Unit tests for asset lifecycle; Playwright drag-drop E2E |
 
 ### Phase 4 — Persistence (Chunks 13–14)
@@ -590,7 +627,7 @@ The core engine's zero-dependency design makes an Obsidian plugin viable. The pl
 
 | Tool | What we take from it | What we avoid |
 |------|---------------------|---------------|
-| **MindNode** | Keyboard model (Tab/Enter), layout aesthetics, smooth animations | App Store lock-in, proprietary format |
+| **MindNode** | Keyboard model (Tab for children), layout aesthetics, smooth animations, spatial arrow navigation | App Store lock-in, proprietary format |
 | **Miro** | Mind map auto-layout, collaborative feel | Cloud dependency, enterprise pricing |
 | **Excalidraw** | Web-first PWA architecture, browser-fs-access, URL sharing, Obsidian plugin path | Canvas 2D rendering (we use SVG/DOM for testability) |
 | **tldraw** | Editor/TestEditor architecture, diff-based undo, signals-style reactivity, package layering | Canvas complexity beyond our needs, full drawing tool scope |
@@ -606,7 +643,7 @@ const migrations = [
     version: 2,
     description: 'Add layoutMode to meta',
     up: (data: any) => {
-      data.meta.layoutMode = data.meta.layoutMode ?? 'standard';
+      data.meta.layoutMode = data.meta.layoutMode ?? 'horizontal';
       return data;
     }
   },
@@ -618,7 +655,7 @@ const migrations = [
         node.style = node.style ?? {};
         node.children?.forEach(addStyle);
       }
-      addStyle(data.root);
+      data.roots.forEach(addStyle);
       return data;
     }
   }
@@ -637,7 +674,8 @@ The URL hash fragment is never sent to the server. For maps exceeding ~2,000 cha
 
 The SVG tree carries ARIA attributes for screen reader support:
 
-- Root container: `role="tree"`, `aria-label="Mind Map"`
+- Canvas container: `role="group"`, `aria-label="Mind Map"`
+- Each root tree: `role="tree"`
 - Each visible node: `role="treeitem"`, `aria-level`, `aria-expanded`, `aria-selected`
 - Node groups: `role="group"` wrapping children
 
