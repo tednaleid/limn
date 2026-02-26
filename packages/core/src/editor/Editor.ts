@@ -49,6 +49,13 @@ export class Editor {
   private editing = false;
   private camera: Camera = { x: 0, y: 0, zoom: 1 };
 
+  // Drag state
+  private dragging = false;
+  private dragNodeId: string | null = null;
+  private dragOffset = { x: 0, y: 0 };
+  private dragMoved = false;
+  private reparentTargetId: string | null = null;
+
   // Document metadata
   protected meta: MindMapMeta = { id: "default", version: 1, theme: "default" };
 
@@ -372,6 +379,121 @@ export class Editor {
       this.selectedId = current.parentId;
       this.notify();
     }
+  }
+
+  // --- Drag ---
+
+  isDragging(): boolean {
+    return this.dragging;
+  }
+
+  getReparentTarget(): string | null {
+    return this.reparentTargetId;
+  }
+
+  startDrag(nodeId: string, worldX: number, worldY: number): void {
+    if (this.editing) {
+      this.exitEditMode();
+    }
+    this.pushUndo("drag");
+    const node = this.store.getNode(nodeId);
+    this.selectedId = nodeId;
+    this.dragging = true;
+    this.dragNodeId = nodeId;
+    this.dragOffset = { x: worldX - node.x, y: worldY - node.y };
+    this.dragMoved = false;
+    this.reparentTargetId = null;
+    this.notify();
+  }
+
+  updateDrag(worldX: number, worldY: number): void {
+    if (!this.dragging || this.dragNodeId === null) return;
+
+    const node = this.store.getNode(this.dragNodeId);
+    const newX = worldX - this.dragOffset.x;
+    const newY = worldY - this.dragOffset.y;
+    const dx = newX - node.x;
+    const dy = newY - node.y;
+
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return;
+
+    this.dragMoved = true;
+
+    // Move the node and its entire subtree
+    this.moveSubtree(this.dragNodeId, dx, dy);
+
+    // Check for reparent proximity
+    this.reparentTargetId = this.findReparentTarget(this.dragNodeId);
+
+    this.notify();
+  }
+
+  endDrag(): void {
+    if (!this.dragging || this.dragNodeId === null) {
+      this.dragging = false;
+      this.dragNodeId = null;
+      this.reparentTargetId = null;
+      return;
+    }
+
+    const nodeId = this.dragNodeId;
+
+    if (this.reparentTargetId !== null) {
+      // Reparent the node
+      this.store.moveNode(nodeId, this.reparentTargetId);
+    }
+
+    if (!this.dragMoved && this.reparentTargetId === null) {
+      // No movement and no reparent: pop the undo entry (no-op drag)
+      this.undoStack.pop();
+    }
+
+    this.dragging = false;
+    this.dragNodeId = null;
+    this.reparentTargetId = null;
+    this.notify();
+  }
+
+  /** Move a node and all its descendants by a delta. */
+  private moveSubtree(nodeId: string, dx: number, dy: number): void {
+    const node = this.store.getNode(nodeId);
+    this.store.setNodePosition(nodeId, node.x + dx, node.y + dy);
+    for (const childId of node.children) {
+      this.moveSubtree(childId, dx, dy);
+    }
+  }
+
+  /** Find the nearest non-descendant node within reparent proximity. */
+  private findReparentTarget(draggedId: string): string | null {
+    const dragged = this.store.getNode(draggedId);
+    const draggedCenterX = dragged.x + dragged.width / 2;
+    const draggedCenterY = dragged.y + dragged.height / 2;
+
+    const PROXIMITY_THRESHOLD = 80;
+    let bestId: string | null = null;
+    let bestDist = PROXIMITY_THRESHOLD;
+
+    for (const node of this.store.getVisibleNodes()) {
+      if (node.id === draggedId) continue;
+      // Cannot reparent to own descendant
+      if (this.store.isDescendant(node.id, draggedId)) continue;
+      // Cannot reparent to current parent (already there)
+      if (node.id === dragged.parentId) continue;
+
+      // Distance from dragged node center to potential parent's edge center
+      const edgeX = draggedCenterX < node.x + node.width / 2
+        ? node.x                    // approach from left
+        : node.x + node.width;     // approach from right
+      const edgeY = node.y + node.height / 2;
+
+      const dist = Math.hypot(draggedCenterX - edgeX, draggedCenterY - edgeY);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = node.id;
+      }
+    }
+
+    return bestId;
   }
 
   // --- Undo/redo ---

@@ -19,6 +19,21 @@ export class TestEditor extends Editor {
     return this;
   }
 
+  pointerDown(nodeId: string, worldX: number, worldY: number): this {
+    this.startDrag(nodeId, worldX, worldY);
+    return this;
+  }
+
+  pointerMove(worldX: number, worldY: number): this {
+    this.updateDrag(worldX, worldY);
+    return this;
+  }
+
+  pointerUp(): this {
+    this.endDrag();
+    return this;
+  }
+
   // --- Assertions ---
 
   expectSelected(nodeId: string): this {
