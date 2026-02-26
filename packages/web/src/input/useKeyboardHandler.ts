@@ -8,6 +8,9 @@ import type { Editor, Modifiers } from "@mindforge/core";
 /** Keys that should always be prevented from browser default behavior. */
 const ALWAYS_PREVENT = new Set(["Tab"]);
 
+/** Meta+key combos that conflict with browser defaults and must be prevented. */
+const META_PREVENT = new Set(["=", "-", "0", "1", "s", "o"]);
+
 /**
  * Hook that attaches a global keydown listener and routes events
  * through the core dispatch function.
@@ -34,7 +37,7 @@ export function useKeyboardHandler(editor: Editor): void {
 
       const handled = dispatch(editor, e.key, modifiers);
 
-      if (handled || ALWAYS_PREVENT.has(e.key)) {
+      if (handled || ALWAYS_PREVENT.has(e.key) || (e.metaKey && META_PREVENT.has(e.key))) {
         e.preventDefault();
         e.stopPropagation();
       }

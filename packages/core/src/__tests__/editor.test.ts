@@ -397,6 +397,83 @@ describe("Editor", () => {
     });
   });
 
+  describe("zoom", () => {
+    test("zoomIn increases zoom level", () => {
+      editor.setCamera(0, 0, 1);
+      editor.zoomIn();
+      expect(editor.getCamera().zoom).toBeGreaterThan(1);
+    });
+
+    test("zoomOut decreases zoom level", () => {
+      editor.setCamera(0, 0, 1);
+      editor.zoomOut();
+      expect(editor.getCamera().zoom).toBeLessThan(1);
+    });
+
+    test("zoomToFit fits all nodes in viewport", () => {
+      editor.setCamera(999, 999, 5);
+      editor.zoomToFit(800, 600);
+      const cam = editor.getCamera();
+      // Should have changed from the extreme values
+      expect(cam.x).not.toBe(999);
+      expect(cam.y).not.toBe(999);
+      expect(cam.zoom).not.toBe(5);
+      // Zoom should be reasonable (not clamped to extremes)
+      expect(cam.zoom).toBeGreaterThan(0);
+      expect(cam.zoom).toBeLessThanOrEqual(3);
+    });
+
+    test("zoomToNode centers on the given node", () => {
+      editor.setCamera(0, 0, 1);
+      editor.zoomToNode("n3", 800, 600);
+      const cam = editor.getCamera();
+      const node = editor.getNode("n3");
+      // Node center should be near viewport center
+      const screenX = node.x * cam.zoom + cam.x + (node.width * cam.zoom) / 2;
+      const screenY = node.y * cam.zoom + cam.y + (node.height * cam.zoom) / 2;
+      expect(Math.abs(screenX - 400)).toBeLessThan(1);
+      expect(Math.abs(screenY - 300)).toBeLessThan(1);
+    });
+
+    test("Cmd+= dispatches zoomIn", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("=", { meta: true });
+      expect(editor.getCamera().zoom).toBeGreaterThan(1);
+    });
+
+    test("Cmd+- dispatches zoomOut", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("-", { meta: true });
+      expect(editor.getCamera().zoom).toBeLessThan(1);
+    });
+  });
+
+  describe("canvas pan via keyboard", () => {
+    test("Shift+ArrowRight pans canvas right", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowRight", { shift: true });
+      expect(editor.getCamera().x).toBeLessThan(0);
+    });
+
+    test("Shift+ArrowLeft pans canvas left", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowLeft", { shift: true });
+      expect(editor.getCamera().x).toBeGreaterThan(0);
+    });
+
+    test("Shift+ArrowDown pans canvas down", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowDown", { shift: true });
+      expect(editor.getCamera().y).toBeLessThan(0);
+    });
+
+    test("Shift+ArrowUp pans canvas up", () => {
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowUp", { shift: true });
+      expect(editor.getCamera().y).toBeGreaterThan(0);
+    });
+  });
+
   describe("toJSON", () => {
     test("preserves camera position", () => {
       editor.setCamera(100, 200, 1.5);

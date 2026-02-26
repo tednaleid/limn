@@ -34,21 +34,21 @@ export function MindMapCanvas() {
   const rootIds = new Set(editor.getRoots().map((r) => r.id));
   const assetUrls = useAssetUrls();
 
-  // Track viewport dimensions for culling
+  // Track viewport dimensions for culling and keyboard zoom-to-fit
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const updateSize = () => {
       if (svgRef.current) {
-        setViewportSize({
-          width: svgRef.current.clientWidth,
-          height: svgRef.current.clientHeight,
-        });
+        const w = svgRef.current.clientWidth;
+        const h = svgRef.current.clientHeight;
+        setViewportSize({ width: w, height: h });
+        editor.setViewportSize(w, h);
       }
     };
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [editor]);
 
   // Viewport culling: only render nodes within the visible area (with padding)
   const CULL_PADDING = 200; // extra pixels beyond viewport to avoid pop-in

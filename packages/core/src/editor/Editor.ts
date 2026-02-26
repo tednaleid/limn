@@ -57,6 +57,10 @@ export class Editor {
   private dragMoved = false;
   private reparentTargetId: string | null = null;
 
+  // Viewport dimensions (set by web layer for zoom-to-fit)
+  private viewportWidth = 0;
+  private viewportHeight = 0;
+
   // Document metadata
   protected meta: MindMapMeta = { id: "default", version: 1, theme: "default" };
 
@@ -143,6 +147,80 @@ export class Editor {
 
   setCamera(x: number, y: number, zoom: number): void {
     this.camera = { x, y, zoom };
+    this.notify();
+  }
+
+  /** Zoom in by a fixed step, clamped to [MIN_ZOOM, MAX_ZOOM]. */
+  zoomIn(): void {
+    const newZoom = Math.min(3, this.camera.zoom * 1.25);
+    this.camera = { ...this.camera, zoom: newZoom };
+    this.notify();
+  }
+
+  /** Zoom out by a fixed step, clamped to [MIN_ZOOM, MAX_ZOOM]. */
+  zoomOut(): void {
+    const newZoom = Math.max(0.1, this.camera.zoom / 1.25);
+    this.camera = { ...this.camera, zoom: newZoom };
+    this.notify();
+  }
+
+  /** Zoom to fit all visible nodes in the given viewport dimensions. */
+  zoomToFit(viewportWidth: number, viewportHeight: number): void {
+    const visible = this.store.getVisibleNodes();
+    if (visible.length === 0) {
+      this.camera = { x: 0, y: 0, zoom: 1 };
+      this.notify();
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of visible) {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      maxX = Math.max(maxX, node.x + node.width);
+      maxY = Math.max(maxY, node.y + node.height);
+    }
+
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const padding = 40;
+    const zoom = Math.min(
+      3,
+      Math.max(0.1, Math.min(
+        (viewportWidth - padding * 2) / contentW,
+        (viewportHeight - padding * 2) / contentH,
+      )),
+    );
+    const x = (viewportWidth - contentW * zoom) / 2 - minX * zoom;
+    const y = (viewportHeight - contentH * zoom) / 2 - minY * zoom;
+    this.camera = { x, y, zoom };
+    this.notify();
+  }
+
+  /** Center and zoom to a specific node in the given viewport dimensions. */
+  zoomToNode(nodeId: string, viewportWidth: number, viewportHeight: number): void {
+    const node = this.store.getNode(nodeId);
+    const zoom = this.camera.zoom;
+    const x = viewportWidth / 2 - (node.x + node.width / 2) * zoom;
+    const y = viewportHeight / 2 - (node.y + node.height / 2) * zoom;
+    this.camera = { x, y, zoom };
+    this.notify();
+  }
+
+  /** Set viewport dimensions (called by web layer on mount/resize). */
+  setViewportSize(width: number, height: number): void {
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+  }
+
+  /** Get stored viewport dimensions. */
+  getViewportSize(): { width: number; height: number } {
+    return { width: this.viewportWidth, height: this.viewportHeight };
+  }
+
+  /** Pan the camera by a delta in screen pixels. */
+  panCamera(dx: number, dy: number): void {
+    this.camera = { ...this.camera, x: this.camera.x + dx, y: this.camera.y + dy };
     this.notify();
   }
 

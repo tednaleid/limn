@@ -84,6 +84,43 @@ const bindings: KeyBinding[] = [
       if (sel) editor.toggleCollapse(sel);
     },
   },
+  // Shift+arrows: pan canvas
+  {
+    key: "ArrowUp",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, (vp.height || 600) * 0.1);
+    },
+  },
+  {
+    key: "ArrowDown",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, -(vp.height || 600) * 0.1);
+    },
+  },
+  {
+    key: "ArrowLeft",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera((vp.width || 800) * 0.1, 0);
+    },
+  },
+  {
+    key: "ArrowRight",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(-(vp.width || 800) * 0.1, 0);
+    },
+  },
   {
     key: "ArrowUp",
     mode: "nav",
@@ -204,6 +241,43 @@ const bindings: KeyBinding[] = [
     mode: "both",
     action: (editor) => {
       editor.requestExport();
+    },
+  },
+  {
+    key: "=",
+    modifiers: { meta: true },
+    mode: "both",
+    action: (editor) => {
+      editor.zoomIn();
+    },
+  },
+  {
+    key: "-",
+    modifiers: { meta: true },
+    mode: "both",
+    action: (editor) => {
+      editor.zoomOut();
+    },
+  },
+  {
+    key: "0",
+    modifiers: { meta: true },
+    mode: "both",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.zoomToFit(vp.width || 800, vp.height || 600);
+    },
+  },
+  {
+    key: "1",
+    modifiers: { meta: true },
+    mode: "both",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) {
+        const vp = editor.getViewportSize();
+        editor.zoomToNode(sel, vp.width || 800, vp.height || 600);
+      }
     },
   },
 ];
