@@ -2,57 +2,44 @@
 
 ## Current status
 
-**Phase**: Not started — project scaffolding pending
-**Next chunk**: Chunk 1 (Project scaffold)
-**Last updated**: (update this date with each chunk completion)
+**Phase**: Phase 1 -- Foundation
+**Next chunk**: Chunk 2 (Data model)
+**Last updated**: 2026-02-26
 
 ---
 
 ## Completed chunks
 
-(None yet)
-
-<!-- Template for completed chunks:
-
-### Chunk N: Title (YYYY-MM-DD)
+### Chunk 1: Project scaffold (2026-02-26)
 
 **What was done:**
-- Bullet points describing what was implemented
+- Bun workspace monorepo with `packages/core/` and `packages/web/`
+- TypeScript strict mode with composite project references
+- Vitest configured for core package with workspace config
+- Vite + React 19 configured for web package
+- ESLint with typescript-eslint strict rules
+- Smoke test passing in core
 
 **Files changed:**
-- `path/to/file.ts` — description of change
+- `package.json` -- root workspace config with scripts
+- `tsconfig.json` -- root TS config with strict mode and project references
+- `vitest.workspace.ts` -- vitest workspace definition
+- `eslint.config.js` -- eslint flat config with typescript-eslint
+- `.gitignore` -- updated with node_modules, dist, tsbuildinfo
+- `packages/core/` -- package.json, tsconfig, vitest.config, src/index.ts, smoke test
+- `packages/web/` -- package.json, tsconfig, vite.config, index.html, src/main.tsx, src/App.tsx
 
 **Tests added:**
-- Number and description of tests
+- 1 smoke test (core exports VERSION string)
 
 **Notes/decisions:**
-- Any deviations from the plan or decisions made during implementation
--->
+- Vitest 4.x does not need `--project` filter; `vitest run` picks up workspace config automatically
 
 ---
 
 ## Chunk details
 
-### Up next: Chunk 1 — Project scaffold
-
-**Goal:** Working TypeScript project with Vitest, build pipeline, and all config files.
-
-**Acceptance criteria:**
-- [ ] `bun install` succeeds
-- [ ] `bun run test` runs and passes (with a single smoke test)
-- [ ] `bun run build` produces output
-- [ ] `bun run dev` starts Vite dev server
-- [ ] `packages/core/` and `packages/web/` exist with correct tsconfig
-- [ ] ESLint + TypeScript strict mode configured
-- [ ] CLAUDE.md and SPEC.md are in the repo root
-
-**Technical notes:**
-- Use Bun workspaces for the monorepo
-- Vite for the web package
-- Vitest config in the core package
-- TypeScript strict mode, no `any`
-
-### Then: Chunk 2 — Data model
+### Up next: Chunk 2 — Data model
 
 **Goal:** Core types and tree operations, fully tested.
 

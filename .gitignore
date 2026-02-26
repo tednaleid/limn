@@ -1,2 +1,7 @@
 CLAUDE.local.md
 .claude/settings.local.json
+
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
