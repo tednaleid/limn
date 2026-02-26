@@ -3,7 +3,7 @@
 ## Current status
 
 **Phase**: Phase 3 -- Interaction
-**Next chunk**: Chunk 8 (Keyboard navigation)
+**Next chunk**: Chunk 9 (Text editing)
 **Last updated**: 2026-02-26
 
 ---
@@ -182,9 +182,29 @@
 **Tests added:**
 - Visual verification via dev server
 
-### Up next: Chunk 8
-- DOM keyboard event handler wiring to core dispatch
-- Spatial arrow key navigation (up/down/left/right)
+### Chunk 8: Keyboard navigation (2026-02-26)
+
+**What was done:**
+- Spatial navigation: navigateUp, navigateDown, navigateLeft, navigateRight on Editor
+- Up/Down finds nearest visible node by y-center distance, tiebreaker is smallest x
+- Left/Right is direction-aware: toward parent on right-side branches, toward children on left-side
+- At root: Left goes to first left child, Right goes to first right child
+- NavigateRight on collapsed node expands it first
+- Arrow key bindings added to dispatch table (without modifiers = nav, with meta = reorder)
+- DOM keyboard handler (useKeyboardHandler hook) wired into App
+- Prevents default on handled keys and Tab
+
+**Files changed:**
+- `packages/core/src/editor/Editor.ts` -- navigateUp/Down/Left/Right methods
+- `packages/core/src/keybindings/dispatch.ts` -- arrow key bindings
+- `packages/web/src/input/useKeyboardHandler.ts` -- DOM keydown handler
+- `packages/web/src/App.tsx` -- wired keyboard handler
+
+**Tests added:**
+- 24 navigation tests: up/down nearest-by-y, left/right direction-aware, bidirectional branches, cross-tree navigation, collapsed node expansion, keyboard dispatch
+
+### Up next: Chunk 9
+- Text editing with positioned textarea overlay
 
 ---
 

@@ -6,6 +6,7 @@ import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize } from "../serialization/serialization";
 import type { MindMapFileFormat } from "../serialization/schema";
 import {
+  branchDirection,
   positionNewChild,
   positionNewSibling,
   relayoutAfterDelete,
@@ -245,6 +246,132 @@ export class Editor {
     this.pushUndo("set-position");
     this.store.setNodePosition(nodeId, x, y);
     this.notify();
+  }
+
+  // --- Spatial navigation ---
+
+  navigateUp(): void {
+    if (this.selectedId === null) return;
+    const current = this.store.getNode(this.selectedId);
+    const currentCenterY = current.y + current.height / 2;
+    const visible = this.store.getVisibleNodes();
+
+    let best: MindMapNode | null = null;
+    let bestDist = Infinity;
+    for (const node of visible) {
+      if (node.id === this.selectedId) continue;
+      const centerY = node.y + node.height / 2;
+      if (centerY >= currentCenterY) continue; // Not above
+      const dist = currentCenterY - centerY;
+      if (dist < bestDist || (dist === bestDist && best !== null && node.x < best.x)) {
+        best = node;
+        bestDist = dist;
+      }
+    }
+
+    if (best) {
+      this.selectedId = best.id;
+      this.notify();
+    }
+  }
+
+  navigateDown(): void {
+    if (this.selectedId === null) return;
+    const current = this.store.getNode(this.selectedId);
+    const currentCenterY = current.y + current.height / 2;
+    const visible = this.store.getVisibleNodes();
+
+    let best: MindMapNode | null = null;
+    let bestDist = Infinity;
+    for (const node of visible) {
+      if (node.id === this.selectedId) continue;
+      const centerY = node.y + node.height / 2;
+      if (centerY <= currentCenterY) continue; // Not below
+      const dist = centerY - currentCenterY;
+      if (dist < bestDist || (dist === bestDist && best !== null && node.x < best.x)) {
+        best = node;
+        bestDist = dist;
+      }
+    }
+
+    if (best) {
+      this.selectedId = best.id;
+      this.notify();
+    }
+  }
+
+  navigateLeft(): void {
+    if (this.selectedId === null) return;
+    const current = this.store.getNode(this.selectedId);
+
+    if (current.parentId === null) {
+      // Root node: go to first left-side child
+      const children = this.store.getChildren(this.selectedId);
+      const leftChildren = children.filter((c) => c.x < current.x);
+      if (leftChildren.length > 0) {
+        if (current.collapsed) {
+          this.toggleCollapse(this.selectedId);
+        }
+        this.selectedId = leftChildren[0].id;
+        this.notify();
+      }
+      return;
+    }
+
+    // Non-root: direction depends on branch side
+    const dir = branchDirection(this.store, this.selectedId);
+    if (dir >= 0) {
+      // Right-side branch: Left goes toward parent
+      this.selectedId = current.parentId;
+      this.notify();
+    } else {
+      // Left-side branch: Left goes toward children (deeper)
+      const children = this.store.getChildren(this.selectedId);
+      if (children.length > 0) {
+        if (current.collapsed) {
+          this.toggleCollapse(this.selectedId);
+        }
+        this.selectedId = children[0].id;
+        this.notify();
+      }
+    }
+  }
+
+  navigateRight(): void {
+    if (this.selectedId === null) return;
+    const current = this.store.getNode(this.selectedId);
+
+    if (current.parentId === null) {
+      // Root node: go to first right-side child
+      const children = this.store.getChildren(this.selectedId);
+      const rightChildren = children.filter((c) => c.x >= current.x);
+      if (rightChildren.length > 0) {
+        if (current.collapsed) {
+          this.toggleCollapse(this.selectedId);
+        }
+        this.selectedId = rightChildren[0].id;
+        this.notify();
+      }
+      return;
+    }
+
+    // Non-root: direction depends on branch side
+    const dir = branchDirection(this.store, this.selectedId);
+    if (dir >= 0) {
+      // Right-side branch: Right goes toward children (deeper)
+      const children = this.store.getChildren(this.selectedId);
+      if (children.length > 0) {
+        if (current.collapsed) {
+          this.toggleCollapse(this.selectedId);
+        }
+        this.selectedId = children[0].id;
+        this.notify();
+      }
+    } else {
+      // Left-side branch: Right goes toward parent
+      this.selectedId = current.parentId;
+      this.notify();
+    }
   }
 
   // --- Undo/redo ---

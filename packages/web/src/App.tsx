@@ -6,6 +6,7 @@ import { Editor } from "@mindforge/core";
 import type { MindMapFileFormat } from "@mindforge/core";
 import { EditorContext } from "./hooks/useEditor";
 import { MindMapCanvas } from "./components/MindMapCanvas";
+import { useKeyboardHandler } from "./input/useKeyboardHandler";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -65,6 +66,8 @@ export function App() {
     e.loadJSON(DEMO_MAP);
     return e;
   }, []);
+
+  useKeyboardHandler(editor);
 
   return (
     <EditorContext.Provider value={editor}>

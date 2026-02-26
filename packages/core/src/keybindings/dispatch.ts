@@ -86,6 +86,34 @@ const bindings: KeyBinding[] = [
   },
   {
     key: "ArrowUp",
+    mode: "nav",
+    action: (editor) => {
+      editor.navigateUp();
+    },
+  },
+  {
+    key: "ArrowDown",
+    mode: "nav",
+    action: (editor) => {
+      editor.navigateDown();
+    },
+  },
+  {
+    key: "ArrowLeft",
+    mode: "nav",
+    action: (editor) => {
+      editor.navigateLeft();
+    },
+  },
+  {
+    key: "ArrowRight",
+    mode: "nav",
+    action: (editor) => {
+      editor.navigateRight();
+    },
+  },
+  {
+    key: "ArrowUp",
     modifiers: { meta: true },
     mode: "nav",
     action: (editor) => {
