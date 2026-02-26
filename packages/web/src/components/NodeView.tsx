@@ -14,10 +14,13 @@ interface NodeViewProps {
   isSelected: boolean;
   isRoot: boolean;
   isReparentTarget?: boolean;
+  imageUrl?: string;
 }
 
-export function NodeView({ node, isSelected, isRoot, isReparentTarget }: NodeViewProps) {
+export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl }: NodeViewProps) {
   const lines = node.text.split("\n");
+  const hasImage = node.image && imageUrl;
+  const textHeight = PADDING_Y * 2 + lines.length * LINE_HEIGHT;
 
   const fillColor = isReparentTarget ? "#fef3c7" : isSelected ? "#dbeafe" : "#ffffff";
   const strokeColor = isReparentTarget ? "#f59e0b" : isSelected ? "#3b82f6" : "#d1d5db";
@@ -45,6 +48,17 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget }: NodeVie
         stroke={strokeColor}
         strokeWidth={strokeWidth}
       />
+      {/* Image (below text) */}
+      {hasImage && node.image && (
+        <image
+          href={imageUrl}
+          x={PADDING_X}
+          y={textHeight}
+          width={node.image.width}
+          height={node.image.height}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      )}
       {/* Collapse indicator: small circle with child count */}
       {node.collapsed && node.children.length > 0 && (
         <g transform={`translate(${node.width + 8}, ${node.height / 2})`}>

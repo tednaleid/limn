@@ -3,7 +3,7 @@
 ## Current status
 
 **Phase**: Phase 3 -- Interaction
-**Next chunk**: Chunk 11 (Image support)
+**Next chunk**: Chunk 12 (IndexedDB auto-save)
 **Last updated**: 2026-02-26
 
 ---
@@ -248,8 +248,31 @@
 **Tests added:**
 - 13 drag tests: start/end drag, move to new position, subtree movement, select on drag, single undo, no-op drag, exit edit mode, reparent proximity detection, reparent on drop, no reparent in open space, no reparent to descendant, clear target after drop, reparent undo
 
-### Up next: Chunk 11
-- Image support (drag-and-drop, paste, resize, sidecar storage)
+### Chunk 11: Image support (2026-02-26)
+
+**What was done:**
+- Asset registry on Editor (getAssets, setNodeImage, removeNodeImage)
+- Asset deduplication (same asset ID not registered twice)
+- Assets included in undo/redo snapshots
+- Assets serialized in toJSON and loaded from loadJSON
+- Image rendering in NodeView (SVG `<image>` element below text)
+- Drag-and-drop images from Finder onto nodes (attaches) or canvas (creates root)
+- Paste from clipboard attaches to selected node or creates new root
+- AssetUrlContext for mapping asset IDs to blob URLs
+- Auto-scaling to max 300px display width, proportional height
+
+**Files changed:**
+- `packages/core/src/editor/Editor.ts` -- asset registry, setNodeImage, removeNodeImage, undo/redo assets
+- `packages/web/src/App.tsx` -- AssetUrlContext provider, paste handler, asset-added event listener
+- `packages/web/src/hooks/useAssetUrls.ts` -- AssetUrlContext and useAssetUrls hook
+- `packages/web/src/components/NodeView.tsx` -- image rendering with imageUrl prop
+- `packages/web/src/components/MindMapCanvas.tsx` -- drop handler, asset URL lookup
+
+**Tests added:**
+- 8 image tests: attach image, register asset, no duplicate assets, remove image, undo set, undo remove, round-trip serialization, replace image
+
+### Up next: Chunk 12
+- IndexedDB auto-save (debounced save, load on startup)
 
 ---
 

@@ -4,6 +4,7 @@
 import { useCallback, useRef } from "react";
 import type { MindMapNode } from "@mindforge/core";
 import { useEditor } from "../hooks/useEditor";
+import { useAssetUrls } from "../hooks/useAssetUrls";
 import { NodeView } from "./NodeView";
 import { EdgeView } from "./EdgeView";
 import { TextEditor } from "./TextEditor";
@@ -31,6 +32,7 @@ export function MindMapCanvas() {
   const isDragging = editor.isDragging();
   const reparentTargetId = editor.getReparentTarget();
   const rootIds = new Set(editor.getRoots().map((r) => r.id));
+  const assetUrls = useAssetUrls();
 
   // Get the editing node for the TextEditor overlay
   const editingNode = isEditing && selectedId ? editor.getNode(selectedId) : null;
@@ -209,8 +211,78 @@ export function MindMapCanvas() {
     [editor, camera],
   );
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    // Allow drop of image files
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const files = Array.from(e.dataTransfer.files);
+      const imageFile = files.find((f) => f.type.startsWith("image/"));
+      if (!imageFile) return;
+
+      const world = screenToWorld(e.clientX, e.clientY);
+
+      // Find node under drop point
+      const target = document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
+      const nodeGroup = target?.closest("[data-node-id]") as SVGElement | null;
+      const targetNodeId = nodeGroup?.getAttribute("data-node-id") ?? null;
+
+      // Read image dimensions and create blob URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const assetId = `a${Date.now()}`;
+          const asset = {
+            id: assetId,
+            filename: imageFile.name,
+            mimeType: imageFile.type,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+          };
+
+          // Scale display size to reasonable dimensions
+          const maxDisplayWidth = 300;
+          const scale = Math.min(1, maxDisplayWidth / img.naturalWidth);
+          const displayWidth = Math.round(img.naturalWidth * scale);
+          const displayHeight = Math.round(img.naturalHeight * scale);
+
+          const blobUrl = URL.createObjectURL(imageFile);
+
+          if (targetNodeId) {
+            // Drop on node: attach image to that node
+            editor.setNodeImage(targetNodeId, asset, displayWidth, displayHeight);
+          } else {
+            // Drop on canvas: create new root with image
+            const rootId = editor.addRoot("", world.x, world.y);
+            editor.exitEditMode();
+            editor.setNodeImage(rootId, asset, displayWidth, displayHeight);
+          }
+
+          // Dispatch custom event so App can register the blob URL
+          window.dispatchEvent(new CustomEvent("mindforge:asset-added", {
+            detail: { assetId, blobUrl },
+          }));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(imageFile);
+    },
+    [editor, screenToWorld],
+  );
+
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div
+      style={{ position: "relative", width: "100%", height: "100%" }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <svg
         ref={svgRef}
         style={{
@@ -245,6 +317,7 @@ export function MindMapCanvas() {
                 isSelected={node.id === selectedId}
                 isRoot={rootIds.has(node.id)}
                 isReparentTarget={node.id === reparentTargetId}
+                imageUrl={node.image ? assetUrls.get(node.image.assetId) : undefined}
               />
             </g>
           ))}

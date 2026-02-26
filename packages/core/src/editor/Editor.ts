@@ -1,7 +1,7 @@
 // ABOUTME: Core Editor class wrapping MindMapStore with selection, modes, and undo.
 // ABOUTME: All state mutations flow through Editor; it is the sole source of truth.
 
-import type { MindMapNode, TextMeasurer, MindMapMeta, Camera } from "../model/types";
+import type { MindMapNode, TextMeasurer, MindMapMeta, Camera, Asset } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize } from "../serialization/serialization";
 import type { MindMapFileFormat } from "../serialization/schema";
@@ -19,6 +19,7 @@ interface HistoryEntry {
   label: string;
   nodes: Map<string, MindMapNode>;
   rootIds: string[];
+  assets: Asset[];
 }
 
 /** Stub text measurer that estimates from character count. */
@@ -58,6 +59,9 @@ export class Editor {
 
   // Document metadata
   protected meta: MindMapMeta = { id: "default", version: 1, theme: "default" };
+
+  // Asset registry (document state)
+  private assets: Asset[] = [];
 
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
@@ -252,6 +256,30 @@ export class Editor {
   setNodePosition(nodeId: string, x: number, y: number): void {
     this.pushUndo("set-position");
     this.store.setNodePosition(nodeId, x, y);
+    this.notify();
+  }
+
+  // --- Image/asset management ---
+
+  getAssets(): Asset[] {
+    return this.assets;
+  }
+
+  setNodeImage(nodeId: string, asset: Asset, displayWidth: number, displayHeight: number): void {
+    this.pushUndo("set-image");
+    const node = this.store.getNode(nodeId);
+    node.image = { assetId: asset.id, width: displayWidth, height: displayHeight };
+    // Register asset if not already present
+    if (!this.assets.some((a) => a.id === asset.id)) {
+      this.assets.push({ ...asset });
+    }
+    this.notify();
+  }
+
+  removeNodeImage(nodeId: string): void {
+    this.pushUndo("remove-image");
+    const node = this.store.getNode(nodeId);
+    delete node.image;
     this.notify();
   }
 
@@ -520,6 +548,7 @@ export class Editor {
     this.store = deserialize(data);
     this.meta = { ...data.meta, version: data.version };
     this.camera = data.camera ?? { x: 0, y: 0, zoom: 1 };
+    this.assets = (data.assets ?? []).map((a) => ({ ...a }));
     this.selectedId = null;
     this.editing = false;
     this.undoStack = [];
@@ -528,7 +557,9 @@ export class Editor {
   }
 
   toJSON(): MindMapFileFormat {
-    return serialize(this.store, this.meta);
+    const data = serialize(this.store, this.meta);
+    data.assets = this.assets.map((a) => ({ ...a }));
+    return data;
   }
 
   // --- Private helpers ---
@@ -547,6 +578,7 @@ export class Editor {
       label,
       nodes,
       rootIds: [...this.store.getRoots().map((n) => n.id)],
+      assets: this.assets.map((a) => ({ ...a })),
     };
   }
 
@@ -559,6 +591,7 @@ export class Editor {
       newStore.addRootId(rootId);
     }
     this.store = newStore;
+    this.assets = entry.assets.map((a) => ({ ...a }));
 
     // Fix selection if selected node no longer exists
     if (this.selectedId !== null && !entry.nodes.has(this.selectedId)) {

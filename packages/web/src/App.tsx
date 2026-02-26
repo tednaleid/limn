@@ -1,10 +1,11 @@
 // ABOUTME: Root React component for MindForge.
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Editor } from "@mindforge/core";
 import type { MindMapFileFormat } from "@mindforge/core";
 import { EditorContext } from "./hooks/useEditor";
+import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 
@@ -69,11 +70,83 @@ export function App() {
 
   useKeyboardHandler(editor);
 
+  const [assetUrls, setAssetUrls] = useState<AssetUrlMap>(new Map());
+
+  const handleAssetAdded = useCallback((e: Event) => {
+    const { assetId, blobUrl } = (e as CustomEvent).detail;
+    setAssetUrls((prev) => {
+      const next = new Map(prev);
+      next.set(assetId, blobUrl);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mindforge:asset-added", handleAssetAdded);
+    return () => window.removeEventListener("mindforge:asset-added", handleAssetAdded);
+  }, [handleAssetAdded]);
+
+  // Handle paste from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+
+          const img = new Image();
+          const blobUrl = URL.createObjectURL(file);
+          img.onload = () => {
+            const assetId = `a${Date.now()}`;
+            const asset = {
+              id: assetId,
+              filename: `pasted-image.${file.type.split("/")[1]}`,
+              mimeType: file.type,
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+            };
+
+            const maxDisplayWidth = 300;
+            const scale = Math.min(1, maxDisplayWidth / img.naturalWidth);
+            const displayWidth = Math.round(img.naturalWidth * scale);
+            const displayHeight = Math.round(img.naturalHeight * scale);
+
+            const selectedId = editor.getSelectedId();
+            if (selectedId) {
+              editor.setNodeImage(selectedId, asset, displayWidth, displayHeight);
+            } else {
+              const rootId = editor.addRoot("", 0, 0);
+              editor.exitEditMode();
+              editor.setNodeImage(rootId, asset, displayWidth, displayHeight);
+            }
+
+            setAssetUrls((prev) => {
+              const next = new Map(prev);
+              next.set(assetId, blobUrl);
+              return next;
+            });
+          };
+          img.src = blobUrl;
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [editor]);
+
   return (
     <EditorContext.Provider value={editor}>
-      <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-        <MindMapCanvas />
-      </div>
+      <AssetUrlContext.Provider value={assetUrls}>
+        <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+          <MindMapCanvas />
+        </div>
+      </AssetUrlContext.Provider>
     </EditorContext.Provider>
   );
 }
