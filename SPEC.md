@@ -147,8 +147,8 @@ interface MindMapNode {
 
 interface ImageRef {
   assetId: string;         // References an asset in the asset registry
-  width: number;           // Display width
-  height: number;          // Display height
+  width: number;           // Display width (always proportional to original aspect ratio)
+  height: number;          // Display height (always proportional to original aspect ratio)
 }
 
 interface NodeStyle {
@@ -465,11 +465,25 @@ The default direction for new children is rightward from their parent. If a user
 
 **Full layout (dagre):** Used when creating a brand-new tree or when the user explicitly requests reflow (future command). Dagre computes positions for all nodes in the tree from scratch.
 
-**Incremental layout:** Used for all structural mutations (add child, add sibling, delete, collapse, expand). Instead of re-running dagre, the engine shifts affected siblings and their entire subtrees to make or close vertical space. This preserves any manual positioning the user has done. Each root tree is adjusted independently. If a shifted subtree overlaps a different root tree, the overlapping tree is pushed apart as well.
+**Incremental layout:** Used for all structural mutations (add child, add sibling, delete, collapse, expand). Instead of re-running dagre, the engine shifts affected siblings and their entire subtrees to make or close vertical space. This preserves any manual positioning the user has done.
+
+The algorithm: when a node is inserted or removed, compute the delta in the parent's visible subtree height (sum of visible descendant heights plus fixed inter-sibling gaps). Shift all siblings below the affected position by that delta, moving each sibling and its entire subtree as a unit. The inter-sibling gap is a fixed constant (e.g., 20px). Each root tree is adjusted independently. After adjusting a tree, check whether its bounding box overlaps any other root tree's bounding box; if so, push the overlapping tree apart by the overlap distance.
 
 ### Viewport following
 
 When a node is created (Tab or Enter in edit mode), the map automatically scrolls to keep the new node visible and the layout smoothly animates to accommodate the new position.
+
+### Mouse interaction
+
+- **Click on node**: Select that node (enters navigation mode if in edit mode)
+- **Double-click on node**: Select and enter edit mode
+- **Double-click on canvas**: Create new root node at click position; enter edit mode
+- **Drag on canvas**: Pan the viewport
+- **Drag on node**: Reposition the node (updates stored x/y)
+- **Scroll wheel**: Zoom in/out centered on cursor position
+- **Drag right edge of node**: Resize node width; text reflows within new width, height adjusts automatically
+
+**Drag-to-reparent (MindNode-style):** While dragging a node, if it comes within proximity of another node, a visual indicator (connection line) appears suggesting it will become a child of that node. Dropping the dragged node while the indicator is visible reparents it. Dropping in open space (no proximity indicator) simply repositions the node without changing its parent. A node cannot be reparented to one of its own descendants.
 
 ---
 
@@ -483,6 +497,10 @@ Following tldraw's architecture, undo/redo is automatic and diff-based rather th
 2. Named **marks** define undo boundaries. Operations like `addChild` call `editor.markHistory('add-child')` before mutating.
 3. `editor.undo()` collects all diffs since the last mark, inverts them (swap added↔removed, reverse updated pairs), and applies the inverse diff.
 4. Continuous operations (like typing text or dragging) produce many small diffs that are **squashed** into a single undo entry when the operation completes.
+
+### What is excluded from undo history
+
+Selection state and camera position are not tracked in the diff history. Undo reverses data changes (node creation, deletion, text edits, etc.) but does not jump your selection or viewport. When undo removes the currently selected node, selection follows the same fallback rules as delete (nearest sibling, then parent, then nearest root).
 
 ### Benefits over command pattern
 
@@ -500,7 +518,7 @@ Following tldraw's architecture, undo/redo is automatic and diff-based rather th
 - Drag an image file from Finder onto a node → image attaches to that node
 - Drag an image onto the canvas (not a node) → creates a new node with the image
 - Paste an image from clipboard → attaches to selected node, if no node selected creates a new node with the image
-- Resize handles on the image corners; constrained aspect ratio by default, hold shift to free resize
+- Resize handle: a single dot in the upper-right corner of the image, visible on hover. Dragging it scales the image proportionally (aspect ratio is always locked). No free resize, no squishing -- images can only be made bigger or smaller.
 - Image selection and deletion interaction (how users select an image within a node to resize or delete it) is designed during Chunk 12 implementation
 
 ### Storage
