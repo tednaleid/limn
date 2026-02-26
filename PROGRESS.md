@@ -4,7 +4,7 @@
 
 **Phase**: All chunks complete (1-17), plus post-spec polish
 **Last updated**: 2026-02-26
-**Tests**: 217 passing across 11 test files, lint clean
+**Tests**: 229 passing across 12 test files, lint clean
 
 ---
 
@@ -381,10 +381,25 @@
 
 ---
 
+**Keyboard focus indicator:**
+- Dashed blue outline (3px offset) on selected node for keyboard nav
+- Renders behind drop shadow for clean visual layering
+
+**Node width resize:**
+- Drag right edge of selected node to resize width
+- Sets widthConstrained=true, text reflows, height adjusts
+- Minimum width 60px, single undo entry per resize
+- 7 tests added
+
+**Image resize handles (spec H7):**
+- Blue dot in upper-right corner of image, visible on hover
+- Dragging scales proportionally (aspect ratio locked)
+- Minimum image width 40px, single undo entry
+- 5 tests added
+
+---
+
 ## Remaining gaps (not blocking, could be future work)
-- Image resize handles (spec H7: dot in upper-right corner for proportional resize)
-- Drag right edge of node to resize width (spec: widthConstrained mode)
-- Keyboard focus indicators (visible focus ring for keyboard navigation)
 - Zip fallback for maps with images on non-Chromium browsers (fflate)
 - PDF export (spec soft requirement S1)
 - Performance benchmarks at 500 and 1000 nodes
