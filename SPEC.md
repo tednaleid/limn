@@ -48,8 +48,6 @@ The core thesis is that by building the engine as a framework-agnostic TypeScrip
 | # | Requirement | Notes |
 |---|-------------|-------|
 | N1 | URL-based sharing | lz-string compressed JSON in URL hash; practical up to ~100 nodes |
-| N2 | Obsidian plugin | Same core engine wrapped as an Obsidian ItemView; .mindmap.md file format |
-| N3 | Tauri desktop wrapper | For native menus, file associations, filesystem watching if needed later |
 
 ### Not in scope (current version)
 
@@ -127,7 +125,7 @@ packages/
       service-worker/  # Workbox offline caching
 ```
 
-The `core` package has zero browser or React dependencies. It can be used in Node.js, Vitest, an Obsidian plugin, or a Tauri app. The `web` package is the React PWA that renders the core engine.
+The `core` package has zero browser or React dependencies. It can be used in Node.js or Vitest. The `web` package is the React PWA that renders the core engine.
 
 ### Data model
 
@@ -146,6 +144,10 @@ interface ImageRef {
   assetId: string;         // References an asset in the asset registry
   width: number;           // Display width
   height: number;          // Display height
+}
+
+interface NodeStyle {
+  // TODO - font, size, color, etc
 }
 
 interface CrossLink {
@@ -358,52 +360,40 @@ The app has two distinct modes, following the MindNode/Excel paradigm:
 
 **Navigation mode** (default): Keyboard input operates on tree structure. Arrow keys move selection. Tab/Enter create nodes. Shortcuts modify the selected node.
 
-**Edit mode** (entered via F2 or double-click): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. Escape exits to navigation mode. Creating a new node (Tab/Enter) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child.
+**Edit mode** (entered via Enter when node is highlighted or double-click on node): Keyboard input goes to an absolutely-positioned textarea overlaid on the node (not SVG foreignObject, which has cross-browser issues). Arrow keys move within text. If text is already in node, cursor starts at the end of the current text. Escape exits to navigation mode. Creating a new node (Tab/Enter) automatically enters edit mode for that node. Nodes support multi-line text: Shift+Enter inserts a newline, Enter exits edit mode and creates a sibling, Tab exits edit mode and creates a child. 
 
 ### Keyboard shortcuts (navigation mode)
 
-| Action | macOS shortcut | Behavior |
+| Context | Action | macOS shortcut | Behavior |
 |--------|---------------|----------|
-| **Node creation** | | |
-| Create child | Tab | New child of selected node; enters edit mode |
-| Create sibling below | Enter | New sibling after selected node; enters edit mode |
-| Create sibling above | Shift+Enter | New sibling before selected node; enters edit mode |
-| **Navigation** | | |
-| Left | ← | Collapse expanded node; if already collapsed or leaf, move to parent |
-| Right | → | Expand collapsed node; if already expanded, move to first child |
-| Down | ↓ | Move to next visually-below node (can cross parent boundaries) |
-| Up | ↑ | Move to previous visually-above node (can cross parent boundaries) |
-| **Editing** | | |
-| Enter edit mode | F2 or ⌘+Enter | Cursor in selected node's text |
+| Node highlighted | Create child | Tab | New child of selected node; enters edit mode; if children already this child follows other children |
+| Node highlighted | Left | ← | move to parent |
+| Node highlighted | Right | → | move to first child |
+| Node highlighted | Down | ↓ | Move to next sibling. If last sibling, move to next visually-below node (can cross parent boundaries) |
+| Node highlighted | Up | ↑ | Move to previous sibling. If first sibling, visually-above node (can cross parent boundaries) |
+| Node highlighted | Enter edit mode | Enter | Cursor at end of node's text |
+| Node highlighted | Delete node and children | Backspace | Remove entire subtree; if at root, deletes full tree |
+| Node highlighted | Collapse/expand | Space | Toggle selected node's collapsed state |
+| Node highlighted | Move node up | ⌘+↑ | Reorder among siblings |
+| Node highlighted | Move node down | ⌘+↓ | Reorder among siblings |
+| Any | Undo | ⌘+Z | Invert last diff |
+| Any | Redo | ⇧+⌘+Z | Reapply last undone diff |
+| Any | Zoom to fit | ⌘+0 | Fit all visible nodes in viewport |
+| Node Highlighted | Zoom to selection | ⌘+1 | Center and zoom to selected node |
+| Any | Zoom in | ⌘+= | Increase zoom |
+| Any | Zoom out | ⌘+- | Decrease zoom |
+| Any | Save | ⌘+S | Save to current file (or download) |
+| Any | Open | ⌘+O | Open file picker |
+| Any | Export as SVG | ⇧+⌘+E | Export map as SVG |
+
+### Keyboard shortcuts (edit mode)
+
+| Context | Action | macOS shortcut | Behavior |
+|--------|---------------|----------|
 | Exit edit mode | Escape | Return to navigation mode |
-| Delete node | Backspace or Delete | Remove node (children reparented to grandparent); no-op on root |
-| Delete node and children | ⌘+Backspace | Remove entire subtree; no-op on root |
-| **Structure** | | |
-| Collapse/expand | Space | Toggle selected node's collapsed state |
-| Move node up | ⌘+↑ | Reorder among siblings |
-| Move node down | ⌘+↓ | Reorder among siblings |
-| Indent (make child of prev sibling) | ⌘+] | Reparent node |
-| Outdent (make sibling of parent) | ⌘+[ | Reparent node |
-| **History** | | |
-| Undo | ⌘+Z | Invert last diff |
-| Redo | ⇧+⌘+Z | Reapply last undone diff |
-| **View** | | |
-| Zoom to fit | ⌘+0 | Fit all visible nodes in viewport |
-| Zoom to selection | ⌘+1 | Center and zoom to selected node |
-| Zoom in | ⌘+= | Increase zoom |
-| Zoom out | ⌘+- | Decrease zoom |
-| **File** | | |
-| Save | ⌘+S | Save to current file (or download) |
-| Open | ⌘+O | Open file picker |
-| Export as SVG | ⇧+⌘+E | Export visible map as SVG |
+| Newline in edit text | Shift+Enter | Adds a newline to the text at cursor position, stays in edit mode |
 
 ### Navigation traversal rules
-
-Arrow key navigation follows the visual layout, not the data structure:
-
-- **↓/↑** move through a flattened pre-order traversal of visible nodes (the order you'd read them top-to-bottom on screen). This naturally crosses parent boundaries -- e.g., moving down from the last child of one subtree lands on the next sibling of the parent.
-- **→** expands a collapsed node OR moves to first child
-- **←** collapses an expanded node OR moves to parent
 
 When a node is created (Tab or Enter), the map automatically scrolls to keep the new node visible and the layout smoothly animates to accommodate the new position.
 
@@ -435,7 +425,7 @@ Following tldraw's architecture, undo/redo is automatic and diff-based rather th
 
 - Drag an image file from Finder onto a node → image attaches to that node
 - Drag an image onto the canvas (not a node) → creates a new node with the image
-- Paste an image from clipboard → attaches to selected node
+- Paste an image from clipboard → attaches to selected node, if no node selected creates a new node with the image
 - Resize handles on the image corners; free resize by default (hold Shift to constrain aspect ratio)
 - Delete key on a selected image removes the image from the node (not the node itself)
 
@@ -590,17 +580,9 @@ describe('Editor > addChild', () => {
 
 ## 12. Open questions and future considerations
 
-### Graph vs. tree
-
-The data model is tree-first with cross-links as an overlay, matching every major mind map tool. Cross-links are visual connections that don't affect layout. If future use cases demand a true graph model (e.g., concept mapping), the cross-link system can be extended without changing the tree layout algorithm.
-
 ### Obsidian plugin
 
 The core engine's zero-dependency design makes an Obsidian plugin viable. The plugin would: register an ItemView, render the React component into `contentEl`, store files as `.mindmap.md` (markdown with embedded JSON in a code block), and use Vault API for persistence. This is ~3 chunks of additional work once the core is stable. The Excalidraw Obsidian plugin validates this approach at scale (~49,000 lines of code wrapping the Excalidraw React component).
-
-### Multiplayer (future)
-
-The diff-based undo system produces exactly the data structure needed for operational transform or CRDT-based sync. If multiplayer is ever added, the store's `RecordsDiff` format can be transmitted over WebSocket with minimal adaptation. tldraw's `@tldraw/sync` package demonstrates this pattern.
 
 ---
 
