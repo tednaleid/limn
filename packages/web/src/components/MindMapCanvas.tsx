@@ -29,6 +29,10 @@ export function MindMapCanvas() {
   const isResizingWidth = useRef(false);
   const resizeNodeId = useRef<string | null>(null);
 
+  // Image resize state
+  const isResizingImage = useRef(false);
+  const imageResizeNodeId = useRef<string | null>(null);
+
   const camera = editor.getCamera();
   const allVisibleNodes = editor.getVisibleNodes();
   const selectedId = editor.getSelectedId();
@@ -146,6 +150,19 @@ export function MindMapCanvas() {
       const target = e.target as SVGElement;
       const isCanvas = target.tagName === "svg" || target.classList.contains("canvas-bg");
 
+      // Check for image resize handle
+      if (target.hasAttribute("data-image-resize-handle")) {
+        const nodeGroup = target.closest("[data-node-id]") as SVGElement | null;
+        const nodeId = nodeGroup?.getAttribute("data-node-id");
+        if (nodeId) {
+          isResizingImage.current = true;
+          imageResizeNodeId.current = nodeId;
+          editor.startImageResize(nodeId);
+          svgRef.current?.setPointerCapture(e.pointerId);
+          return;
+        }
+      }
+
       // Check for resize handle
       if (target.hasAttribute("data-resize-handle")) {
         const nodeGroup = target.closest("[data-node-id]") as SVGElement | null;
@@ -180,6 +197,17 @@ export function MindMapCanvas() {
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (isResizingImage.current && imageResizeNodeId.current) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        const node = editor.getNode(imageResizeNodeId.current);
+        if (node.image) {
+          const imageLeft = node.x + 10; // PADDING_X
+          const newWidth = world.x - imageLeft;
+          editor.updateImageResize(newWidth);
+        }
+        return;
+      }
+
       if (isResizingWidth.current && resizeNodeId.current) {
         const world = screenToWorld(e.clientX, e.clientY);
         const node = editor.getNode(resizeNodeId.current);
@@ -220,6 +248,13 @@ export function MindMapCanvas() {
 
   const handlePointerUp = useCallback(
     (_e: React.PointerEvent) => {
+      if (isResizingImage.current) {
+        editor.endImageResize();
+        isResizingImage.current = false;
+        imageResizeNodeId.current = null;
+        return;
+      }
+
       if (isResizingWidth.current) {
         editor.endWidthResize();
         isResizingWidth.current = false;

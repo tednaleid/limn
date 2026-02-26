@@ -134,3 +134,81 @@ describe("image support", () => {
     expect(editor.getAssets()).toHaveLength(2);
   });
 });
+
+describe("image resize", () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
+  function createNodeWithImage(): TestEditor {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.exitEditMode();
+    editor.setNodeImage("n0", makeAsset("a1"), 400, 300);
+    return editor;
+  }
+
+  it("should start and end an image resize", () => {
+    const editor = createNodeWithImage();
+    editor.startImageResize("n0");
+    expect(editor.isResizingImage()).toBe(true);
+    editor.endImageResize();
+    expect(editor.isResizingImage()).toBe(false);
+  });
+
+  it("should scale image proportionally during resize", () => {
+    const editor = createNodeWithImage();
+    // Original image: 400x300 (4:3 aspect ratio)
+    editor.startImageResize("n0");
+    editor.updateImageResize(200);
+    editor.endImageResize();
+
+    const image = editor.getNode("n0").image!;
+    expect(image.width).toBe(200);
+    expect(image.height).toBe(150); // 200 * (300/400)
+  });
+
+  it("should enforce minimum image width of 40px", () => {
+    const editor = createNodeWithImage();
+    editor.startImageResize("n0");
+    editor.updateImageResize(10);
+    editor.endImageResize();
+
+    expect(editor.getNode("n0").image!.width).toBe(40);
+  });
+
+  it("should be undoable as a single operation", () => {
+    const editor = createNodeWithImage();
+    const originalWidth = editor.getNode("n0").image!.width;
+    const originalHeight = editor.getNode("n0").image!.height;
+
+    editor.startImageResize("n0");
+    editor.updateImageResize(200);
+    editor.updateImageResize(100);
+    editor.endImageResize();
+
+    expect(editor.getNode("n0").image!.width).toBe(100);
+
+    editor.undo();
+    expect(editor.getNode("n0").image!.width).toBe(originalWidth);
+    expect(editor.getNode("n0").image!.height).toBe(originalHeight);
+  });
+
+  it("should not create undo entry for no-op resize", () => {
+    const editor = createNodeWithImage();
+    const originalWidth = editor.getNode("n0").image!.width;
+
+    // Do a real resize first
+    editor.startImageResize("n0");
+    editor.updateImageResize(200);
+    editor.endImageResize();
+
+    // No-op resize
+    editor.startImageResize("n0");
+    editor.endImageResize();
+
+    // Undo should revert the real resize
+    editor.undo();
+    expect(editor.getNode("n0").image!.width).toBe(originalWidth);
+  });
+});

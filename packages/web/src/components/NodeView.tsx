@@ -68,14 +68,28 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl 
       />
       {/* Image (below text) */}
       {hasImage && node.image && (
-        <image
-          href={imageUrl}
-          x={PADDING_X}
-          y={textHeight}
-          width={node.image.width}
-          height={node.image.height}
-          preserveAspectRatio="xMidYMid meet"
-        />
+        <g className="node-image-group">
+          <image
+            href={imageUrl}
+            x={PADDING_X}
+            y={textHeight}
+            width={node.image.width}
+            height={node.image.height}
+            preserveAspectRatio="xMidYMid meet"
+          />
+          {/* Image resize handle: dot in upper-right corner */}
+          <circle
+            data-image-resize-handle
+            cx={PADDING_X + node.image.width}
+            cy={textHeight}
+            r={5}
+            fill="#3b82f6"
+            stroke="#ffffff"
+            strokeWidth={1.5}
+            className="image-resize-dot"
+            style={{ cursor: "nwse-resize" }}
+          />
+        </g>
       )}
       {/* Collapse indicator: small circle with child count */}
       {node.collapsed && node.children.length > 0 && (

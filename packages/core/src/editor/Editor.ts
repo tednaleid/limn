@@ -63,6 +63,12 @@ export class Editor {
   private resizeStartWidth = 0;
   private resizeChanged = false;
 
+  // Image resize state
+  private resizingImage = false;
+  private imageResizeNodeId: string | null = null;
+  private imageAspectRatio = 1;
+  private imageResizeChanged = false;
+
   // Viewport dimensions (set by web layer for zoom-to-fit)
   private viewportWidth = 0;
   private viewportHeight = 0;
@@ -698,6 +704,48 @@ export class Editor {
 
     this.resizingWidth = false;
     this.resizeNodeId = null;
+    this.notify();
+  }
+
+  // --- Image resize ---
+
+  private static MIN_IMAGE_WIDTH = 40;
+
+  isResizingImage(): boolean {
+    return this.resizingImage;
+  }
+
+  startImageResize(nodeId: string): void {
+    const node = this.store.getNode(nodeId);
+    if (!node.image) return;
+    this.pushUndo("resize-image");
+    this.resizingImage = true;
+    this.imageResizeNodeId = nodeId;
+    this.imageAspectRatio = node.image.height / node.image.width;
+    this.imageResizeChanged = false;
+    this.notify();
+  }
+
+  updateImageResize(newWidth: number): void {
+    if (!this.resizingImage || this.imageResizeNodeId === null) return;
+    const node = this.store.getNode(this.imageResizeNodeId);
+    if (!node.image) return;
+    const clampedWidth = Math.max(Editor.MIN_IMAGE_WIDTH, Math.round(newWidth));
+    const newHeight = Math.round(clampedWidth * this.imageAspectRatio);
+    node.image = { ...node.image, width: clampedWidth, height: newHeight };
+    this.imageResizeChanged = true;
+    this.notify();
+  }
+
+  endImageResize(): void {
+    if (!this.resizingImage) return;
+
+    if (!this.imageResizeChanged) {
+      this.undoStack.pop();
+    }
+
+    this.resizingImage = false;
+    this.imageResizeNodeId = null;
     this.notify();
   }
 

@@ -20,3 +20,13 @@ body,
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Image resize dot: hidden by default, visible on hover */
+.image-resize-dot {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.node-image-group:hover .image-resize-dot {
+  opacity: 1;
+}
