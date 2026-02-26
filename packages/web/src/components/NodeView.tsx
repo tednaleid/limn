@@ -27,8 +27,26 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl 
   const strokeWidth = isReparentTarget ? 2 : isSelected ? 2 : 1;
   const fontWeight = isRoot ? 600 : 400;
 
+  const FOCUS_OFFSET = 3;
+
   return (
     <g>
+      {/* Keyboard focus ring */}
+      {isSelected && !isReparentTarget && (
+        <rect
+          x={-FOCUS_OFFSET}
+          y={-FOCUS_OFFSET}
+          width={node.width + FOCUS_OFFSET * 2}
+          height={node.height + FOCUS_OFFSET * 2}
+          rx={BORDER_RADIUS + FOCUS_OFFSET}
+          ry={BORDER_RADIUS + FOCUS_OFFSET}
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth={2}
+          strokeDasharray="4 3"
+          opacity={0.6}
+        />
+      )}
       {/* Drop shadow */}
       <rect
         width={node.width}
