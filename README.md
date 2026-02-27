@@ -6,7 +6,7 @@ A keyboard-first, offline-capable mind map progressive web app built with TypeSc
 
 ```bash
 bun install
-just dev         # starts Vite dev server at http://localhost:5173
+just serve       # starts Vite dev server at http://localhost:5173
 ```
 
 ## Project structure
@@ -23,7 +23,7 @@ All commands are available via [just](https://github.com/casey/just):
 ```bash
 just               # list all available commands
 just install       # install dependencies
-just dev           # start Vite dev server
+just serve         # start Vite dev server
 just test          # run all unit tests
 just test-watch    # run tests in watch mode
 just test-file drag  # run a specific test file (by name)
