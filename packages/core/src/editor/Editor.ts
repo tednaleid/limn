@@ -588,6 +588,13 @@ export class Editor {
     if (node.parentId === null) return; // Already a root
     this.pushUndo("detach-to-root");
     this.store.detachToRoot(nodeId);
+    // Auto-assign a branch color like new roots get
+    const existingColors = this.store.getRoots()
+      .filter((r) => r.id !== nodeId)
+      .map((r) => r.style?.color)
+      .filter((c): c is string => c !== undefined);
+    const detached = this.store.getNode(nodeId);
+    detached.style = { ...detached.style, color: nextBranchColor(existingColors) };
     this.resolveOverlapForNode(nodeId);
     this.notify();
   }

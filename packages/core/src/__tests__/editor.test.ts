@@ -691,6 +691,14 @@ describe("Editor", () => {
       expect(grandchild.x).toBeLessThan(leftChild.x);
     });
 
+    test("detachToRoot assigns a branch color", () => {
+      editor.select("n1");
+      // n1 is a child, may not have a branch color
+      editor.pressKey("Tab", { shift: true });
+      const detached = editor.getNode("n1");
+      expect(detached.style?.color).toBeTruthy();
+    });
+
     test("detachToRoot preserves children", () => {
       editor.select("n1");
       const childrenBefore = [...editor.getNode("n1").children];
