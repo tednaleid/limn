@@ -460,22 +460,19 @@ export class Editor {
   navigateUp(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const current = this.store.getNode(this.selectedId);
-    const currentCenterX = current.x + current.width / 2;
     const currentCenterY = current.y + current.height / 2;
-    const visible = this.store.getVisibleNodes();
 
+    // Navigate among siblings (roots are siblings of each other)
+    const siblings = this.store.getSiblings(this.selectedId);
     let best: MindMapNode | null = null;
-    let bestScore = Infinity;
-    for (const node of visible) {
-      if (node.id === this.selectedId) continue;
-      const centerY = node.y + node.height / 2;
-      if (centerY >= currentCenterY) continue; // Not above
-      const yDist = currentCenterY - centerY;
-      const xDist = Math.abs((node.x + node.width / 2) - currentCenterX);
-      const score = yDist + xDist * 0.5;
-      if (score < bestScore) {
-        best = node;
-        bestScore = score;
+    let bestCenterY = -Infinity;
+    for (const sib of siblings) {
+      if (sib.id === this.selectedId) continue;
+      const sibCenterY = sib.y + sib.height / 2;
+      if (sibCenterY >= currentCenterY) continue; // Not above
+      if (sibCenterY > bestCenterY) {
+        best = sib;
+        bestCenterY = sibCenterY;
       }
     }
 
@@ -488,22 +485,19 @@ export class Editor {
   navigateDown(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const current = this.store.getNode(this.selectedId);
-    const currentCenterX = current.x + current.width / 2;
     const currentCenterY = current.y + current.height / 2;
-    const visible = this.store.getVisibleNodes();
 
+    // Navigate among siblings (roots are siblings of each other)
+    const siblings = this.store.getSiblings(this.selectedId);
     let best: MindMapNode | null = null;
-    let bestScore = Infinity;
-    for (const node of visible) {
-      if (node.id === this.selectedId) continue;
-      const centerY = node.y + node.height / 2;
-      if (centerY <= currentCenterY) continue; // Not below
-      const yDist = centerY - currentCenterY;
-      const xDist = Math.abs((node.x + node.width / 2) - currentCenterX);
-      const score = yDist + xDist * 0.5;
-      if (score < bestScore) {
-        best = node;
-        bestScore = score;
+    let bestCenterY = Infinity;
+    for (const sib of siblings) {
+      if (sib.id === this.selectedId) continue;
+      const sibCenterY = sib.y + sib.height / 2;
+      if (sibCenterY <= currentCenterY) continue; // Not below
+      if (sibCenterY < bestCenterY) {
+        best = sib;
+        bestCenterY = sibCenterY;
       }
     }
 

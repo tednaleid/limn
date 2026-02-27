@@ -162,7 +162,7 @@ function twoRoots(): MindMapFileFormat {
   };
 }
 
-describe("Spatial navigation", () => {
+describe("Navigation", () => {
   let editor: TestEditor;
 
   describe("navigateUp / navigateDown", () => {
@@ -211,48 +211,71 @@ describe("Spatial navigation", () => {
       expect(editor.getSelectedId()).toBe("c1");
     });
 
-    test("navigateDown from root selects c2 (nearest below by y-center)", () => {
-      editor.select("root");
-      editor.navigateDown();
-      // root is at y=0, c2 is at y=0 too but has same y-center,
-      // c3 is at y=52 which is below
-      // Nearest below: c3 at y=52 (center = 68) is below root center (16)
-      // c2 at y=0 has center=16, same as root -- not below
-      // Actually c2.center == root.center, so it's not strictly below.
-      // Next below is c3. But wait, all children with y-center > root.y-center should qualify.
-      // c2 center = 16, root center = 16 -- not below (equal)
-      // c3 center = 68 -- below
-      // So navigateDown from root should select c3
-      expect(editor.getSelectedId()).toBe("c3");
-    });
-
-    test("navigateDown prefers nearby sibling over distant grandchild", () => {
-      // Reproduce Ted's bug: "Web App" down should go to "Persistence", not "new box"
+    test("navigateDown stays among siblings, ignores spatially close parent", () => {
+      // Reproduce Ted's bug: from "Layout", Down went to parent "Persistence"
+      // because it was spatially closer (slightly below + far left) than
+      // the next sibling "SVG Renderer" (far below + same x).
+      // Parent root at y=2 is barely below layout center, but spatial score
+      // (yDist=2 + xDist*0.5=125 = 127) beats svg (yDist=200).
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default", version: 1 },
+        meta: { id: "test", theme: "default" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [{
-          id: "root", text: "Root", x: 0, y: 0, width: 100, height: NODE_HEIGHT,
+          id: "root", text: "Persistence", x: 0, y: 2, width: 100, height: NODE_HEIGHT,
           children: [
-            { id: "c1", text: "Sibling A", x: 250, y: -52, width: 100, height: NODE_HEIGHT, children: [] },
+            { id: "store", text: "Store", x: 250, y: -200, width: 100, height: NODE_HEIGHT, children: [] },
             {
-              id: "c2", text: "Sibling B", x: 250, y: 52, width: 100, height: NODE_HEIGHT,
-              children: [{
-                id: "gc1", text: "Grandchild", x: 500, y: 20, width: 100, height: NODE_HEIGHT,
-                children: [],
-              }],
+              id: "layout", text: "Layout", x: 250, y: 0, width: 100, height: NODE_HEIGHT,
+              children: [
+                { id: "t1", text: "test", x: 500, y: -10, width: 100, height: NODE_HEIGHT, children: [] },
+              ],
             },
+            { id: "svg", text: "SVG Renderer", x: 250, y: 200, width: 100, height: NODE_HEIGHT, children: [] },
           ],
         }],
         assets: [],
       };
       editor.loadJSON(file);
-      editor.select("c1");
-      // Grandchild is closer in y (center 36 vs 68) but far in x (550 vs 300)
-      // Should select Sibling B, not Grandchild
+      editor.select("layout");
       editor.navigateDown();
-      expect(editor.getSelectedId()).toBe("c2");
+      expect(editor.getSelectedId()).toBe("svg");
+    });
+
+    test("navigateUp stays among siblings, ignores spatially close children", () => {
+      // From "Layout", Up went to child "test" (slightly above + far right)
+      // because spatial score (yDist=10 + xDist*0.5=125 = 135) beats
+      // distant sibling "Store" (yDist=200).
+      // Same fixture as above.
+      const file: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [{
+          id: "root", text: "Persistence", x: 0, y: 2, width: 100, height: NODE_HEIGHT,
+          children: [
+            { id: "store", text: "Store", x: 250, y: -200, width: 100, height: NODE_HEIGHT, children: [] },
+            {
+              id: "layout", text: "Layout", x: 250, y: 0, width: 100, height: NODE_HEIGHT,
+              children: [
+                { id: "t1", text: "test", x: 500, y: -10, width: 100, height: NODE_HEIGHT, children: [] },
+              ],
+            },
+            { id: "svg", text: "SVG Renderer", x: 250, y: 200, width: 100, height: NODE_HEIGHT, children: [] },
+          ],
+        }],
+        assets: [],
+      };
+      editor.loadJSON(file);
+      editor.select("layout");
+      editor.navigateUp();
+      expect(editor.getSelectedId()).toBe("store");
+    });
+
+    test("navigateDown on only root is no-op (no sibling roots)", () => {
+      editor.select("root");
+      editor.navigateDown();
+      expect(editor.getSelectedId()).toBe("root");
     });
   });
 
@@ -346,14 +369,11 @@ describe("Spatial navigation", () => {
       expect(editor.getSelectedId()).toBe("r2");
     });
 
-    test("navigateUp from r2 reaches nodes in r1's tree", () => {
+    test("navigateUp from r2 goes to r1 (sibling root)", () => {
       editor.select("r2");
       editor.navigateUp();
-      // r1c1 and r1 are both above r2, pick nearest by y distance
-      const selected = editor.getSelectedId();
-      // r1c1 at y=0 (center=16), r1 at y=0 (center=16), r2 at y=200 (center=216)
-      // Nearest above r2 is r1c1 or r1 (tie at y=0, prefer smaller x)
-      expect(selected === "r1" || selected === "r1c1").toBe(true);
+      // Up/down navigates among siblings; roots are siblings of each other
+      expect(editor.getSelectedId()).toBe("r1");
     });
   });
 
