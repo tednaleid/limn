@@ -467,6 +467,7 @@ export class Editor {
 
   enterEditMode(): void {
     if (this.selectedId === null) return;
+    this.remeasureNode(this.selectedId);
     this.editing = true;
     this.notify();
   }
