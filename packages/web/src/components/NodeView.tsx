@@ -15,9 +15,10 @@ interface NodeViewProps {
   isRoot: boolean;
   isReparentTarget?: boolean;
   imageUrl?: string;
+  branchColor?: string;
 }
 
-export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl }: NodeViewProps) {
+export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl, branchColor }: NodeViewProps) {
   const lines = node.text.split("\n");
   const hasImage = node.image && imageUrl;
   const fontSize = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
@@ -98,7 +99,7 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl 
           fontSize={fontSize}
           fontWeight={fontWeight}
           fontFamily="system-ui, -apple-system, sans-serif"
-          style={{ fill: "var(--text-color)" }}
+          style={{ fill: branchColor ?? "var(--text-color)" }}
         >
           {line || "\u00A0"}
         </text>

@@ -443,6 +443,7 @@ export function MindMapCanvas() {
               key={`${edge.parent.id}-${edge.child.id}`}
               parent={edge.parent}
               child={edge.child}
+              branchColor={editor.getBranchColor(edge.child.id)}
             />
           ))}
           {visibleNodes.map((node) => {
@@ -471,6 +472,7 @@ export function MindMapCanvas() {
                   isRoot={rootIds.has(node.id)}
                   isReparentTarget={node.id === reparentTargetId}
                   imageUrl={node.image ? assetUrls.get(node.image.assetId) : undefined}
+                  branchColor={editor.getBranchColor(node.id)}
                 />
               </g>
             );

@@ -6,9 +6,10 @@ import type { MindMapNode } from "@limn/core";
 interface EdgeViewProps {
   parent: MindMapNode;
   child: MindMapNode;
+  branchColor?: string;
 }
 
-export function EdgeView({ parent, child }: EdgeViewProps) {
+export function EdgeView({ parent, child, branchColor }: EdgeViewProps) {
   // Connect from parent's right/left edge center to child's left/right edge center
   const goingRight = child.x >= parent.x;
 
@@ -25,7 +26,7 @@ export function EdgeView({ parent, child }: EdgeViewProps) {
     <path
       d={d}
       fill="none"
-      stroke="#9ca3af"
+      style={{ stroke: branchColor ?? "var(--edge-default)" }}
       strokeWidth={1.5}
     />
   );
