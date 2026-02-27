@@ -13,9 +13,10 @@ interface TextEditorProps {
   editor: Editor;
   node: MindMapNode;
   camera: Camera;
+  branchColor?: string;
 }
 
-export function TextEditor({ editor, node, camera }: TextEditorProps) {
+export function TextEditor({ editor, node, camera, branchColor }: TextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Position the textarea to overlay the node, accounting for camera transform
@@ -100,9 +101,9 @@ export function TextEditor({ editor, node, camera }: TextEditorProps) {
         border: "none",
         borderRadius: `${6 * camera.zoom}px`,
         outline: "none",
-        boxShadow: `0 0 0 ${2 * camera.zoom}px var(--editor-shadow)`,
+        boxShadow: `0 0 0 ${2 * camera.zoom}px ${branchColor ?? "var(--editor-shadow)"}`,
         background: "var(--editor-bg)",
-        color: "var(--text-color)",
+        color: branchColor ?? "var(--text-color)",
         resize: "none",
         overflow: "hidden",
         boxSizing: "border-box",

@@ -490,7 +490,7 @@ export function MindMapCanvas() {
         </g>
       </svg>
       {editingNode && (
-        <TextEditor editor={editor} node={editingNode} camera={camera} />
+        <TextEditor editor={editor} node={editingNode} camera={camera} branchColor={editor.getBranchColor(editingNode.id)} />
       )}
     </div>
   );
