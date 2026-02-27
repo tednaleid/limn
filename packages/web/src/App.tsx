@@ -14,6 +14,7 @@ import { saveToFile, openFile } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
+import { applyTheme, resolveThemeName } from "./theme/themes";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -99,6 +100,24 @@ export function App() {
       setLoaded(true);
     });
   }, [editor]);
+
+  // Apply theme from document metadata and listen for system preference changes
+  useEffect(() => {
+    if (!loaded) return;
+    const themeName = editor.getTheme();
+    applyTheme(resolveThemeName(themeName));
+
+    // Re-apply when system preference changes (for "system"/"default" theme)
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const current = editor.getTheme();
+      if (current === "system" || current === "default") {
+        applyTheme(resolveThemeName(current));
+      }
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [editor, loaded]);
 
   // Set up auto-save after initial load
   useEffect(() => {
@@ -211,7 +230,7 @@ export function App() {
   }, [editor]);
 
   if (!loaded) {
-    return <div style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>Loading...</div>;
+    return <div style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>Loading...</div>;
   }
 
   return (

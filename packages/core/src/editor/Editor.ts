@@ -228,6 +228,10 @@ export class Editor {
     return this.camera;
   }
 
+  getTheme(): string {
+    return this.meta.theme;
+  }
+
   setCamera(x: number, y: number, zoom: number): void {
     this.camera = { x, y, zoom };
     this.notify();

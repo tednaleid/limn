@@ -1,6 +1,24 @@
 /* ABOUTME: Global styles for Limn web app. */
 /* ABOUTME: Minimal reset and canvas full-screen layout. */
 
+/* CSS custom properties are set by applyTheme() in themes.ts.
+   These fallback values match the light theme. */
+:root {
+  --canvas-bg: #f5f5f5;
+  --text-color: #1f2937;
+  --text-muted: #6b7280;
+  --selection-bg: rgba(59, 130, 246, 0.15);
+  --selection-border: #3b82f6;
+  --reparent-bg: rgba(245, 158, 11, 0.15);
+  --reparent-border: #f59e0b;
+  --editor-bg: #ffffff;
+  --editor-shadow: #3b82f6;
+  --collapse-bg: #e5e7eb;
+  --collapse-border: #9ca3af;
+  --collapse-text: #6b7280;
+  --edge-default: #c4c4c4;
+}
+
 *,
 *::before,
 *::after {
@@ -16,7 +34,7 @@ body,
   height: 100%;
   overflow: hidden;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #f9fafb;
+  background: var(--canvas-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
