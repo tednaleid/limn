@@ -208,3 +208,125 @@ describe("EasyMotion mode lifecycle", () => {
     expect(labelCount).toBe(4);
   });
 });
+
+describe("EasyMotion key handling", () => {
+  let editor: TestEditor;
+
+  beforeEach(() => {
+    editor = new TestEditor();
+    editor.loadJSON(threeNodeMap());
+    editor.select("root");
+  });
+
+  test("single-char label selects node and exits easymotion", () => {
+    editor.enterEasyMotionMode();
+    // c1 is closest to root, should get label "a"
+    const label = editor.getEasyMotionLabel("c1");
+    expect(label).toBeDefined();
+    editor.handleEasyMotionKey(label as string);
+    expect(editor.getSelectedId()).toBe("c1");
+    expect(editor.isEasyMotionActive()).toBe(false);
+  });
+
+  test("prefix key stores buffer and stays in easymotion", () => {
+    // Need >26 nodes to get prefixes. Create a large map.
+    const largeMap: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: Array.from({ length: 28 }, (_, i) => ({
+        id: `n${i}`,
+        text: `Node ${i}`,
+        x: i * 200,
+        y: 0,
+        width: 100,
+        height: NODE_HEIGHT,
+        children: [] as MindMapFileFormat["roots"][0]["children"],
+      })),
+      assets: [],
+    };
+    editor.loadJSON(largeMap);
+    editor.select("n0");
+    editor.enterEasyMotionMode();
+    // With 27 other nodes, P=1, so "a" is a prefix
+    expect(editor.getEasyMotionBuffer()).toBe("");
+    editor.handleEasyMotionKey("a");
+    expect(editor.isEasyMotionActive()).toBe(true);
+    expect(editor.getEasyMotionBuffer()).toBe("a");
+  });
+
+  test("second char after prefix selects two-char labeled node and exits", () => {
+    const largeMap: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: Array.from({ length: 28 }, (_, i) => ({
+        id: `n${i}`,
+        text: `Node ${i}`,
+        x: i * 200,
+        y: 0,
+        width: 100,
+        height: NODE_HEIGHT,
+        children: [] as MindMapFileFormat["roots"][0]["children"],
+      })),
+      assets: [],
+    };
+    editor.loadJSON(largeMap);
+    editor.select("n0");
+    editor.enterEasyMotionMode();
+    // Find a node with a two-char label starting with "a"
+    const aaNode = editor.getVisibleNodes().find(
+      (n) => editor.getEasyMotionLabel(n.id)?.startsWith("a") && editor.getEasyMotionLabel(n.id)?.length === 2,
+    );
+    expect(aaNode).toBeDefined();
+    const fullLabel = editor.getEasyMotionLabel(aaNode?.id ?? "");
+    expect(fullLabel?.length).toBe(2);
+
+    editor.handleEasyMotionKey("a"); // prefix
+    editor.handleEasyMotionKey(fullLabel?.charAt(1) ?? "a"); // second char
+    expect(editor.getSelectedId()).toBe(aaNode?.id);
+    expect(editor.isEasyMotionActive()).toBe(false);
+  });
+
+  test("invalid key (not a label or prefix) exits easymotion, selection unchanged", () => {
+    editor.enterEasyMotionMode();
+    const selBefore = editor.getSelectedId();
+    // Use a key that is definitely not assigned (only 3 labels: a, b, c)
+    editor.handleEasyMotionKey("z");
+    expect(editor.isEasyMotionActive()).toBe(false);
+    expect(editor.getSelectedId()).toBe(selBefore);
+  });
+
+  test("invalid second char after prefix exits easymotion, selection unchanged", () => {
+    const largeMap: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: Array.from({ length: 28 }, (_, i) => ({
+        id: `n${i}`,
+        text: `Node ${i}`,
+        x: i * 200,
+        y: 0,
+        width: 100,
+        height: NODE_HEIGHT,
+        children: [] as MindMapFileFormat["roots"][0]["children"],
+      })),
+      assets: [],
+    };
+    editor.loadJSON(largeMap);
+    editor.select("n0");
+    editor.enterEasyMotionMode();
+    editor.handleEasyMotionKey("a"); // valid prefix
+    expect(editor.isEasyMotionActive()).toBe(true);
+    // Now enter a key that makes an invalid combo
+    // With 27 nodes, only aa and ab exist. "a" + "z" should be invalid since az > 27-25=2 double labels
+    editor.handleEasyMotionKey("z");
+    expect(editor.isEasyMotionActive()).toBe(false);
+    expect(editor.getSelectedId()).toBe("n0");
+  });
+
+  test("getEasyMotionBuffer returns current partial input", () => {
+    editor.enterEasyMotionMode();
+    expect(editor.getEasyMotionBuffer()).toBe("");
+  });
+});
