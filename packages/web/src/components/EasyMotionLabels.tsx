@@ -7,6 +7,8 @@ const BADGE_HEIGHT = 20;
 const BADGE_FONT_SIZE = 13;
 const BADGE_PADDING_X = 4;
 const BADGE_RADIUS = 3;
+// Badge colors are hardcoded (not themed) since they need high contrast
+// for rapid visual scanning in EasyMotion mode.
 const BADGE_BG = "#facc15";      // yellow-400
 const BADGE_BG_DIM = "#e5e7eb";  // gray-200
 const BADGE_TEXT = "#1f2937";     // gray-800

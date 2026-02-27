@@ -24,9 +24,13 @@ test-file name:
 lint:
     bun run lint
 
-# Start the Vite dev server
+# Start the Vite dev server (skips if already running on :5173)
 serve:
-    bun run dev
+    @if lsof -i :5173 -sTCP:LISTEN >/dev/null 2>&1; then \
+        echo "Dev server already running on port 5173"; \
+    else \
+        bun run dev 2>&1 | tee /tmp/limn-dev.log; \
+    fi
 
 # Production build
 build:

@@ -436,7 +436,7 @@ export function MindMapCanvas() {
         onPointerUp={handlePointerUp}
         onDoubleClick={handleCanvasDoubleClick}
       >
-        <rect className="canvas-bg" width="100%" height="100%" fill="#f9fafb" />
+        <rect className="canvas-bg" width="100%" height="100%" style={{ fill: "var(--canvas-bg)" }} />
         <g transform={`translate(${camera.x}, ${camera.y}) scale(${camera.zoom})`}>
           {edges.map((edge) => (
             <EdgeView
