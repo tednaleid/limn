@@ -12,7 +12,7 @@
       },
     },
     "packages/core": {
-      "name": "@mindforge/core",
+      "name": "@limn/core",
       "version": "0.0.1",
       "dependencies": {
         "lz-string": "^1.5.0",
@@ -20,10 +20,10 @@
       },
     },
     "packages/web": {
-      "name": "@mindforge/web",
+      "name": "@limn/web",
       "version": "0.0.1",
       "dependencies": {
-        "@mindforge/core": "workspace:*",
+        "@limn/core": "workspace:*",
         "browser-fs-access": "^0.38.0",
         "fflate": "^0.8.2",
         "idb-keyval": "^6.2.2",
@@ -315,9 +315,9 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@mindforge/core": ["@mindforge/core@workspace:packages/core"],
+    "@limn/core": ["@limn/core@workspace:packages/core"],
 
-    "@mindforge/web": ["@mindforge/web@workspace:packages/web"],
+    "@limn/web": ["@limn/web@workspace:packages/web"],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.27", "", {}, "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA=="],
 

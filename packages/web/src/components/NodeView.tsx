@@ -1,8 +1,8 @@
 // ABOUTME: SVG component rendering a single mind map node.
 // ABOUTME: Displays a rounded rectangle with text, selection highlight, and collapse indicator.
 
-import type { MindMapNode } from "@mindforge/core";
-import { ROOT_FONT_SIZE } from "@mindforge/core";
+import type { MindMapNode } from "@limn/core";
+import { ROOT_FONT_SIZE } from "@limn/core";
 
 const BORDER_RADIUS = 6;
 const PADDING_X = 10;

@@ -2,7 +2,7 @@
 // ABOUTME: Renders all visible nodes and edges from Editor state.
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import type { MindMapNode } from "@mindforge/core";
+import type { MindMapNode } from "@limn/core";
 import { useEditor } from "../hooks/useEditor";
 import { useAssetUrls } from "../hooks/useAssetUrls";
 import { NodeView } from "./NodeView";
@@ -347,7 +347,7 @@ export function MindMapCanvas() {
           if (assets.length > 0) {
             const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
             for (const [assetId, blobUrl] of urls) {
-              window.dispatchEvent(new CustomEvent("mindforge:asset-added", {
+              window.dispatchEvent(new CustomEvent("limn:asset-added", {
                 detail: { assetId, blobUrl },
               }));
             }
@@ -402,7 +402,7 @@ export function MindMapCanvas() {
 
           // Persist blob to IndexedDB and notify App of the blob URL
           saveAssetBlob(assetId, imageFile);
-          window.dispatchEvent(new CustomEvent("mindforge:asset-added", {
+          window.dispatchEvent(new CustomEvent("limn:asset-added", {
             detail: { assetId, blobUrl },
           }));
         };
@@ -421,7 +421,7 @@ export function MindMapCanvas() {
     >
       <svg
         ref={svgRef}
-        data-mindforge-canvas
+        data-limn-canvas
         role="tree"
         aria-label="Mind Map"
         style={{

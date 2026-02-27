@@ -1,7 +1,7 @@
 // ABOUTME: DOM-based TextMeasurer using an off-screen element.
 // ABOUTME: Measures actual text dimensions for accurate node sizing.
 
-import type { TextMeasurer, NodeStyle } from "@mindforge/core";
+import type { TextMeasurer, NodeStyle } from "@limn/core";
 
 const FONT_SIZE = 14;
 const FONT_FAMILY = "system-ui, -apple-system, sans-serif";

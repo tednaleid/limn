@@ -1,9 +1,9 @@
-// ABOUTME: Root React component for MindForge.
+// ABOUTME: Root React component for Limn.
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Editor } from "@mindforge/core";
-import type { MindMapFileFormat } from "@mindforge/core";
+import { Editor } from "@limn/core";
+import type { MindMapFileFormat } from "@limn/core";
 import { EditorContext } from "./hooks/useEditor";
 import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
@@ -12,7 +12,7 @@ import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { setupAutoSave, loadFromIDB, saveAssetBlob, loadAllAssetBlobs } from "./persistence/local";
 import { saveToFile, openFile } from "./persistence/file";
 import { exportSvg } from "./export/svg";
-import { decompressFromUrl } from "@mindforge/core";
+import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 
 const DEMO_MAP: MindMapFileFormat = {
@@ -22,7 +22,7 @@ const DEMO_MAP: MindMapFileFormat = {
   roots: [
     {
       id: "root",
-      text: "MindForge",
+      text: "Limn",
       x: 0,
       y: 0,
       width: 100,
@@ -151,8 +151,8 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    window.addEventListener("mindforge:asset-added", handleAssetAdded);
-    return () => window.removeEventListener("mindforge:asset-added", handleAssetAdded);
+    window.addEventListener("limn:asset-added", handleAssetAdded);
+    return () => window.removeEventListener("limn:asset-added", handleAssetAdded);
   }, [handleAssetAdded]);
 
   // Handle paste from clipboard

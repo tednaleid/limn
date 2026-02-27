@@ -3,9 +3,9 @@
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
-import type { Editor } from "@mindforge/core";
-import { migrateToLatest } from "@mindforge/core";
-import type { MindMapFileFormat } from "@mindforge/core";
+import type { Editor } from "@limn/core";
+import { migrateToLatest } from "@limn/core";
+import type { MindMapFileFormat } from "@limn/core";
 import { loadAssetBlob, saveAssetBlob } from "./local";
 
 const MINDMAP_EXTENSION = ".mindmap";
@@ -14,7 +14,7 @@ const MINDMAP_MIME = "application/octet-stream";
 const FILE_OPTIONS = {
   mimeTypes: [MINDMAP_MIME],
   extensions: [MINDMAP_EXTENSION],
-  description: "MindForge Mind Map",
+  description: "Limn Mind Map",
 };
 
 /** Whether the File System Access API is supported (Chromium). */
@@ -144,7 +144,7 @@ export async function saveToFile(editor: Editor): Promise<void> {
 export async function openFile(editor: Editor): Promise<void> {
   const file = await fileOpen({
     ...FILE_OPTIONS,
-    id: "mindforge",
+    id: "limn",
   });
 
   const { data, assetBlobs } = await parseMindmapFile(file);

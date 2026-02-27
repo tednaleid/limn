@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-MindForge — keyboard-first, offline-capable mind map PWA.
+Limn — keyboard-first, offline-capable mind map progressive web app.
 
 ## Development Methodology
 
@@ -13,7 +13,7 @@ For this project, you are allowed to commit, and are actually REQUIRED to commit
 
 ```
 packages/core/    # Framework-agnostic TS library — NO React, NO browser APIs
-packages/web/     # React PWA — rendering, input handling, persistence
+packages/web/     # React web app — rendering, input handling, persistence
 ```
 
 ## Commands
@@ -47,8 +47,3 @@ A `justfile` is provided for convenience (`just check` runs tests + lint + typec
 - **Undo tracks only document data.** Camera position and selection state are excluded from the diff/undo system. The store distinguishes "document state" (nodes, structure, text) from "session state" (camera, selection).
 - **Root nodes have no siblings.** Creating a sibling (Shift+Enter in nav mode, Enter in edit mode) is a no-op on root nodes. New roots are created only via Enter with nothing selected, or double-click on canvas.
 - **Empty nodes are auto-deleted.** If a user exits edit mode (Escape) on a node with empty text, the node is deleted and selection falls back to previous sibling, then parent.
-
-## Specs and progress
-
-- Full spec: `SPEC.md`
-- Current status and next steps: `PROGRESS.md`

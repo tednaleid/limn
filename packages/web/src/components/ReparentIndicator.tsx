@@ -1,7 +1,7 @@
 // ABOUTME: SVG dashed line indicator shown during drag-to-reparent.
 // ABOUTME: Connects the dragged node to the potential new parent.
 
-import type { MindMapNode } from "@mindforge/core";
+import type { MindMapNode } from "@limn/core";
 
 interface ReparentIndicatorProps {
   draggedNode: MindMapNode;

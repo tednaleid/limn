@@ -1,4 +1,4 @@
-// ABOUTME: Entry point for the MindForge web application.
+// ABOUTME: Entry point for the Limn web application.
 // ABOUTME: Mounts the React app into the DOM.
 
 import { StrictMode } from "react";

@@ -6,7 +6,7 @@
  * Finds the main SVG element in the DOM and serializes it.
  */
 export function exportSvg(): void {
-  const svgEl = document.querySelector("svg[data-mindforge-canvas]");
+  const svgEl = document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;
@@ -23,7 +23,7 @@ export function exportSvg(): void {
  * Renders the SVG to a canvas element, then converts to PNG.
  */
 export function exportPng(): void {
-  const svgEl = document.querySelector("svg[data-mindforge-canvas]") as SVGSVGElement | null;
+  const svgEl = document.querySelector("svg[data-limn-canvas]") as SVGSVGElement | null;
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;

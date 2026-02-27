@@ -2,8 +2,8 @@
 // ABOUTME: Captures keydown events and calls preventDefault for handled keys.
 
 import { useEffect } from "react";
-import { dispatch } from "@mindforge/core";
-import type { Editor, Modifiers } from "@mindforge/core";
+import { dispatch } from "@limn/core";
+import type { Editor, Modifiers } from "@limn/core";
 
 /** Keys that should always be prevented from browser default behavior. */
 const ALWAYS_PREVENT = new Set(["Tab"]);
@@ -23,7 +23,7 @@ export function useKeyboardHandler(editor: Editor): void {
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !target.dataset.mindforgeEdit)
+        (target.tagName === "TEXTAREA" && !target.dataset.limnEdit)
       ) {
         return;
       }

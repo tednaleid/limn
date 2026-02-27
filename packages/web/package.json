@@ -1,5 +1,5 @@
 {
-  "name": "@mindforge/web",
+  "name": "@limn/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mindforge/core": "workspace:*",
+    "@limn/core": "workspace:*",
     "browser-fs-access": "^0.38.0",
     "fflate": "^0.8.2",
     "idb-keyval": "^6.2.2",

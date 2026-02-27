@@ -2,7 +2,7 @@
 // ABOUTME: Uses useSyncExternalStore for efficient re-rendering on state changes.
 
 import { createContext, useContext, useSyncExternalStore } from "react";
-import type { Editor } from "@mindforge/core";
+import type { Editor } from "@limn/core";
 
 export const EditorContext = createContext<Editor | null>(null);
 

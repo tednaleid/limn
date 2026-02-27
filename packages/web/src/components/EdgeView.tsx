@@ -1,7 +1,7 @@
 // ABOUTME: SVG component rendering an edge between parent and child nodes.
 // ABOUTME: Uses a cubic bezier curve for smooth connections.
 
-import type { MindMapNode } from "@mindforge/core";
+import type { MindMapNode } from "@limn/core";
 
 interface EdgeViewProps {
   parent: MindMapNode;

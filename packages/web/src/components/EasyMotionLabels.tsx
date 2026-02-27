@@ -1,7 +1,7 @@
 // ABOUTME: SVG overlay that renders EasyMotion label badges on each visible node.
 // ABOUTME: Shown when EasyMotion mode is active; dims non-matching labels during prefix input.
 
-import type { MindMapNode, Editor } from "@mindforge/core";
+import type { MindMapNode, Editor } from "@limn/core";
 
 const BADGE_HEIGHT = 20;
 const BADGE_FONT_SIZE = 13;

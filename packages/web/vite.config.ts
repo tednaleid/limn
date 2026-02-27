@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "prompt",
       includeAssets: ["favicon.ico"],
       manifest: {
-        name: "MindForge",
-        short_name: "MindForge",
+        name: "Limn",
+        short_name: "Limn",
         description: "Keyboard-first, offline-capable mind map",
         theme_color: "#1e40af",
         background_color: "#f8fafc",

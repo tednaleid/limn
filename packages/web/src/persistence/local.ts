@@ -2,14 +2,14 @@
 // ABOUTME: Persists mind map state between sessions; supports cross-tab sync.
 
 import { get, set } from "idb-keyval";
-import type { Editor } from "@mindforge/core";
-import type { MindMapFileFormat } from "@mindforge/core";
+import type { Editor } from "@limn/core";
+import type { MindMapFileFormat } from "@limn/core";
 
 const SAVE_DEBOUNCE_MS = 500;
-const IDB_PREFIX = "mindforge:doc:";
-const IDB_REVISION_PREFIX = "mindforge:rev:";
-const IDB_ASSET_PREFIX = "mindforge:asset:";
-const BROADCAST_CHANNEL_NAME = "mindforge-sync";
+const IDB_PREFIX = "limn:doc:";
+const IDB_REVISION_PREFIX = "limn:rev:";
+const IDB_ASSET_PREFIX = "limn:asset:";
+const BROADCAST_CHANNEL_NAME = "limn-sync";
 
 interface StoredDocument {
   data: MindMapFileFormat;

@@ -2,8 +2,8 @@
 // ABOUTME: Zoom-aware positioning; delegates key events to core dispatch.
 
 import { useEffect, useRef, useCallback } from "react";
-import { dispatch, ROOT_FONT_SIZE } from "@mindforge/core";
-import type { Editor, MindMapNode, Camera } from "@mindforge/core";
+import { dispatch, ROOT_FONT_SIZE } from "@limn/core";
+import type { Editor, MindMapNode, Camera } from "@limn/core";
 
 const PADDING_X = 10;
 const PADDING_Y = 6;
@@ -82,7 +82,7 @@ export function TextEditor({ editor, node, camera }: TextEditorProps) {
     <textarea
       ref={textareaRef}
       rows={1}
-      data-mindforge-edit="true"
+      data-limn-edit="true"
       value={node.text}
       onChange={handleChange}
       onKeyDown={handleKeyDown}

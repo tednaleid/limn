@@ -1,4 +1,4 @@
-# MindForge development commands
+# Limn development commands
 
 # List available recipes
 default:

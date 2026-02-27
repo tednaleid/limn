@@ -1,4 +1,4 @@
-// ABOUTME: Core data model types for MindForge.
+// ABOUTME: Core data model types for Limn.
 // ABOUTME: Framework-agnostic interfaces shared by all packages.
 
 export interface NodeStyle {

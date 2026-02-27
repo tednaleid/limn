@@ -1,6 +1,6 @@
-# MindForge
+# Limn
 
-A keyboard-first, offline-capable mind map PWA built with TypeScript, React, and SVG.
+A keyboard-first, offline-capable mind map progressive web app built with TypeScript, React, and SVG.
 
 ## Quick start
 
@@ -13,7 +13,7 @@ just dev         # starts Vite dev server at http://localhost:5173
 
 ```
 packages/core/    # Framework-agnostic TS library (no React, no browser APIs)
-packages/web/     # React PWA (rendering, input handling, persistence)
+packages/web/     # React web app (rendering, input handling, persistence)
 ```
 
 ## Development commands
@@ -65,6 +65,8 @@ bun run build      # production build
 | Backspace | Delete node |
 | Space | Toggle collapse |
 | `;` | EasyMotion: labels appear on all visible nodes, type a label to jump |
+| Opt+Up/Down | Reorder among siblings |
+| Opt+Left/Right | Indent / Outdent |
 | Shift+Tab | Detach node to root |
 | Escape | Deselect |
 
@@ -87,5 +89,3 @@ bun run build      # production build
 | Cmd+0 | Zoom to fit |
 | Cmd+1 | Zoom to selected node |
 | Shift+Arrows | Pan canvas |
-
-See `SPEC.md` for full requirements and `PROGRESS.md` for current status.

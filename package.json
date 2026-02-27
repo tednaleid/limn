@@ -1,5 +1,5 @@
 {
-  "name": "mindforge",
+  "name": "limn",
   "private": true,
   "type": "module",
   "workspaces": ["packages/*"],
@@ -7,8 +7,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "dev": "bun run --filter @mindforge/web dev",
-    "build": "bun run --filter @mindforge/web build",
+    "dev": "bun run --filter @limn/web dev",
+    "build": "bun run --filter @limn/web build",
     "lint": "eslint packages/"
   },
   "devDependencies": {
