@@ -319,16 +319,20 @@ describe("Editor", () => {
       editor.expectEditing(selectedId!);
     });
 
-    test("Cmd+Up reorders node up", () => {
+    test("Cmd+Up reorders node up and updates layout", () => {
       editor.select("n2");
       editor.pressKey("ArrowUp", { meta: true });
       editor.expectChildren("n0", ["n2", "n1"]);
+      // n2 moved up visually: its y should now be less than n1's y
+      expect(editor.getNode("n2").y).toBeLessThan(editor.getNode("n1").y);
     });
 
-    test("Cmd+Down reorders node down", () => {
+    test("Cmd+Down reorders node down and updates layout", () => {
       editor.select("n1");
       editor.pressKey("ArrowDown", { meta: true });
       editor.expectChildren("n0", ["n2", "n1"]);
+      // n1 moved down visually: its y should now be greater than n2's y
+      expect(editor.getNode("n1").y).toBeGreaterThan(editor.getNode("n2").y);
     });
   });
 
@@ -691,16 +695,18 @@ describe("Editor", () => {
       expect(editor.getCamera().y).toBeGreaterThan(0);
     });
 
-    test("Cmd+j reorders node down", () => {
+    test("Cmd+j reorders node down and updates layout", () => {
       editor.select("n1");
       editor.pressKey("j", { meta: true });
       editor.expectChildren("n0", ["n2", "n1"]);
+      expect(editor.getNode("n1").y).toBeGreaterThan(editor.getNode("n2").y);
     });
 
-    test("Cmd+k reorders node up", () => {
+    test("Cmd+k reorders node up and updates layout", () => {
       editor.select("n2");
       editor.pressKey("k", { meta: true });
       editor.expectChildren("n0", ["n2", "n1"]);
+      expect(editor.getNode("n2").y).toBeLessThan(editor.getNode("n1").y);
     });
   });
 

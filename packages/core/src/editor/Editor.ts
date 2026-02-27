@@ -584,6 +584,7 @@ export class Editor {
   reorderNode(nodeId: string, direction: "up" | "down"): void {
     this.pushUndo("reorder-node");
     this.store.reorderNode(nodeId, direction);
+    relayoutFromNode(this.store, nodeId);
     this.notify();
   }
 
