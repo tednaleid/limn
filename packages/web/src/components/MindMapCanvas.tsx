@@ -444,6 +444,7 @@ export function MindMapCanvas() {
               parent={edge.parent}
               child={edge.child}
               branchColor={editor.getBranchColor(edge.child.id)}
+              depth={editor.getNodeDepth(edge.child.id)}
             />
           ))}
           {visibleNodes.map((node) => {
