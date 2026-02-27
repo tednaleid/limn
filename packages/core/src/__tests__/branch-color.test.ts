@@ -96,9 +96,7 @@ describe("getBranchColor", () => {
     expect(editor.getBranchColor(grandchildId)).toBe("#ff0000");
   });
 
-  it("returns undefined for a node with no color in its ancestry", () => {
-    // Manually create a root without auto-color (via store directly)
-    // This tests the fallback case
+  it("auto-assigns a color when loading a file without colors", () => {
     const editor2 = new TestEditor();
     // Load a file without colors to simulate old data
     const fileData = {
@@ -115,7 +113,7 @@ describe("getBranchColor", () => {
       assets: [],
     };
     editor2.loadJSON(fileData);
-    expect(editor2.getBranchColor("r1")).toBeUndefined();
+    expect(editor2.getBranchColor("r1")).toBe(BRANCH_PALETTE[0]);
   });
 });
 

@@ -210,6 +210,21 @@ export class Editor {
     this.notify();
   }
 
+  /** Assign palette colors to root nodes that don't have one (e.g., old files). */
+  private assignMissingRootColors(): void {
+    const roots = this.store.getRoots();
+    const existingColors = roots
+      .map((r) => r.style?.color)
+      .filter((c): c is string => c !== undefined);
+    for (const root of roots) {
+      if (!root.style?.color) {
+        const color = nextBranchColor(existingColors);
+        root.style = { ...root.style, color };
+        existingColors.push(color);
+      }
+    }
+  }
+
   /** Check if a node has visible children (not collapsed and has children). */
   hasVisibleChildren(id: string): boolean {
     const node = this.store.getNode(id);
@@ -1291,6 +1306,8 @@ export class Editor {
     this.undoStack = [];
     this.redoStack = [];
     this.lastUndoLabel = null;
+    // Auto-assign branch colors to roots that lack them (old files)
+    this.assignMissingRootColors();
     this.notify();
   }
 
