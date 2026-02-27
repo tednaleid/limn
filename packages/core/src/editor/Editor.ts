@@ -547,7 +547,7 @@ export class Editor {
     return id;
   }
 
-  addChild(parentId: string, text = ""): string {
+  addChild(parentId: string, text = "", direction?: number): string {
     this.pushUndo("add-child");
     const parent = this.store.getNode(parentId);
     if (parent.collapsed) {
@@ -556,7 +556,7 @@ export class Editor {
     }
     const id = this.store.addChild(parentId, text);
     this.remeasureNode(id);
-    positionNewChild(this.store, id);
+    positionNewChild(this.store, id, direction);
     this.resolveOverlapForNode(id);
     this.selectedId = id;
     this.editing = true;
@@ -771,6 +771,21 @@ export class Editor {
 
   // --- Spatial navigation ---
 
+  /** Get siblings filtered to the same side when parent is a root node.
+   *  For non-root parents, returns all siblings. */
+  private sameSideSiblings(nodeId: string): MindMapNode[] {
+    const node = this.store.getNode(nodeId);
+    if (node.parentId === null) {
+      return this.store.getRoots();
+    }
+    const parent = this.store.getNode(node.parentId);
+    const siblings = this.store.getChildren(node.parentId);
+    // Only filter by side when parent is a root
+    if (parent.parentId !== null) return siblings;
+    const nodeIsLeft = node.x < parent.x;
+    return siblings.filter((s) => (s.x < parent.x) === nodeIsLeft);
+  }
+
   navigateUp(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const current = this.store.getNode(this.selectedId);
@@ -780,8 +795,8 @@ export class Editor {
 
     // Root nodes use spatial search directly (siblings can be anywhere on the canvas)
     if (current.parentId !== null) {
-      // Navigate among siblings for non-root nodes
-      const siblings = this.store.getSiblings(this.selectedId);
+      // Navigate among same-side siblings for non-root nodes
+      const siblings = this.sameSideSiblings(this.selectedId);
       let bestCenterY = -Infinity;
       for (const sib of siblings) {
         if (sib.id === this.selectedId) continue;
@@ -810,8 +825,8 @@ export class Editor {
 
     // Root nodes use spatial search directly (siblings can be anywhere on the canvas)
     if (current.parentId !== null) {
-      // Navigate among siblings for non-root nodes
-      const siblings = this.store.getSiblings(this.selectedId);
+      // Navigate among same-side siblings for non-root nodes
+      const siblings = this.sameSideSiblings(this.selectedId);
       let bestCenterY = Infinity;
       for (const sib of siblings) {
         if (sib.id === this.selectedId) continue;

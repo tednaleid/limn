@@ -38,7 +38,14 @@ const bindings: KeyBinding[] = [
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.detachToRoot(sel);
+      if (!sel) return;
+      const node = editor.getNode(sel);
+      if (node.parentId === null) {
+        // Root node: add a child to the left
+        editor.addChild(sel, "", -1);
+      } else {
+        editor.detachToRoot(sel);
+      }
     },
   },
   {
@@ -46,7 +53,14 @@ const bindings: KeyBinding[] = [
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.addChild(sel);
+      if (!sel) return;
+      const node = editor.getNode(sel);
+      if (node.parentId === null) {
+        // Root node: always add child to the right
+        editor.addChild(sel, "", 1);
+      } else {
+        editor.addChild(sel);
+      }
     },
   },
   {
@@ -335,10 +349,16 @@ const bindings: KeyBinding[] = [
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (!sel) return;
+      const node = editor.getNode(sel);
       editor.exitEditMode();
       // If the node was deleted (empty text), don't try to add a child
       if (editor.getSelectedId() !== sel) return;
-      editor.addChild(sel);
+      if (node.parentId === null) {
+        // Root node: always add child to the right
+        editor.addChild(sel, "", 1);
+      } else {
+        editor.addChild(sel);
+      }
     },
   },
 

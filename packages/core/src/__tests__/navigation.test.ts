@@ -314,6 +314,41 @@ describe("Navigation", () => {
     });
   });
 
+  describe("same-side navigation for root children", () => {
+    beforeEach(() => {
+      editor = new TestEditor();
+      editor.loadJSON(bidirectionalMap());
+    });
+
+    test("navigateDown from right child of root stays on right side", () => {
+      editor.select("right1");
+      editor.navigateDown();
+      expect(editor.getSelectedId()).toBe("right2");
+    });
+
+    test("navigateUp from right child stays on right side, does not jump to left", () => {
+      editor.select("right2");
+      editor.navigateUp();
+      expect(editor.getSelectedId()).toBe("right1");
+    });
+
+    test("navigateDown from bottom right child does not jump to left side", () => {
+      editor.select("right2");
+      editor.navigateDown();
+      // right2 is the bottommost right child, should stay selected (no-op)
+      // or spatial fallback, but should NOT jump to left1
+      expect(editor.getSelectedId()).not.toBe("left1");
+    });
+
+    test("navigateUp from top right child does not jump to left side", () => {
+      editor.select("right1");
+      editor.navigateUp();
+      // right1 is the topmost right child, should stay selected (no-op)
+      // or spatial fallback, but should NOT jump to left1
+      expect(editor.getSelectedId()).not.toBe("left1");
+    });
+  });
+
   describe("navigateLeft / navigateRight (left-side branches)", () => {
     beforeEach(() => {
       editor = new TestEditor();

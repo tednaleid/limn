@@ -241,6 +241,51 @@ describe("Layout engine", () => {
     });
   });
 
+  describe("side-aware centering for root children", () => {
+    test("left and right children of root are centered independently", () => {
+      editor = new TestEditor();
+      editor.loadJSON(singleRoot());
+
+      // Add two right children
+      const r1 = editor.addChild("root", "R1");
+      const r2 = editor.addChild("root", "R2");
+
+      // Add a left child
+      editor.select("root");
+      const l1 = editor.addChild("root", "L1", -1);
+
+      const rootY = editor.getNode("root").y;
+      const rootCenter = rootY + NODE_HEIGHT / 2;
+
+      // Left child should be centered on root independently
+      const l1Center = editor.getNode(l1).y + NODE_HEIGHT / 2;
+      expect(Math.abs(l1Center - rootCenter)).toBeLessThan(1);
+
+      // Right children should be centered on root independently
+      const r1Y = editor.getNode(r1).y;
+      const r2Y = editor.getNode(r2).y;
+      const rightMidpoint = (r1Y + r2Y) / 2;
+      expect(Math.abs(rightMidpoint - rootY)).toBeLessThan(1);
+    });
+
+    test("adding a right child does not shift left children", () => {
+      editor = new TestEditor();
+      editor.loadJSON(singleRoot());
+
+      // Add a left child
+      const l1 = editor.addChild("root", "L1", -1);
+      const l1YBefore = editor.getNode(l1).y;
+
+      // Add right children (explicit direction, as dispatch would pass)
+      editor.addChild("root", "R1", 1);
+      editor.addChild("root", "R2", 1);
+      editor.addChild("root", "R3", 1);
+
+      // Left child should not have moved
+      expect(editor.getNode(l1).y).toBe(l1YBefore);
+    });
+  });
+
   describe("collapse does not push other trees", () => {
     test("collapsing a node does not shift an unrelated root tree", () => {
       editor = new TestEditor();

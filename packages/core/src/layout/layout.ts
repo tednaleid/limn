@@ -44,21 +44,22 @@ export function branchDirection(store: MindMapStore, nodeId: string): number {
  * Position a new child node relative to its parent.
  * Handles horizontal offset and vertical centering among siblings.
  */
-export function positionNewChild(store: MindMapStore, childId: string): void {
+export function positionNewChild(store: MindMapStore, childId: string, directionHint?: number): void {
   const child = store.getNode(childId);
   if (child.parentId === null) return;
 
   const parent = store.getNode(child.parentId);
   const siblings = store.getChildren(child.parentId);
 
-  // Determine direction: from existing siblings, or from parent's branch direction
-  let direction = 1;
-  const firstSibling = siblings.filter((s) => s.id !== childId)[0];
-  if (firstSibling) {
-    direction = branchDirection(store, firstSibling.id);
-  } else {
-    // No existing siblings: infer direction from parent's branch
-    direction = branchDirection(store, child.parentId);
+  // Determine direction: explicit hint, existing siblings, or parent's branch direction
+  let direction = directionHint ?? 0;
+  if (!direction) {
+    const firstSibling = siblings.filter((s) => s.id !== childId)[0];
+    if (firstSibling) {
+      direction = branchDirection(store, firstSibling.id);
+    } else {
+      direction = branchDirection(store, child.parentId);
+    }
   }
 
   // Horizontal: fixed offset in branch direction
@@ -87,14 +88,29 @@ export function positionNewSibling(
 }
 
 /**
- * Re-center all children of a parent around the parent's y coordinate.
+ * Partition children of a node into left and right groups based on x-position.
+ */
+function partitionChildrenBySide(
+  store: MindMapStore,
+  parentId: string,
+): { left: ReturnType<MindMapStore["getChildren"]>; right: ReturnType<MindMapStore["getChildren"]> } {
+  const parent = store.getNode(parentId);
+  const children = store.getChildren(parentId);
+  const left = children.filter((c) => c.x < parent.x);
+  const right = children.filter((c) => c.x >= parent.x);
+  return { left, right };
+}
+
+/**
+ * Center a group of children around a parent's y coordinate.
  * Each child occupies space equal to its subtree height.
  * Children (and their subtrees) are shifted as rigid units.
  */
-export function centerChildren(store: MindMapStore, parentId: string): void {
-  const parent = store.getNode(parentId);
-  const children = store.getChildren(parentId);
-
+function centerChildGroup(
+  store: MindMapStore,
+  parent: ReturnType<MindMapStore["getNode"]>,
+  children: ReturnType<MindMapStore["getChildren"]>,
+): void {
   if (children.length === 0) return;
 
   // Compute subtree heights for each child
@@ -122,6 +138,27 @@ export function centerChildren(store: MindMapStore, parentId: string): void {
     }
 
     currentY += childHeight + V_GAP;
+  }
+}
+
+/**
+ * Re-center all children of a parent around the parent's y coordinate.
+ * When the parent is a root, left and right children are centered independently.
+ * When the parent is non-root, all children are centered as one group.
+ */
+export function centerChildren(store: MindMapStore, parentId: string): void {
+  const parent = store.getNode(parentId);
+  const children = store.getChildren(parentId);
+
+  if (children.length === 0) return;
+
+  if (parent.parentId === null) {
+    // Root: center left and right groups independently
+    const { left, right } = partitionChildrenBySide(store, parentId);
+    centerChildGroup(store, parent, left);
+    centerChildGroup(store, parent, right);
+  } else {
+    centerChildGroup(store, parent, children);
   }
 }
 

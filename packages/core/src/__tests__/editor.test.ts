@@ -615,14 +615,80 @@ describe("Editor", () => {
       expect(editor.getRoots().map((r) => r.id)).toContain("n1");
     });
 
-    test("Shift+Tab on root is a no-op", () => {
+    test("Shift+Tab on root creates a left child", () => {
       editor.select("n0");
-      const rootsBefore = editor.getRoots().length;
+      const root = editor.getNode("n0");
+      const childrenBefore = root.children.length;
 
       editor.pressKey("Tab", { shift: true });
 
-      expect(editor.getRoots().length).toBe(rootsBefore);
-      expect(editor.getNode("n0").parentId).toBeNull();
+      // Should have added a child and entered edit mode
+      expect(root.children.length).toBe(childrenBefore + 1);
+      expect(editor.isEditing()).toBe(true);
+
+      // The new child should be to the left of the root
+      const newChildId = editor.getSelectedId()!;
+      const newChild = editor.getNode(newChildId);
+      expect(newChild.parentId).toBe("n0");
+      expect(newChild.x).toBeLessThan(root.x);
+    });
+
+    test("Shift+Tab left child is undoable", () => {
+      editor.select("n0");
+      const childrenBefore = editor.getNode("n0").children.length;
+
+      editor.pressKey("Tab", { shift: true });
+      editor.setText(editor.getSelectedId()!, "left");
+      editor.exitEditMode();
+      expect(editor.getNode("n0").children.length).toBe(childrenBefore + 1);
+
+      // Undo setText, then undo addChild
+      editor.undo();
+      editor.undo();
+      expect(editor.getNode("n0").children.length).toBe(childrenBefore);
+    });
+
+    test("Tab on root always creates right child even when only left children exist", () => {
+      // Start fresh with a root that has no children
+      const fresh = new TestEditor();
+      fresh.loadJSON({
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [{
+          id: "r", text: "Root", x: 0, y: 0, width: 100, height: 32,
+          children: [{
+            id: "lc", text: "Left", x: -250, y: 0, width: 100, height: 32,
+            children: [],
+          }],
+        }],
+        assets: [],
+      });
+
+      // Tab on root should create right child despite only left children existing
+      fresh.select("r");
+      fresh.pressKey("Tab");
+      const newChildId = fresh.getSelectedId()!;
+      const newChild = fresh.getNode(newChildId);
+      const root = fresh.getNode("r");
+      expect(newChild.x).toBeGreaterThan(root.x);
+    });
+
+    test("Tab on a left-side child creates grandchild also to the left", () => {
+      editor.select("n0");
+      editor.pressKey("Tab", { shift: true });
+      editor.setText(editor.getSelectedId()!, "left");
+      editor.exitEditMode();
+
+      // Now select the left child and add a grandchild with Tab
+      const leftChildId = editor.getSelectedId()!;
+      const leftChild = editor.getNode(leftChildId);
+      editor.pressKey("Tab");
+
+      // Grandchild should also be to the left of its parent
+      const grandchildId = editor.getSelectedId()!;
+      const grandchild = editor.getNode(grandchildId);
+      expect(grandchild.x).toBeLessThan(leftChild.x);
     });
 
     test("detachToRoot preserves children", () => {
