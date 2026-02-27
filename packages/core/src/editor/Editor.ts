@@ -1298,7 +1298,7 @@ export class Editor {
   private remeasureNode(nodeId: string): void {
     const node = this.store.getNode(nodeId);
     const style = node.parentId === null
-      ? { ...node.style, fontSize: node.style?.fontSize ?? ROOT_FONT_SIZE }
+      ? { ...node.style, fontSize: node.style?.fontSize ?? ROOT_FONT_SIZE, fontWeight: node.style?.fontWeight ?? 600 }
       : node.style;
     if (node.widthConstrained) {
       const { height } = this.textMeasurer.reflow(node.text, node.width, style);

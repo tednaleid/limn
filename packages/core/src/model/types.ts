@@ -3,6 +3,7 @@
 
 export interface NodeStyle {
   fontSize?: number;
+  fontWeight?: number;
 }
 
 export interface ImageRef {

@@ -32,6 +32,7 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
   const lineHeight = Math.round(fontSize * (LINE_HEIGHT / FONT_SIZE));
   const paddingY = Math.round(fontSize * (PADDING_Y / FONT_SIZE));
   el.style.fontSize = `${fontSize}px`;
+  el.style.fontWeight = `${style?.fontWeight ?? 400}`;
   el.style.lineHeight = `${lineHeight}px`;
   el.style.padding = `${paddingY}px ${PADDING_X}px`;
 }
