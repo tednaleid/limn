@@ -330,3 +330,88 @@ describe("EasyMotion key handling", () => {
     expect(editor.getEasyMotionBuffer()).toBe("");
   });
 });
+
+describe("EasyMotion dispatch integration", () => {
+  let editor: TestEditor;
+
+  beforeEach(() => {
+    editor = new TestEditor();
+    editor.loadJSON(threeNodeMap());
+  });
+
+  test("; in nav mode enters easymotion", () => {
+    editor.select("root");
+    editor.pressKey(";");
+    expect(editor.isEasyMotionActive()).toBe(true);
+  });
+
+  test("letter keys during easymotion route to handleEasyMotionKey", () => {
+    editor.select("root");
+    editor.pressKey(";");
+    // c1 should get label "a" (closest to root)
+    const label = editor.getEasyMotionLabel("c1");
+    expect(label).toBeDefined();
+    editor.pressKey(label as string);
+    expect(editor.getSelectedId()).toBe("c1");
+    expect(editor.isEasyMotionActive()).toBe(false);
+  });
+
+  test("Escape during easymotion exits without changing selection", () => {
+    editor.select("root");
+    editor.pressKey(";");
+    expect(editor.isEasyMotionActive()).toBe(true);
+    editor.pressKey("Escape");
+    expect(editor.isEasyMotionActive()).toBe(false);
+    expect(editor.getSelectedId()).toBe("root");
+  });
+
+  test("; in edit mode is not intercepted", () => {
+    editor.select("root");
+    editor.enterEditMode();
+    editor.pressKey(";");
+    expect(editor.isEasyMotionActive()).toBe(false);
+  });
+
+  test("Cmd+Z during easymotion still triggers undo", () => {
+    // Create a child so there's something to undo
+    editor.select("root");
+    editor.addChild("root", "test");
+    editor.exitEditMode();
+    const countBefore = editor.nodeCount;
+
+    editor.pressKey(";");
+    expect(editor.isEasyMotionActive()).toBe(true);
+    editor.pressKey("z", { meta: true });
+    // Undo should have fired (removing the child), easymotion should also exit
+    // since the state changed underneath
+    expect(editor.nodeCount).toBe(countBefore - 1);
+  });
+
+  test("Escape after buffering a prefix exits easymotion, selection unchanged", () => {
+    // Need >26 visible nodes to get prefixes
+    const largeMap: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: Array.from({ length: 28 }, (_, i) => ({
+        id: `n${i}`,
+        text: `Node ${i}`,
+        x: i * 200,
+        y: 0,
+        width: 100,
+        height: NODE_HEIGHT,
+        children: [] as MindMapFileFormat["roots"][0]["children"],
+      })),
+      assets: [],
+    };
+    editor.loadJSON(largeMap);
+    editor.select("n0");
+    editor.pressKey(";");
+    editor.pressKey("a"); // prefix
+    expect(editor.isEasyMotionActive()).toBe(true);
+    expect(editor.getEasyMotionBuffer()).toBe("a");
+    editor.pressKey("Escape");
+    expect(editor.isEasyMotionActive()).toBe(false);
+    expect(editor.getSelectedId()).toBe("n0");
+  });
+});

@@ -176,6 +176,14 @@ const bindings: KeyBinding[] = [
       if (sel) editor.reorderNode(sel, "down");
     },
   },
+  // EasyMotion trigger
+  {
+    key: ";",
+    mode: "nav",
+    action: (editor) => {
+      editor.enterEasyMotionMode();
+    },
+  },
   // Vim-style hjkl navigation (mirrors arrow keys)
   {
     key: "h",
@@ -391,6 +399,19 @@ export function dispatch(
   // Normalize single-character keys to lowercase so bindings stay consistent
   // (browser sends uppercase when Shift is held, e.g., "H" for Shift+h)
   const normalizedKey = key.length === 1 ? key.toLowerCase() : key;
+  const hasModifiers = modifiers.meta || modifiers.ctrl || modifiers.alt;
+
+  // EasyMotion mode intercepts unmodified single-char keys and Escape
+  if (editor.isEasyMotionActive() && !hasModifiers) {
+    if (normalizedKey === "Escape") {
+      editor.exitEasyMotionMode();
+      return true;
+    }
+    if (normalizedKey.length === 1 && !modifiers.shift) {
+      editor.handleEasyMotionKey(normalizedKey);
+      return true;
+    }
+  }
 
   for (const binding of bindings) {
     if (binding.key !== normalizedKey) continue;
