@@ -55,6 +55,39 @@ export const stubTextMeasurer: TextMeasurer = {
   },
 };
 
+/** Generate easymotion labels for a distance-sorted list of node IDs.
+ *  Returns a Map from label string to node ID. Nodes earlier in the array
+ *  (closer) get shorter labels. */
+export function generateEasyMotionLabels(nodeIds: string[]): Map<string, string> {
+  const result = new Map<string, string>();
+  const n = nodeIds.length;
+  if (n === 0) return result;
+
+  // Number of prefix letters needed for double-char labels
+  const P = n <= 26 ? 0 : Math.min(26, Math.ceil((n - 26) / 25));
+  const singleCount = 26 - P;
+
+  // Single-char labels: skip the first P letters (reserved as prefixes)
+  let nodeIdx = 0;
+  for (let i = 0; i < singleCount && nodeIdx < n; i++) {
+    const label = String.fromCharCode(97 + P + i); // 'a' + P + i
+    const id = nodeIds[nodeIdx++];
+    if (id !== undefined) result.set(label, id);
+  }
+
+  // Double-char labels: each prefix letter followed by a-z
+  for (let p = 0; p < P && nodeIdx < n; p++) {
+    const prefix = String.fromCharCode(97 + p); // 'a' + p
+    for (let s = 0; s < 26 && nodeIdx < n; s++) {
+      const label = prefix + String.fromCharCode(97 + s);
+      const id = nodeIds[nodeIdx++];
+      if (id !== undefined) result.set(label, id);
+    }
+  }
+
+  return result;
+}
+
 export class Editor {
   protected store: MindMapStore;
   protected textMeasurer: TextMeasurer;
