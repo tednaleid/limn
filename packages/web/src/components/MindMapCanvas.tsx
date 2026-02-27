@@ -9,6 +9,7 @@ import { NodeView } from "./NodeView";
 import { EdgeView } from "./EdgeView";
 import { TextEditor } from "./TextEditor";
 import { ReparentIndicator } from "./ReparentIndicator";
+import { EasyMotionLabels } from "./EasyMotionLabels";
 import { saveAssetBlob, loadAllAssetBlobs } from "../persistence/local";
 import { parseMindmapFile } from "../persistence/file";
 
@@ -478,6 +479,9 @@ export function MindMapCanvas() {
               draggedNode={editor.getNode(selectedId)}
               targetNode={editor.getNode(reparentTargetId)}
             />
+          )}
+          {editor.isEasyMotionActive() && (
+            <EasyMotionLabels nodes={visibleNodes} editor={editor} />
           )}
         </g>
       </svg>
