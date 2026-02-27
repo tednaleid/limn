@@ -4,7 +4,7 @@
 import type { MindMapNode, NodeStyle, TextMeasurer, MindMapMeta, Camera, Asset } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
-import type { MindMapFileFormat } from "../serialization/schema";
+import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import {
   branchDirection,
   positionNewChild,
@@ -842,6 +842,84 @@ export class Editor {
     this.undoStack = [];
     this.redoStack = [];
     this.lastUndoLabel = null;
+    this.notify();
+  }
+
+  /**
+   * Import roots from another mind map file, adding them alongside existing content.
+   * All IDs are remapped to avoid collisions. Positions are offset so the first
+   * imported root lands at (offsetX, offsetY).
+   */
+  importRoots(data: MindMapFileFormat, offsetX: number, offsetY: number): void {
+    this.pushUndo("import-roots");
+
+    // Compute bounding box origin of imported data to calculate offsets
+    let minX = Infinity;
+    let minY = Infinity;
+    const visitForBounds = (node: MindMapFileNode) => {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      for (const child of node.children) visitForBounds(child);
+    };
+    for (const root of data.roots) visitForBounds(root);
+    const dx = offsetX - (isFinite(minX) ? minX : 0);
+    const dy = offsetY - (isFinite(minY) ? minY : 0);
+
+    // Generate new IDs for all imported nodes to avoid collisions
+    const idMap = new Map<string, string>();
+    let counter = 0;
+    const assignIds = (fileNode: MindMapFileNode) => {
+      idMap.set(fileNode.id, `import${Date.now()}_${counter++}`);
+      for (const child of fileNode.children) assignIds(child);
+    };
+    for (const root of data.roots) assignIds(root);
+
+    let firstRootId: string | null = null;
+
+    const loadNode = (fileNode: MindMapFileNode, parentId: string | null) => {
+      const newId = idMap.get(fileNode.id) ?? fileNode.id;
+      if (firstRootId === null && parentId === null) firstRootId = newId;
+
+      this.store.loadNode({
+        id: newId,
+        parentId,
+        text: fileNode.text,
+        x: fileNode.x + dx,
+        y: fileNode.y + dy,
+        width: fileNode.width,
+        height: fileNode.height,
+        children: fileNode.children.map((c) => idMap.get(c.id) ?? c.id),
+        collapsed: fileNode.collapsed ?? false,
+        widthConstrained: fileNode.widthConstrained ?? false,
+        style: fileNode.style,
+        image: fileNode.image,
+      });
+
+      if (parentId === null) {
+        this.store.addRootId(newId);
+      }
+
+      for (const child of fileNode.children) {
+        loadNode(child, newId);
+      }
+    };
+
+    for (const root of data.roots) {
+      loadNode(root, null);
+    }
+
+    // Register imported assets
+    const existingAssets = this.store.getAssets();
+    for (const asset of data.assets ?? []) {
+      if (!existingAssets.some((a) => a.id === asset.id)) {
+        existingAssets.push({ ...asset });
+      }
+    }
+
+    if (firstRootId) {
+      this.selectedId = firstRootId;
+    }
+    this.editing = false;
     this.notify();
   }
 

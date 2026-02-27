@@ -704,6 +704,73 @@ describe("Editor", () => {
     });
   });
 
+  describe("importRoots", () => {
+    const importData: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "imported", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: [
+        {
+          id: "r1",
+          text: "Imported Root",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 32,
+          children: [
+            {
+              id: "r1c1",
+              text: "Imported Child",
+              x: 250,
+              y: 0,
+              width: 100,
+              height: 32,
+              children: [],
+            },
+          ],
+        },
+      ],
+      assets: [],
+    };
+
+    test("adds imported roots alongside existing nodes", () => {
+      const rootsBefore = editor.getRoots().length;
+      editor.importRoots(importData, 500, 200);
+      expect(editor.getRoots().length).toBe(rootsBefore + 1);
+    });
+
+    test("offsets imported node positions", () => {
+      editor.importRoots(importData, 500, 200);
+      // Find the imported root (not n0)
+      const imported = editor.getRoots().find((r) => r.id !== "n0")!;
+      expect(imported.x).toBe(500);
+      expect(imported.y).toBe(200);
+    });
+
+    test("generates new IDs to avoid collisions", () => {
+      editor.importRoots(importData, 500, 200);
+      const imported = editor.getRoots().find((r) => r.id !== "n0")!;
+      // Should not use the original IDs from importData
+      expect(imported.id).not.toBe("r1");
+    });
+
+    test("preserves tree structure with children", () => {
+      editor.importRoots(importData, 500, 200);
+      const imported = editor.getRoots().find((r) => r.id !== "n0")!;
+      expect(imported.children.length).toBe(1);
+      const child = editor.getNode(imported.children[0]!);
+      expect(child.text).toBe("Imported Child");
+    });
+
+    test("is undoable", () => {
+      const rootsBefore = editor.getRoots().length;
+      editor.importRoots(importData, 500, 200);
+      expect(editor.getRoots().length).toBe(rootsBefore + 1);
+      editor.undo();
+      expect(editor.getRoots().length).toBe(rootsBefore);
+    });
+  });
+
   describe("toJSON", () => {
     test("preserves camera position", () => {
       editor.setCamera(100, 200, 1.5);

@@ -9,7 +9,8 @@ import { NodeView } from "./NodeView";
 import { EdgeView } from "./EdgeView";
 import { TextEditor } from "./TextEditor";
 import { ReparentIndicator } from "./ReparentIndicator";
-import { saveAssetBlob } from "../persistence/local";
+import { saveAssetBlob, loadAllAssetBlobs } from "../persistence/local";
+import { parseMindmapFile } from "../persistence/file";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 3;
@@ -326,6 +327,35 @@ export function MindMapCanvas() {
     (e: React.DragEvent) => {
       e.preventDefault();
       const files = Array.from(e.dataTransfer.files);
+
+      // Check for .mindmap file first
+      const mindmapFile = files.find((f) => f.name.endsWith(".mindmap"));
+      if (mindmapFile) {
+        const world = screenToWorld(e.clientX, e.clientY);
+        parseMindmapFile(mindmapFile).then(async ({ data, assetBlobs }) => {
+          editor.importRoots(data, world.x, world.y);
+
+          // Persist asset blobs to IndexedDB
+          for (const [assetId, blob] of assetBlobs) {
+            await saveAssetBlob(assetId, blob);
+          }
+
+          // Restore blob URLs for imported assets
+          const assets = editor.getAssets();
+          if (assets.length > 0) {
+            const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
+            for (const [assetId, blobUrl] of urls) {
+              window.dispatchEvent(new CustomEvent("mindforge:asset-added", {
+                detail: { assetId, blobUrl },
+              }));
+            }
+          }
+        }).catch((err) => {
+          console.error("Failed to import .mindmap file:", err);
+        });
+        return;
+      }
+
       const imageFile = files.find((f) => f.type.startsWith("image/"));
       if (!imageFile) return;
 
