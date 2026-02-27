@@ -7,6 +7,7 @@ import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serial
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import {
   branchDirection,
+  centerChildren,
   positionNewChild,
   positionNewSibling,
   reflowSubtree,
@@ -102,6 +103,7 @@ export class Editor {
   private dragNodeId: string | null = null;
   private dragOffset = { x: 0, y: 0 };
   private dragMoved = false;
+  private dragReordered = false;
   private reparentTargetId: string | null = null;
 
   // Width resize state
@@ -864,6 +866,7 @@ export class Editor {
     this.dragNodeId = nodeId;
     this.dragOffset = { x: worldX - node.x, y: worldY - node.y };
     this.dragMoved = false;
+    this.dragReordered = false;
     this.reparentTargetId = null;
     this.notify();
   }
@@ -883,6 +886,11 @@ export class Editor {
 
     // Move the node and its entire subtree
     this.moveSubtree(this.dragNodeId, dx, dy);
+
+    // Check for sibling reorder (non-root nodes only)
+    if (node.parentId !== null) {
+      this.checkDragReorder(this.dragNodeId);
+    }
 
     // Check for reparent proximity
     this.reparentTargetId = this.findReparentTarget(this.dragNodeId);
@@ -917,6 +925,10 @@ export class Editor {
     } else if (this.dragMoved) {
       // Reflow children if node was dragged to the other side of its root
       reflowSubtree(this.store, nodeId);
+      // Snap to correct layout position after sibling reorder
+      if (this.dragReordered) {
+        relayoutFromNode(this.store, nodeId);
+      }
     }
 
     if (!this.dragMoved && this.reparentTargetId === null) {
@@ -928,6 +940,67 @@ export class Editor {
     this.dragNodeId = null;
     this.reparentTargetId = null;
     this.notify();
+  }
+
+  /** Check if the dragged node has crossed an adjacent sibling and swap if so. */
+  private checkDragReorder(draggedId: string): void {
+    const dragged = this.store.getNode(draggedId);
+    if (dragged.parentId === null) return;
+
+    const parent = this.store.getNode(dragged.parentId);
+    const draggedCenterY = dragged.y + dragged.height / 2;
+    let didSwap = false;
+
+    // While-loop handles fast drags past multiple siblings
+    let swapped = true;
+    while (swapped) {
+      swapped = false;
+      const idx = parent.children.indexOf(draggedId);
+      if (idx === -1) break;
+
+      // Check sibling below
+      const belowId = parent.children[idx + 1];
+      if (belowId !== undefined) {
+        const below = this.store.getNode(belowId);
+        const belowCenterY = below.y + below.height / 2;
+        if (draggedCenterY > belowCenterY) {
+          parent.children[idx + 1] = draggedId;
+          parent.children[idx] = belowId;
+          swapped = true;
+          didSwap = true;
+          continue;
+        }
+      }
+
+      // Check sibling above
+      const aboveId = idx > 0 ? parent.children[idx - 1] : undefined;
+      if (aboveId !== undefined) {
+        const above = this.store.getNode(aboveId);
+        const aboveCenterY = above.y + above.height / 2;
+        if (draggedCenterY < aboveCenterY) {
+          parent.children[idx - 1] = draggedId;
+          parent.children[idx] = aboveId;
+          swapped = true;
+          didSwap = true;
+          continue;
+        }
+      }
+    }
+
+    if (!didSwap) return;
+
+    this.dragReordered = true;
+
+    // Reposition non-dragged siblings: save dragged position, re-center, restore dragged
+    const savedX = dragged.x;
+    const savedY = dragged.y;
+    centerChildren(this.store, dragged.parentId);
+    const afterCenter = this.store.getNode(draggedId);
+    const dx = savedX - afterCenter.x;
+    const dy = savedY - afterCenter.y;
+    if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
+      this.moveSubtree(draggedId, dx, dy);
+    }
   }
 
   /** Move a node and all its descendants by a delta. */

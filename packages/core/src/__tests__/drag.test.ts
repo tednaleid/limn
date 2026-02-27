@@ -294,3 +294,148 @@ describe("drag to reparent", () => {
     expect(editor.getNode("n1").parentId).toBe(origParent);
   });
 });
+
+describe("drag to reorder siblings", () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
+  function createThreeChildTree(): TestEditor {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.select("n0");
+    editor.exitEditMode();
+    editor.addChild("n0", "child1");
+    editor.exitEditMode();
+    editor.addChild("n0", "child2");
+    editor.exitEditMode();
+    editor.addChild("n0", "child3");
+    editor.exitEditMode();
+    return editor;
+  }
+
+  it("should reorder when dragged past adjacent sibling downward", () => {
+    const editor = createThreeChildTree();
+    editor.expectChildren("n0", ["n1", "n2", "n3"]);
+
+    const child1 = editor.getNode("n1");
+    const child2 = editor.getNode("n2");
+    const child2CenterY = child2.y + child2.height / 2;
+
+    // Drag child1 down past child2's center
+    editor.pointerDown("n1", child1.x + 10, child1.y + 10);
+    editor.pointerMove(child1.x + 10, child2CenterY + 5);
+    editor.pointerUp();
+
+    // child1 and child2 should have swapped
+    editor.expectChildren("n0", ["n2", "n1", "n3"]);
+  });
+
+  it("should reorder when dragged past adjacent sibling upward", () => {
+    const editor = createThreeChildTree();
+    editor.expectChildren("n0", ["n1", "n2", "n3"]);
+
+    const child2 = editor.getNode("n2");
+    const child1 = editor.getNode("n1");
+
+    // Drag child2 well above child1 (accounting for drag offset)
+    editor.pointerDown("n2", child2.x + 10, child2.y + 10);
+    editor.pointerMove(child2.x + 10, child1.y - 20);
+    editor.pointerUp();
+
+    // child1 and child2 should have swapped
+    editor.expectChildren("n0", ["n2", "n1", "n3"]);
+  });
+
+  it("should handle fast drag past multiple siblings", () => {
+    const editor = createThreeChildTree();
+    editor.expectChildren("n0", ["n1", "n2", "n3"]);
+
+    const child1 = editor.getNode("n1");
+    const child3 = editor.getNode("n3");
+    const child3CenterY = child3.y + child3.height / 2;
+
+    // Drag child1 all the way past child3 in one move
+    editor.pointerDown("n1", child1.x + 10, child1.y + 10);
+    editor.pointerMove(child1.x + 10, child3CenterY + 5);
+    editor.pointerUp();
+
+    // child1 should now be last
+    editor.expectChildren("n0", ["n2", "n3", "n1"]);
+  });
+
+  it("should snap to correct layout position on drop", () => {
+    const editor = createThreeChildTree();
+
+    const child1 = editor.getNode("n1");
+    const child2 = editor.getNode("n2");
+    const child2CenterY = child2.y + child2.height / 2;
+
+    // Drag child1 past child2
+    editor.pointerDown("n1", child1.x + 10, child1.y + 10);
+    editor.pointerMove(child1.x + 10, child2CenterY + 5);
+    editor.pointerUp();
+
+    // After drop, all children should have proper layout positions
+    const n2 = editor.getNode("n2");
+    const n1 = editor.getNode("n1");
+    const n3 = editor.getNode("n3");
+    // Order is now n2, n1, n3 - they should be vertically ordered
+    expect(n2.y).toBeLessThan(n1.y);
+    expect(n1.y).toBeLessThan(n3.y);
+  });
+
+  it("should not reorder root nodes", () => {
+    const editor = new TestEditor();
+    editor.addRoot("root1", 0, 0);
+    editor.select("n0");
+    editor.exitEditMode();
+    editor.addRoot("root2", 0, 100);
+    editor.select("n1");
+    editor.exitEditMode();
+
+    // Drag root1 down past root2 - should just reposition, not reorder
+    editor.pointerDown("n0", 10, 10);
+    editor.pointerMove(10, 160);
+    editor.pointerUp();
+
+    // Root order unchanged (roots don't have siblings to reorder with)
+    expect(editor.getNode("n0").parentId).toBeNull();
+    expect(editor.getNode("n1").parentId).toBeNull();
+  });
+
+  it("should be undoable", () => {
+    const editor = createThreeChildTree();
+    editor.expectChildren("n0", ["n1", "n2", "n3"]);
+
+    const child1 = editor.getNode("n1");
+    const child2 = editor.getNode("n2");
+    const child2CenterY = child2.y + child2.height / 2;
+
+    editor.pointerDown("n1", child1.x + 10, child1.y + 10);
+    editor.pointerMove(child1.x + 10, child2CenterY + 5);
+    editor.pointerUp();
+
+    editor.expectChildren("n0", ["n2", "n1", "n3"]);
+
+    editor.undo();
+    editor.expectChildren("n0", ["n1", "n2", "n3"]);
+  });
+
+  it("should slide non-dragged siblings during drag", () => {
+    const editor = createThreeChildTree();
+
+    const child1 = editor.getNode("n1");
+    const child2yBefore = editor.getNode("n2").y;
+    const child2 = editor.getNode("n2");
+
+    // Drag child1 well past child2 (accounting for drag offset) but don't release
+    editor.pointerDown("n1", child1.x + 10, child1.y + 10);
+    editor.pointerMove(child1.x + 10, child2.y + child2.height + 20);
+
+    // During drag, child2 should have slid upward to fill the gap
+    expect(editor.getNode("n2").y).toBeLessThan(child2yBefore);
+
+    editor.pointerUp();
+  });
+});
