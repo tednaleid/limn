@@ -377,6 +377,102 @@ describe("Navigation", () => {
       // Up/down navigates among siblings; roots are siblings of each other
       expect(editor.getSelectedId()).toBe("r1");
     });
+
+    test("navigateUp on root prefers spatially close node over distant root", () => {
+      // Root A far to the left, Root B at center with children above it.
+      // Up from B should go to the nearby child above, not the far-away Root A.
+      const file: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          {
+            id: "rootA",
+            text: "Root A",
+            x: -1000,
+            y: -50,
+            width: 100,
+            height: NODE_HEIGHT,
+            children: [],
+          },
+          {
+            id: "rootB",
+            text: "Root B",
+            x: 0,
+            y: 100,
+            width: 100,
+            height: NODE_HEIGHT,
+            children: [
+              {
+                id: "child1",
+                text: "Child 1",
+                x: 250,
+                y: 0,
+                width: 100,
+                height: NODE_HEIGHT,
+                children: [],
+              },
+            ],
+          },
+        ],
+        assets: [],
+      };
+      editor.loadJSON(file);
+      editor.select("rootB");
+      editor.navigateUp();
+      // rootB center=(50, 116). child1 center=(300, 16) is above at xDist=250.
+      // rootA center=(-950, -34) is above at xDist=1000.
+      // Spatial: child1 score=100+250*10=2600, rootA score=150+1000*10=10150
+      // Should pick child1, not rootA.
+      expect(editor.getSelectedId()).toBe("child1");
+    });
+
+    test("navigateDown on root prefers spatially close node over distant root", () => {
+      const file: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          {
+            id: "rootA",
+            text: "Root A",
+            x: 0,
+            y: 0,
+            width: 100,
+            height: NODE_HEIGHT,
+            children: [
+              {
+                id: "child1",
+                text: "Child 1",
+                x: 250,
+                y: 100,
+                width: 100,
+                height: NODE_HEIGHT,
+                children: [],
+              },
+            ],
+          },
+          {
+            id: "rootB",
+            text: "Root B",
+            x: -1000,
+            y: 50,
+            width: 100,
+            height: NODE_HEIGHT,
+            children: [],
+          },
+        ],
+        assets: [],
+      };
+      editor.loadJSON(file);
+      editor.select("rootA");
+      editor.navigateDown();
+      // rootA center=(50, 16). child1 center=(300, 116) is below at xDist=250.
+      // rootB center=(-950, 66) is below at xDist=1000.
+      // Spatial: child1 score=100+250*10=2600, rootB score=50+1000*10=10050
+      // Should pick child1, not rootB.
+      expect(editor.getSelectedId()).toBe("child1");
+    });
   });
 
   describe("collapsed node navigation", () => {

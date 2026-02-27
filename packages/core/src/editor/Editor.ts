@@ -620,17 +620,21 @@ export class Editor {
     const current = this.store.getNode(this.selectedId);
     const currentCenterY = current.y + current.height / 2;
 
-    // Navigate among siblings (roots are siblings of each other)
-    const siblings = this.store.getSiblings(this.selectedId);
     let best: MindMapNode | null = null;
-    let bestCenterY = -Infinity;
-    for (const sib of siblings) {
-      if (sib.id === this.selectedId) continue;
-      const sibCenterY = sib.y + sib.height / 2;
-      if (sibCenterY >= currentCenterY) continue; // Not above
-      if (sibCenterY > bestCenterY) {
-        best = sib;
-        bestCenterY = sibCenterY;
+
+    // Root nodes use spatial search directly (siblings can be anywhere on the canvas)
+    if (current.parentId !== null) {
+      // Navigate among siblings for non-root nodes
+      const siblings = this.store.getSiblings(this.selectedId);
+      let bestCenterY = -Infinity;
+      for (const sib of siblings) {
+        if (sib.id === this.selectedId) continue;
+        const sibCenterY = sib.y + sib.height / 2;
+        if (sibCenterY >= currentCenterY) continue; // Not above
+        if (sibCenterY > bestCenterY) {
+          best = sib;
+          bestCenterY = sibCenterY;
+        }
       }
     }
 
@@ -646,17 +650,21 @@ export class Editor {
     const current = this.store.getNode(this.selectedId);
     const currentCenterY = current.y + current.height / 2;
 
-    // Navigate among siblings (roots are siblings of each other)
-    const siblings = this.store.getSiblings(this.selectedId);
     let best: MindMapNode | null = null;
-    let bestCenterY = Infinity;
-    for (const sib of siblings) {
-      if (sib.id === this.selectedId) continue;
-      const sibCenterY = sib.y + sib.height / 2;
-      if (sibCenterY <= currentCenterY) continue; // Not below
-      if (sibCenterY < bestCenterY) {
-        best = sib;
-        bestCenterY = sibCenterY;
+
+    // Root nodes use spatial search directly (siblings can be anywhere on the canvas)
+    if (current.parentId !== null) {
+      // Navigate among siblings for non-root nodes
+      const siblings = this.store.getSiblings(this.selectedId);
+      let bestCenterY = Infinity;
+      for (const sib of siblings) {
+        if (sib.id === this.selectedId) continue;
+        const sibCenterY = sib.y + sib.height / 2;
+        if (sibCenterY <= currentCenterY) continue; // Not below
+        if (sibCenterY < bestCenterY) {
+          best = sib;
+          bestCenterY = sibCenterY;
+        }
       }
     }
 
