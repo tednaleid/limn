@@ -15,6 +15,7 @@ import {
   relayoutFromNode,
   resolveTreeOverlap,
 } from "../layout/layout";
+import { nextBranchColor } from "../theme/palette";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -190,6 +191,23 @@ export class Editor {
       node = this.store.getNode(node.parentId);
     }
     return depth;
+  }
+
+  /** Walk up ancestors returning the first style.color found, or undefined. */
+  getBranchColor(id: string): string | undefined {
+    let node = this.store.getNode(id);
+    while (true) {
+      if (node.style?.color) return node.style.color;
+      if (node.parentId === null) return undefined;
+      node = this.store.getNode(node.parentId);
+    }
+  }
+
+  /** Set a node's branch color. */
+  setNodeColor(id: string, color: string): void {
+    const node = this.store.getNode(id);
+    node.style = { ...node.style, color };
+    this.notify();
   }
 
   /** Check if a node has visible children (not collapsed and has children). */
@@ -495,6 +513,13 @@ export class Editor {
   addRoot(text = "", x = 0, y = 0): string {
     this.pushUndo("add-root");
     const id = this.store.addRoot(text, x, y);
+    // Auto-assign a branch color from the palette
+    const existingColors = this.store.getRoots()
+      .filter((r) => r.id !== id)
+      .map((r) => r.style?.color)
+      .filter((c): c is string => c !== undefined);
+    const node = this.store.getNode(id);
+    node.style = { ...node.style, color: nextBranchColor(existingColors) };
     this.remeasureNode(id);
     this.selectedId = id;
     this.editing = true;

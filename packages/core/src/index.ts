@@ -49,6 +49,7 @@ export {
 } from "./layout/layout";
 
 export { Editor, stubTextMeasurer, ROOT_FONT_SIZE } from "./editor/Editor";
+export { BRANCH_PALETTE, nextBranchColor } from "./theme/palette";
 export { dispatch } from "./keybindings/dispatch";
 export type { Modifiers } from "./keybindings/dispatch";
 export { TestEditor } from "./test-editor/TestEditor";
