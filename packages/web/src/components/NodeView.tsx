@@ -29,7 +29,7 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
 
   return (
     <g>
-      {/* Selection highlight */}
+      {/* Selection highlight: uses branch color at low opacity when available */}
       {isSelected && !isReparentTarget && (
         <rect
           x={PADDING_X - 4}
@@ -37,7 +37,8 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
           width={node.width - PADDING_X * 2 + 8}
           height={node.height - 4}
           rx={4}
-          style={{ fill: "var(--selection-bg)" }}
+          style={{ fill: branchColor ?? "var(--selection-border)" }}
+          opacity={0.18}
         />
       )}
       {/* Reparent target highlight */}
