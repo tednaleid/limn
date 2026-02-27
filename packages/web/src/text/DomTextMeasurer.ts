@@ -44,8 +44,8 @@ export const domTextMeasurer: TextMeasurer = {
     el.style.whiteSpace = "pre";
     el.style.width = "";
     el.textContent = text || "\u00A0";
-    // +1 buffer prevents sub-pixel wrapping when the textarea is zoom-scaled
-    const width = Math.max(MIN_WIDTH, Math.ceil(el.offsetWidth) + 1);
+    // Buffer accounts for SVG text rendering wider than DOM measurement
+    const width = Math.max(MIN_WIDTH, Math.ceil(el.offsetWidth) + 4);
     const height = Math.max(32, Math.ceil(el.offsetHeight));
     return { width, height };
   },

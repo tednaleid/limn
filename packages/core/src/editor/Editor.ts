@@ -1552,6 +1552,18 @@ export class Editor {
     }
   }
 
+  /** Remeasure all nodes using the current text measurer. */
+  remeasureAllNodes(): void {
+    for (const root of this.store.getRoots()) {
+      const visit = (nodeId: string) => {
+        this.remeasureNode(nodeId);
+        const node = this.store.getNode(nodeId);
+        for (const childId of node.children) visit(childId);
+      };
+      visit(root.id);
+    }
+  }
+
   /** Find the root of a node and resolve cross-tree overlap. */
   private resolveOverlapForNode(nodeId: string): void {
     // Walk up to root

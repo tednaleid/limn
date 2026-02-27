@@ -150,6 +150,7 @@ export async function openFile(editor: Editor): Promise<void> {
   const { data, assetBlobs } = await parseMindmapFile(file);
 
   editor.loadJSON(data);
+  editor.remeasureAllNodes();
 
   // Store asset blobs in IndexedDB
   for (const [assetId, blob] of assetBlobs) {

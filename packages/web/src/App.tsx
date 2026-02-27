@@ -82,6 +82,7 @@ export function App() {
       const data = decompressFromUrl(compressed);
       if (data) {
         editor.loadJSON(data);
+        editor.remeasureAllNodes();
         setLoaded(true);
         return;
       }
@@ -89,6 +90,7 @@ export function App() {
 
     loadFromIDB(DOC_ID).then(async (saved) => {
       editor.loadJSON(saved ?? DEMO_MAP);
+      editor.remeasureAllNodes();
       // Restore image blob URLs from IndexedDB
       const assets = editor.getAssets();
       if (assets.length > 0) {
@@ -124,6 +126,7 @@ export function App() {
     if (!loaded) return;
     return setupAutoSave(editor, DOC_ID, (data) => {
       editor.loadJSON(data);
+      editor.remeasureAllNodes();
     });
   }, [editor, loaded]);
 
