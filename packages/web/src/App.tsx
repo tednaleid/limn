@@ -116,11 +116,21 @@ export function App() {
         console.error("Save failed:", err);
       });
     });
-    editor.onOpen(() => {
-      openFile(editor).catch((err) => {
+    editor.onOpen(async () => {
+      try {
+        await openFile(editor);
+        // Restore asset blob URLs from IndexedDB after loading
+        const assets = editor.getAssets();
+        if (assets.length > 0) {
+          const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
+          if (urls.size > 0) {
+            setAssetUrls(urls);
+          }
+        }
+      } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Open failed:", err);
-      });
+      }
     });
     editor.onExport(() => {
       exportSvg();
@@ -163,7 +173,7 @@ export function App() {
             const assetId = `a${Date.now()}`;
             const asset = {
               id: assetId,
-              filename: `pasted-image.${file.type.split("/")[1]}`,
+              filename: `pasted-${assetId}.${file.type.split("/")[1]}`,
               mimeType: file.type,
               width: img.naturalWidth,
               height: img.naturalHeight,

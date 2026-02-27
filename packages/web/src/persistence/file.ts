@@ -1,13 +1,15 @@
 // ABOUTME: File save/load using browser-fs-access for File System Access API with fallback.
-// ABOUTME: Handles .mindmap files, remembers file handle for subsequent saves.
+// ABOUTME: Saves .mindmap files as ZIP bundles containing data.json + assets/.
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
+import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
 import type { Editor } from "@mindforge/core";
 import { migrateToLatest } from "@mindforge/core";
 import type { MindMapFileFormat } from "@mindforge/core";
+import { loadAssetBlob, saveAssetBlob } from "./local";
 
 const MINDMAP_EXTENSION = ".mindmap";
-const MINDMAP_MIME = "application/json";
+const MINDMAP_MIME = "application/octet-stream";
 
 const FILE_OPTIONS = {
   mimeTypes: [MINDMAP_MIME],
@@ -34,14 +36,91 @@ export function clearFileHandle(): void {
 }
 
 /**
- * Save the current editor state to a file.
+ * Parse a .mindmap file (ZIP bundle or legacy JSON).
+ * Returns the parsed data and any asset blobs found in the archive.
+ */
+export async function parseMindmapFile(file: File | Blob): Promise<{
+  data: MindMapFileFormat;
+  assetBlobs: Map<string, Blob>;
+}> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Detect format: ZIP starts with PK (0x50, 0x4B)
+  if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b) {
+    return parseZipMindmap(bytes);
+  }
+
+  // Legacy: plain JSON
+  const text = new TextDecoder().decode(bytes);
+  const raw = JSON.parse(text);
+  const data: MindMapFileFormat = migrateToLatest(raw);
+  return { data, assetBlobs: new Map() };
+}
+
+/** Parse a ZIP-bundled .mindmap file. */
+function parseZipMindmap(bytes: Uint8Array): {
+  data: MindMapFileFormat;
+  assetBlobs: Map<string, Blob>;
+} {
+  const files = unzipSync(bytes);
+  const assetBlobs = new Map<string, Blob>();
+
+  // Extract data.json
+  const dataJsonBytes = files["data.json"];
+  if (!dataJsonBytes) {
+    throw new Error("Invalid .mindmap file: missing data.json");
+  }
+  const raw = JSON.parse(strFromU8(dataJsonBytes));
+  const data: MindMapFileFormat = migrateToLatest(raw);
+
+  // Build filename -> assetId lookup from asset metadata
+  const filenameToAssetId = new Map<string, string>();
+  for (const asset of data.assets ?? []) {
+    filenameToAssetId.set(asset.filename, asset.id);
+  }
+
+  // Extract asset files
+  for (const [path, content] of Object.entries(files)) {
+    if (!path.startsWith("assets/") || path === "assets/") continue;
+    const filename = path.slice("assets/".length);
+    const assetId = filenameToAssetId.get(filename);
+    if (assetId) {
+      const buf = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer;
+      assetBlobs.set(assetId, new Blob([buf]));
+    }
+  }
+
+  return { data, assetBlobs };
+}
+
+/**
+ * Save the current editor state to a .mindmap ZIP file.
  * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
  * On Safari/Firefox: triggers a download via <a download>.
  */
 export async function saveToFile(editor: Editor): Promise<void> {
   const data = editor.toJSON();
   const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: MINDMAP_MIME });
+  const assets = editor.getAssets();
+
+  // Build ZIP contents
+  const zipFiles: Record<string, Uint8Array> = {
+    "data.json": strToU8(json),
+  };
+
+  // Add asset blobs from IndexedDB
+  for (const asset of assets) {
+    const blob = await loadAssetBlob(asset.id);
+    if (blob) {
+      const buffer = await blob.arrayBuffer();
+      zipFiles[`assets/${asset.filename}`] = new Uint8Array(buffer);
+    }
+  }
+
+  const zipped = zipSync(zipFiles);
+  const zipBuf = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
+  const blob = new Blob([zipBuf], { type: MINDMAP_MIME });
 
   const defaultName = currentFilename ?? `${data.meta.id}${MINDMAP_EXTENSION}`;
 
@@ -59,7 +138,8 @@ export async function saveToFile(editor: Editor): Promise<void> {
 
 /**
  * Open a .mindmap file and load it into the editor.
- * Runs forward migrations if the file version is older than current.
+ * Supports both ZIP bundles and legacy plain JSON files.
+ * Asset blobs are stored in IndexedDB for later retrieval.
  */
 export async function openFile(editor: Editor): Promise<void> {
   const file = await fileOpen({
@@ -67,11 +147,14 @@ export async function openFile(editor: Editor): Promise<void> {
     id: "mindforge",
   });
 
-  const text = await file.text();
-  const raw = JSON.parse(text);
-  const data: MindMapFileFormat = migrateToLatest(raw);
+  const { data, assetBlobs } = await parseMindmapFile(file);
 
   editor.loadJSON(data);
+
+  // Store asset blobs in IndexedDB
+  for (const [assetId, blob] of assetBlobs) {
+    await saveAssetBlob(assetId, blob);
+  }
 
   // Remember the handle for subsequent saves (Chromium only)
   if (file.handle) {

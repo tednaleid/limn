@@ -43,3 +43,8 @@ install-hooks:
 # Type-check with TypeScript (builds core declarations, checks web)
 typecheck:
     bunx tsc -b
+
+# Clean and reinstall node_modules (fixes esbuild EPIPE errors after bun add)
+clean-install:
+    rm -rf node_modules packages/core/node_modules packages/web/node_modules
+    bun install
