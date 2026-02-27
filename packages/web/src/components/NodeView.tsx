@@ -76,16 +76,16 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
           />
         </g>
       )}
-      {/* Collapse indicator: small circle with child count */}
+      {/* Collapse indicator: small circle with child count, styled to match parent */}
       {node.collapsed && node.children.length > 0 && (
         <g transform={`translate(${node.width + 8}, ${node.height / 2})`}>
-          <circle r={8} style={{ fill: "var(--collapse-bg)", stroke: "var(--collapse-border)" }} strokeWidth={1} />
+          <circle r={8} style={{ fill: branchColor ?? "var(--collapse-bg)" }} opacity={0.18} />
           <text
             textAnchor="middle"
             dominantBaseline="central"
             fontSize={10}
             fontFamily="system-ui, -apple-system, sans-serif"
-            style={{ fill: "var(--collapse-text)" }}
+            style={{ fill: branchColor ?? "var(--collapse-text)" }}
           >
             {node.children.length}
           </text>
