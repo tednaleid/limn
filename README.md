@@ -46,10 +46,46 @@ bun run build      # production build
 
 - **Editor** is the sole source of truth for all state
 - **TestEditor** enables testing all interactions without a browser
-- Keyboard-first: Tab creates child, Enter edits, arrows navigate spatially
+- Keyboard-first: Tab creates child, Enter edits, arrows navigate spatially, `;` for EasyMotion jump
 - Diff-based undo/redo (snapshot capture, no Command classes)
 - SVG rendering with pan/zoom viewport
 - IndexedDB auto-save with cross-tab sync
 - Sidecar asset storage for images (`file.mindmap` + `file.assets/`)
+
+## Keyboard shortcuts
+
+**Nav mode:**
+
+| Key | Action |
+|-----|--------|
+| Arrows / hjkl | Navigate between nodes |
+| Tab | Create child node |
+| Enter | Edit selected node (or create root if nothing selected) |
+| Shift+Enter | Create sibling node |
+| Backspace | Delete node |
+| Space | Toggle collapse |
+| `;` | EasyMotion: labels appear on all visible nodes, type a label to jump |
+| Shift+Tab | Detach node to root |
+| Escape | Deselect |
+
+**Edit mode:**
+
+| Key | Action |
+|-----|--------|
+| Enter | Exit edit, create sibling |
+| Tab | Exit edit, create child |
+| Shift+Enter | Insert newline |
+| Escape | Exit edit mode |
+
+**Global:**
+
+| Key | Action |
+|-----|--------|
+| Cmd+Z / Cmd+Shift+Z | Undo / Redo |
+| Cmd+S / Cmd+O | Save / Open file |
+| Cmd+= / Cmd+- | Zoom in / out |
+| Cmd+0 | Zoom to fit |
+| Cmd+1 | Zoom to selected node |
+| Shift+Arrows | Pan canvas |
 
 See `SPEC.md` for full requirements and `PROGRESS.md` for current status.

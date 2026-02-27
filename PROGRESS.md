@@ -2,9 +2,9 @@
 
 ## Current status
 
-**Phase**: All chunks complete (1-17), plus post-spec polish
+**Phase**: All chunks complete (1-17), plus post-spec polish and EasyMotion navigation
 **Last updated**: 2026-02-26
-**Tests**: 238 passing across 13 test files, lint and typecheck clean
+**Tests**: 317 passing across 16 test files, lint and typecheck clean
 
 ---
 
@@ -409,6 +409,16 @@
 - `bunx tsc -b` type-checks both packages cleanly
 - justfile `check` recipe runs tests + lint + typecheck
 
+**EasyMotion node jumping (2026-02-26):**
+- Vim-easymotion-inspired quick jump: press `;` in nav mode, type a label to jump
+- `generateEasyMotionLabels()` pure function assigns single-char (a-z) and double-char labels
+- Labels sorted by distance from selected node (closest get shortest labels)
+- Prefix buffering: when >26 nodes, first char narrows candidates, second char selects
+- Escape cancels, modified keys (Cmd+Z) fall through to normal dispatch
+- SVG label badges render above each visible node (yellow, monospace)
+- Non-matching labels dim when a prefix character is buffered
+- 24 tests added (label generation, lifecycle, key handling, dispatch integration)
+
 ---
 
 ## Remaining gaps (not blocking, could be future work)
@@ -444,3 +454,4 @@
 | 2026-02-25 | Direction inferred from positions | No explicit side property; child.x < parent.x means left-side branch; simpler data model |
 | 2026-02-26 | 4px drag threshold before starting drag | Distinguishes click-to-select from drag-to-reposition; prevents accidental drags |
 | 2026-02-26 | 100px reparent proximity threshold | Generous enough to be discoverable; uses distance from dragged node center to target edge center |
+| 2026-02-26 | EasyMotion over search/filter for quick jump | Constant-time visual selection; no typing node text; scales to large maps with double-char labels |
