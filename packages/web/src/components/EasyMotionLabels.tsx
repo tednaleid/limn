@@ -7,12 +7,9 @@ const BADGE_HEIGHT = 20;
 const BADGE_FONT_SIZE = 13;
 const BADGE_PADDING_X = 4;
 const BADGE_RADIUS = 3;
-// Badge colors are hardcoded (not themed) since they need high contrast
-// for rapid visual scanning in EasyMotion mode.
-const BADGE_BG = "#facc15";      // yellow-400
 const BADGE_BG_DIM = "#e5e7eb";  // gray-200
-const BADGE_TEXT = "#1f2937";     // gray-800
 const BADGE_TEXT_DIM = "#9ca3af"; // gray-400
+const BADGE_FALLBACK = "#6b7280"; // gray-500
 
 interface EasyMotionLabelsProps {
   nodes: MindMapNode[];
@@ -28,10 +25,12 @@ export function EasyMotionLabels({ nodes, editor }: EasyMotionLabelsProps) {
         const label = editor.getEasyMotionLabel(node.id);
         if (!label) return null;
 
+        const branchColor = editor.getBranchColor(node.id) ?? BADGE_FALLBACK;
+
         // If a prefix is buffered, dim labels that don't match
         const matches = buffer === "" || label.startsWith(buffer);
-        const bg = matches ? BADGE_BG : BADGE_BG_DIM;
-        const textColor = matches ? BADGE_TEXT : BADGE_TEXT_DIM;
+        const bg = matches ? branchColor : BADGE_BG_DIM;
+        const textColor = matches ? "#ffffff" : BADGE_TEXT_DIM;
 
         // Estimate badge width from label length
         const charWidth = BADGE_FONT_SIZE * 0.65;
@@ -47,8 +46,7 @@ export function EasyMotionLabels({ nodes, editor }: EasyMotionLabelsProps) {
               rx={BADGE_RADIUS}
               ry={BADGE_RADIUS}
               fill={bg}
-              stroke={matches ? "#d97706" : "#d1d5db"}
-              strokeWidth={1}
+              stroke="none"
             />
             <text
               x={node.x + BADGE_PADDING_X}
