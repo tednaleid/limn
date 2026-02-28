@@ -15,4 +15,4 @@
 
 - code coverage metrics?
 
-- split up Editor.ts into logical portions, deeper analysis on this for what makes the most sense.
+- ~~split up Editor.ts into logical portions~~ DONE: extracted easymotion.ts, navigation.ts, resize.ts, drag.ts
