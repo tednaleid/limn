@@ -7,6 +7,9 @@ import {
   validateFileFormat,
 } from "../serialization/serialization";
 import type { MindMapFileFormat } from "../serialization/schema";
+import { migrateToLatest } from "../serialization/migration";
+import { TestEditor } from "../test-editor/TestEditor";
+import v1Fixture from "../serialization/fixtures/v1-complete.json";
 
 const sampleFile: MindMapFileFormat = {
   version: 1,
@@ -322,5 +325,91 @@ describe("serialization", () => {
       const md = toMarkdown(store);
       expect(md).toContain("# Line 1\nLine 2");
     });
+  });
+});
+
+describe("format stability", () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
+  test("v1 golden fixture validates against schema", () => {
+    const result = validateFileFormat(v1Fixture);
+    expect(result.success).toBe(true);
+  });
+
+  test("v1 golden fixture survives migration", () => {
+    const migrated = migrateToLatest(v1Fixture as MindMapFileFormat);
+    expect(migrated.version).toBe(1);
+    expect(migrated.roots).toHaveLength(2);
+  });
+
+  test("v1 golden fixture round-trips through serialize/deserialize", () => {
+    const fixture = v1Fixture as MindMapFileFormat;
+    const migrated = migrateToLatest(fixture);
+    const store = deserialize(migrated);
+    const result = serialize(
+      store,
+      { ...migrated.meta, version: migrated.version },
+      migrated.camera,
+    );
+
+    // Roots preserved
+    expect(result.roots).toHaveLength(fixture.roots.length);
+    expect(result.roots.map((r) => r.id)).toEqual(
+      fixture.roots.map((r) => r.id),
+    );
+
+    // Camera preserved
+    expect(result.camera).toEqual(fixture.camera);
+
+    // Meta preserved
+    expect(result.meta).toEqual(fixture.meta);
+
+    // Node count preserved (flatten and count)
+    function countNodes(nodes: typeof fixture.roots): number {
+      return nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
+    }
+    expect(countNodes(result.roots)).toBe(countNodes(fixture.roots));
+  });
+
+  test("round-trip preserves all optional fields", () => {
+    const fixture = v1Fixture as MindMapFileFormat;
+    const store = deserialize(fixture);
+    const result = serialize(
+      store,
+      { ...fixture.meta, version: fixture.version },
+      fixture.camera,
+    );
+
+    // collapsed on r1c2 (Development)
+    const r1 = result.roots[0]!;
+    expect(r1.children[1]!.collapsed).toBe(true);
+
+    // widthConstrained on r1c3
+    expect(r1.children[2]!.widthConstrained).toBe(true);
+
+    // style on r1 (Project Alpha)
+    expect(r1.style).toEqual({
+      fontSize: 18,
+      fontWeight: 700,
+      color: "#1a1a2e",
+    });
+
+    // image on r1c1c2 (Mockups)
+    expect(r1.children[0]!.children[1]!.image).toEqual({
+      assetId: "asset-001",
+      width: 800,
+      height: 600,
+    });
+  });
+
+  test("serialized editor output validates against schema", () => {
+    const editor = new TestEditor();
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const json = editor.toJSON();
+    const result = validateFileFormat(json);
+    expect(result.success).toBe(true);
   });
 });
