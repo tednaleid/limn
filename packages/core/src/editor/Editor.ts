@@ -30,6 +30,16 @@ import {
   findHorizontalTarget,
   findNearestToViewportCenter,
 } from "./navigation";
+import {
+  type WidthResizeState,
+  type ImageResizeState,
+  initialWidthResizeState,
+  initialImageResizeState,
+  initWidthResize,
+  initImageResize,
+  clampNodeWidth,
+  computeImageResize,
+} from "./resize";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -87,17 +97,9 @@ export class Editor {
   private dragReordered = false;
   private reparentTargetId: string | null = null;
 
-  // Width resize state
-  private resizingWidth = false;
-  private resizeNodeId: string | null = null;
-  private resizeStartWidth = 0;
-  private resizeChanged = false;
-
-  // Image resize state
-  private resizingImage = false;
-  private imageResizeNodeId: string | null = null;
-  private imageAspectRatio = 1;
-  private imageResizeChanged = false;
+  // Resize state
+  private widthResize: WidthResizeState = initialWidthResizeState();
+  private imageResize: ImageResizeState = initialImageResizeState();
 
   // EasyMotion state
   private easyMotion: EasyMotionState = initialEasyMotionState();
@@ -975,83 +977,59 @@ export class Editor {
 
   // --- Width resize ---
 
-  private static MIN_NODE_WIDTH = 60;
-
   isResizingWidth(): boolean {
-    return this.resizingWidth;
+    return this.widthResize.active;
   }
 
   startWidthResize(nodeId: string): void {
     this.pushUndo("resize-width");
-    const node = this.store.getNode(nodeId);
-    this.resizingWidth = true;
-    this.resizeNodeId = nodeId;
-    this.resizeStartWidth = node.width;
-    this.resizeChanged = false;
+    this.widthResize = initWidthResize(this.store.getNode(nodeId));
     this.notify();
   }
 
   updateWidthResize(newWidth: number): void {
-    if (!this.resizingWidth || this.resizeNodeId === null) return;
-    const clampedWidth = Math.max(Editor.MIN_NODE_WIDTH, newWidth);
-    this.store.setNodeWidth(this.resizeNodeId, clampedWidth);
-    this.remeasureNode(this.resizeNodeId);
-    this.resizeChanged = true;
+    if (!this.widthResize.active || this.widthResize.nodeId === null) return;
+    this.store.setNodeWidth(this.widthResize.nodeId, clampNodeWidth(newWidth));
+    this.remeasureNode(this.widthResize.nodeId);
+    this.widthResize.changed = true;
     this.notify();
   }
 
   endWidthResize(): void {
-    if (!this.resizingWidth) return;
-
-    if (!this.resizeChanged) {
-      // No-op resize: pop the undo entry
-      this.undoStack.pop();
-    }
-
-    this.resizingWidth = false;
-    this.resizeNodeId = null;
+    if (!this.widthResize.active) return;
+    if (!this.widthResize.changed) this.undoStack.pop();
+    this.widthResize = initialWidthResizeState();
     this.notify();
   }
 
   // --- Image resize ---
 
-  private static MIN_IMAGE_WIDTH = 40;
-
   isResizingImage(): boolean {
-    return this.resizingImage;
+    return this.imageResize.active;
   }
 
   startImageResize(nodeId: string): void {
-    const node = this.store.getNode(nodeId);
-    if (!node.image) return;
+    const state = initImageResize(this.store.getNode(nodeId));
+    if (!state) return;
     this.pushUndo("resize-image");
-    this.resizingImage = true;
-    this.imageResizeNodeId = nodeId;
-    this.imageAspectRatio = node.image.height / node.image.width;
-    this.imageResizeChanged = false;
+    this.imageResize = state;
     this.notify();
   }
 
   updateImageResize(newWidth: number): void {
-    if (!this.resizingImage || this.imageResizeNodeId === null) return;
-    const node = this.store.getNode(this.imageResizeNodeId);
+    if (!this.imageResize.active || this.imageResize.nodeId === null) return;
+    const node = this.store.getNode(this.imageResize.nodeId);
     if (!node.image) return;
-    const clampedWidth = Math.max(Editor.MIN_IMAGE_WIDTH, Math.round(newWidth));
-    const newHeight = Math.round(clampedWidth * this.imageAspectRatio);
-    node.image = { ...node.image, width: clampedWidth, height: newHeight };
-    this.imageResizeChanged = true;
+    const dims = computeImageResize(this.imageResize.aspectRatio, newWidth);
+    node.image = { ...node.image, ...dims };
+    this.imageResize.changed = true;
     this.notify();
   }
 
   endImageResize(): void {
-    if (!this.resizingImage) return;
-
-    if (!this.imageResizeChanged) {
-      this.undoStack.pop();
-    }
-
-    this.resizingImage = false;
-    this.imageResizeNodeId = null;
+    if (!this.imageResize.active) return;
+    if (!this.imageResize.changed) this.undoStack.pop();
+    this.imageResize = initialImageResizeState();
     this.notify();
   }
 
