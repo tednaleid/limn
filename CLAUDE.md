@@ -41,3 +41,6 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - **Root nodes have no siblings.** Creating a sibling (Shift+Enter in nav mode, Enter in edit mode) is a no-op on root nodes. New roots are created only via Enter with nothing selected, or double-click on canvas.
 - **Empty nodes are auto-deleted.** If a user exits edit mode (Escape) on a node with empty text, the node is deleted and selection falls back to previous sibling, then parent.
 - **File format changes require Ted's approval.** Any modification to `schema.ts`, serialization behavior, or the file format shape (adding/removing/renaming fields) must be discussed first. Non-breaking additions bump the package minor version. Breaking changes bump the major version and require a migration in `migration.ts`. The golden fixture must be updated to cover any new fields.
+
+# REMINDERS
+- NEVER use command substitution when committing, Ted will never approve this, always use a heredoc
