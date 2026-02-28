@@ -3,6 +3,15 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/App.tsx",
+    "./components/MindMapCanvas": "./src/components/MindMapCanvas.tsx",
+    "./hooks/useEditor": "./src/hooks/useEditor.ts",
+    "./hooks/usePersistence": "./src/hooks/usePersistence.ts",
+    "./hooks/useAssetUrls": "./src/hooks/useAssetUrls.ts",
+    "./input/useKeyboardHandler": "./src/input/useKeyboardHandler.ts",
+    "./text/DomTextMeasurer": "./src/text/DomTextMeasurer.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

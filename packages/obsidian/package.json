@@ -1,0 +1,22 @@
+{
+  "name": "@limn/obsidian",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --dev --watch"
+  },
+  "dependencies": {
+    "@limn/core": "workspace:*",
+    "@limn/web": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "^1.8.7"
+  }
+}

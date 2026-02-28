@@ -52,6 +52,25 @@ install-hooks:
 typecheck:
     bunx tsc -b
 
+# Build the Obsidian plugin (production)
+obsidian-build:
+    cd packages/obsidian && bun run build
+
+# Build the Obsidian plugin in dev/watch mode
+obsidian-dev:
+    cd packages/obsidian && bun run dev
+
+# Install plugin into an Obsidian vault via symlink
+obsidian-install vault_path:
+    just obsidian-build
+    mkdir -p "{{vault_path}}/.obsidian/plugins"
+    ln -sfn "$(pwd)/packages/obsidian/dist" "{{vault_path}}/.obsidian/plugins/obsidian-limn"
+    @echo "Symlinked. Enable 'Limn' in Obsidian Settings -> Community plugins."
+
+# Run obsidian package tests
+obsidian-test:
+    bun run test -- --run 'packages/obsidian/'
+
 # Clean and reinstall node_modules (fixes esbuild EPIPE errors after bun add)
 clean-install:
     rm -rf node_modules packages/core/node_modules packages/web/node_modules

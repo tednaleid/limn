@@ -15,17 +15,23 @@ let measureEl: HTMLDivElement | null = null;
 
 function getMeasureElement(): HTMLDivElement {
   if (measureEl) return measureEl;
-  measureEl = document.createElement("div");
-  measureEl.style.position = "absolute";
-  measureEl.style.visibility = "hidden";
-  measureEl.style.whiteSpace = "pre";
-  measureEl.style.fontSize = `${FONT_SIZE}px`;
-  measureEl.style.fontFamily = FONT_FAMILY;
-  measureEl.style.lineHeight = `${LINE_HEIGHT}px`;
-  measureEl.style.padding = `${PADDING_Y}px ${PADDING_X}px`;
-  measureEl.style.boxSizing = "border-box";
-  document.body.appendChild(measureEl);
+  measureEl = createMeasureElement(document.body);
   return measureEl;
+}
+
+function createMeasureElement(container: HTMLElement): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "limn-measure";
+  el.style.position = "absolute";
+  el.style.visibility = "hidden";
+  el.style.whiteSpace = "pre";
+  el.style.fontSize = `${FONT_SIZE}px`;
+  el.style.fontFamily = FONT_FAMILY;
+  el.style.lineHeight = `${LINE_HEIGHT}px`;
+  el.style.padding = `${PADDING_Y}px ${PADDING_X}px`;
+  el.style.boxSizing = "border-box";
+  container.appendChild(el);
+  return el;
 }
 
 function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
@@ -64,27 +70,38 @@ function markdownToHtml(text: string): string {
     .join("\n");
 }
 
-export const domTextMeasurer: TextMeasurer = {
-  measure(text: string, style?: NodeStyle) {
-    const el = getMeasureElement();
-    applyStyle(el, style);
-    el.style.whiteSpace = "pre";
-    el.style.width = "";
-    el.innerHTML = markdownToHtml(text);
-    // Buffer accounts for SVG text rendering wider than DOM measurement
-    const width = Math.max(MIN_WIDTH, Math.ceil(el.offsetWidth) + 4);
-    const height = Math.max(32, Math.ceil(el.offsetHeight));
-    return { width, height };
-  },
+function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
+  return {
+    measure(text: string, style?: NodeStyle) {
+      const el = getEl();
+      applyStyle(el, style);
+      el.style.whiteSpace = "pre";
+      el.style.width = "";
+      el.innerHTML = markdownToHtml(text);
+      // Buffer accounts for SVG text rendering wider than DOM measurement
+      const width = Math.max(MIN_WIDTH, Math.ceil(el.offsetWidth) + 4);
+      const height = Math.max(32, Math.ceil(el.offsetHeight));
+      return { width, height };
+    },
 
-  reflow(text: string, maxWidth: number, style?: NodeStyle) {
-    const el = getMeasureElement();
-    applyStyle(el, style);
-    el.style.whiteSpace = "pre-wrap";
-    el.style.wordBreak = "break-word";
-    el.style.width = `${maxWidth}px`;
-    el.innerHTML = markdownToHtml(text);
-    const height = Math.max(32, Math.ceil(el.offsetHeight));
-    return { width: maxWidth, height };
-  },
-};
+    reflow(text: string, maxWidth: number, style?: NodeStyle) {
+      const el = getEl();
+      applyStyle(el, style);
+      el.style.whiteSpace = "pre-wrap";
+      el.style.wordBreak = "break-word";
+      el.style.width = `${maxWidth}px`;
+      el.innerHTML = markdownToHtml(text);
+      const height = Math.max(32, Math.ceil(el.offsetHeight));
+      return { width: maxWidth, height };
+    },
+  };
+}
+
+/** Default singleton measurer that appends to document.body. */
+export const domTextMeasurer: TextMeasurer = buildMeasurer(getMeasureElement);
+
+/** Create a measurer that appends its off-screen element to the given container. */
+export function createDomTextMeasurer(container: HTMLElement): TextMeasurer {
+  const el = createMeasureElement(container);
+  return buildMeasurer(() => el);
+}
