@@ -124,8 +124,9 @@ export async function buildMindmapZip(
  * Save the current editor state to a .mindmap ZIP file.
  * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
  * On Safari/Firefox: triggers a download via <a download>.
+ * Returns the filename that was saved to (for UI feedback).
  */
-export async function saveToFile(editor: Editor): Promise<void> {
+export async function saveToFile(editor: Editor): Promise<string> {
   const data = editor.toJSON();
   const assets = editor.getAssets();
 
@@ -154,6 +155,8 @@ export async function saveToFile(editor: Editor): Promise<void> {
     currentHandle = handle;
     currentFilename = handle.name;
   }
+
+  return currentFilename ?? defaultName;
 }
 
 /**
@@ -161,7 +164,7 @@ export async function saveToFile(editor: Editor): Promise<void> {
  * Supports both ZIP bundles and legacy plain JSON files.
  * Asset blobs are stored in IndexedDB for later retrieval.
  */
-export async function openFile(editor: Editor): Promise<void> {
+export async function openFile(editor: Editor): Promise<string> {
   const file = await fileOpen({
     ...FILE_OPTIONS,
     id: "limn",
@@ -185,4 +188,6 @@ export async function openFile(editor: Editor): Promise<void> {
     currentHandle = null;
     currentFilename = file.name;
   }
+
+  return currentFilename;
 }

@@ -10,9 +10,10 @@ import { MindMapCanvas } from "./components/MindMapCanvas";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { HamburgerMenu } from "./components/HamburgerMenu";
 import { ToolbarOverlay } from "./components/ToolbarOverlay";
+import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { setupAutoSave, loadFromIDB, saveAssetBlob, loadAllAssetBlobs } from "./persistence/local";
-import { saveToFile, openFile, clearFileHandle } from "./persistence/file";
+import { saveToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
@@ -132,17 +133,29 @@ export function App() {
     });
   }, [editor, loaded]);
 
+  // File status: current filename and transient "Saved" indicator
+  const [filename, setFilename] = useState<string | null>(null);
+  const [saveFlash, setSaveFlash] = useState(false);
+
   // Wire Cmd+S, Cmd+O, Shift+Cmd+E to file/export actions
   useEffect(() => {
-    editor.onSave(() => {
-      saveToFile(editor).catch((err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
+    editor.onSave(async () => {
+      try {
+        const name = await saveToFile(editor);
+        setFilename(name);
+        setSaveFlash(true);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // User cancelled the file picker -- not an error
+          return;
+        }
         console.error("Save failed:", err);
-      });
+      }
     });
     editor.onOpen(async () => {
       try {
-        await openFile(editor);
+        const name = await openFile(editor);
+        setFilename(name);
         // Restore asset blob URLs from IndexedDB after loading
         const assets = editor.getAssets();
         if (assets.length > 0) {
@@ -164,11 +177,19 @@ export function App() {
     });
     editor.onClear(() => {
       clearFileHandle();
+      setFilename(null);
     });
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
   }, [editor]);
+
+  // Initialize filename from any previously set file handle
+  useEffect(() => {
+    setFilename(getCurrentFilename());
+  }, [loaded]);
+
+  const clearSaveFlash = useCallback(() => setSaveFlash(false), []);
 
   useKeyboardHandler(editor);
 
@@ -253,6 +274,7 @@ export function App() {
         <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
           <MindMapCanvas />
           <HamburgerMenu />
+          <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />
           <ToolbarOverlay />
           <UpdateBanner />
         </div>
