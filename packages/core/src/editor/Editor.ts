@@ -16,6 +16,7 @@ import {
   resolveTreeOverlap,
 } from "../layout/layout";
 import { nextBranchColor } from "../theme/palette";
+import { stripMarkdown } from "../markdown/inlineMarkdown";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -31,14 +32,16 @@ interface HistoryEntry {
   assets: Asset[];
 }
 
-/** Stub text measurer that estimates from character count. */
+/** Stub text measurer that estimates from character count.
+ *  Uses stripMarkdown to measure display text, not raw markers. */
 export const stubTextMeasurer: TextMeasurer = {
   measure(text: string, style?: NodeStyle) {
     const scale = (style?.fontSize ?? 14) / 14;
     const charWidth = Math.round(8 * scale);
     const lineHeight = Math.round(20 * scale);
     const paddingY = Math.round(6 * scale);
-    const lines = text.split("\n");
+    const display = stripMarkdown(text);
+    const lines = display.split("\n");
     const maxLineLen = Math.max(...lines.map((l) => l.length), 0);
     return { width: Math.max(maxLineLen * charWidth + 16, 100), height: lines.length * lineHeight + paddingY * 2 };
   },
@@ -48,7 +51,8 @@ export const stubTextMeasurer: TextMeasurer = {
     const lineHeight = Math.round(20 * scale);
     const paddingY = Math.round(6 * scale);
     const charsPerLine = Math.floor((maxWidth - 16) / charWidth);
-    const lines = text.split("\n");
+    const display = stripMarkdown(text);
+    const lines = display.split("\n");
     let totalLines = 0;
     for (const line of lines) {
       totalLines += Math.max(1, Math.ceil(line.length / charsPerLine));
