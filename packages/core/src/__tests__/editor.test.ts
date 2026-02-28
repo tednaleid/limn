@@ -868,4 +868,53 @@ describe("Editor", () => {
       expect(data.camera).toEqual({ x: 50, y: -75, zoom: 0.8 });
     });
   });
+
+  describe("clear", () => {
+    test("removes all nodes", () => {
+      editor.clear();
+      editor.expectNodeCount(0);
+      expect(editor.getRoots()).toEqual([]);
+    });
+
+    test("deselects", () => {
+      editor.select("n0");
+      editor.clear();
+      expect(editor.getSelectedId()).toBeNull();
+    });
+
+    test("exits edit mode", () => {
+      editor.select("n0");
+      editor.enterEditMode();
+      editor.clear();
+      editor.expectNotEditing();
+    });
+
+    test("is undoable", () => {
+      editor.clear();
+      editor.expectNodeCount(0);
+      editor.undo();
+      editor.expectNodeCount(4);
+    });
+  });
+
+  describe("setTheme", () => {
+    test("updates theme in meta", () => {
+      editor.setTheme("dark");
+      expect(editor.getTheme()).toBe("dark");
+    });
+
+    test("fires theme change callback", () => {
+      const themes: string[] = [];
+      editor.onThemeChange((t) => themes.push(t));
+      editor.setTheme("dark");
+      editor.setTheme("light");
+      expect(themes).toEqual(["dark", "light"]);
+    });
+
+    test("persists in serialized output", () => {
+      editor.setTheme("dark");
+      const json = editor.toJSON();
+      expect(json.meta.theme).toBe("dark");
+    });
+  });
 });

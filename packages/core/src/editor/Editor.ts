@@ -137,6 +137,8 @@ export class Editor {
   private saveCallback: (() => void) | null = null;
   private openCallback: (() => void) | null = null;
   private exportCallback: (() => void) | null = null;
+  private themeChangeCallback: ((theme: string) => void) | null = null;
+  private clearCallback: (() => void) | null = null;
 
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
@@ -245,6 +247,13 @@ export class Editor {
 
   getTheme(): string {
     return this.meta.theme;
+  }
+
+  /** Set the document theme. Notifies subscribers so the web layer can apply it. */
+  setTheme(theme: string): void {
+    this.meta = { ...this.meta, theme };
+    this.themeChangeCallback?.(theme);
+    this.notify();
   }
 
   setCamera(x: number, y: number, zoom: number): void {
@@ -356,6 +365,16 @@ export class Editor {
   /** Request an export operation (called by dispatch on Shift+Cmd+E). */
   requestExport(): void {
     this.exportCallback?.();
+  }
+
+  /** Register a callback for theme changes. */
+  onThemeChange(cb: (theme: string) => void): void {
+    this.themeChangeCallback = cb;
+  }
+
+  /** Register a callback for clear operations. */
+  onClear(cb: () => void): void {
+    this.clearCallback = cb;
   }
 
   // --- Subscription (for useSyncExternalStore) ---
@@ -528,6 +547,16 @@ export class Editor {
   }
 
   // --- Mutations (all tracked for undo) ---
+
+  /** Clear all nodes, resetting to an empty canvas. Undoable. */
+  clear(): void {
+    this.pushUndo("clear");
+    this.store = new MindMapStore();
+    this.selectedId = null;
+    this.editing = false;
+    this.clearCallback?.();
+    this.notify();
+  }
 
   addRoot(text = "", x = 0, y = 0): string {
     this.pushUndo("add-root");
