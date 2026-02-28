@@ -52,6 +52,16 @@ bun run build      # production build
 - IndexedDB auto-save with cross-tab sync
 - Sidecar asset storage for images (`file.mindmap` + `file.assets/`)
 
+## File format
+
+`.mindmap` files are ZIP bundles containing `data.json` and an `assets/` directory for images. The current format version is 1.
+
+- Schema definition: `packages/core/src/serialization/schema.ts`
+- Golden fixture: `packages/core/src/serialization/fixtures/v1-complete.json`
+- Migration pipeline: `packages/core/src/serialization/migration.ts`
+
+The format uses integer versions. When a file is opened, the migration pipeline in `migration.ts` upgrades it from its stored version to the current version. Post-migration, the result is validated against the Zod schema.
+
 ## Keyboard shortcuts
 
 **Nav mode:**
