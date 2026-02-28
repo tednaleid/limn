@@ -2,7 +2,7 @@
 // ABOUTME: Runs ordered migrations to bring old files up to the current version.
 
 import type { MindMapFileFormat } from "./schema";
-import { CURRENT_FORMAT_VERSION } from "./schema";
+import { CURRENT_FORMAT_VERSION, mindMapFileSchema } from "./schema";
 
 export { CURRENT_FORMAT_VERSION };
 
@@ -40,6 +40,14 @@ export function migrateToLatest(data: MindMapFileFormat): MindMapFileFormat {
     if (!migrate) throw new Error(`Missing migration for version ${v}`);
     migrated = migrate(migrated);
     migrated.version = v + 1;
+  }
+
+  // Validate post-migration result against schema
+  const result = mindMapFileSchema.safeParse(migrated);
+  if (!result.success) {
+    throw new Error(
+      `Post-migration validation failed (v${version} -> v${CURRENT_FORMAT_VERSION}): ${result.error}`,
+    );
   }
 
   return migrated as MindMapFileFormat;
