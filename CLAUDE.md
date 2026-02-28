@@ -23,6 +23,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 
 - Use `bunx` instead of `npx` for running package binaries (this is a Bun project).
 - Save Playwright MCP screenshots to `/tmp`, not the project directory.
+- `just serve` already uses `tee` for output redirection. Do not add shell redirect operators (`2>&1 &`) when invoking it.
 
 ## Architecture invariants
 
