@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "meta": {
+    "id": "fixture-v1-complete",
+    "theme": "dark"
+  },
+  "camera": {
+    "x": 120,
+    "y": -50,
+    "zoom": 0.85
+  },
+  "roots": [
+    {
+      "id": "r1",
+      "text": "Project Alpha",
+      "x": 0,
+      "y": 0,
+      "width": 140,
+      "height": 32,
+      "style": {
+        "fontSize": 18,
+        "fontWeight": 700,
+        "color": "#1a1a2e"
+      },
+      "children": [
+        {
+          "id": "r1c1",
+          "text": "Design",
+          "x": 250,
+          "y": -80,
+          "width": 100,
+          "height": 32,
+          "children": [
+            {
+              "id": "r1c1c1",
+              "text": "Wireframes",
+              "x": 480,
+              "y": -110,
+              "width": 110,
+              "height": 32,
+              "children": [
+                {
+                  "id": "r1c1c1c1",
+                  "text": "Mobile",
+                  "x": 710,
+                  "y": -110,
+                  "width": 80,
+                  "height": 32,
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "r1c1c2",
+              "text": "Mockups",
+              "x": 480,
+              "y": -50,
+              "width": 100,
+              "height": 32,
+              "image": {
+                "assetId": "asset-001",
+                "width": 800,
+                "height": 600
+              },
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "r1c2",
+          "text": "Development",
+          "x": 250,
+          "y": 40,
+          "width": 120,
+          "height": 32,
+          "collapsed": true,
+          "children": [
+            {
+              "id": "r1c2c1",
+              "text": "Frontend",
+              "x": 480,
+              "y": 20,
+              "width": 100,
+              "height": 32,
+              "children": []
+            },
+            {
+              "id": "r1c2c2",
+              "text": "Backend",
+              "x": 480,
+              "y": 60,
+              "width": 100,
+              "height": 32,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "r1c3",
+          "text": "A node with\nmultiple lines",
+          "x": 250,
+          "y": 120,
+          "width": 160,
+          "height": 48,
+          "widthConstrained": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "r2",
+      "text": "Project Beta",
+      "x": 0,
+      "y": 300,
+      "width": 130,
+      "height": 32,
+      "children": [
+        {
+          "id": "r2c1",
+          "text": "Research",
+          "x": 250,
+          "y": 300,
+          "width": 100,
+          "height": 32,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset-001",
+      "filename": "mockup.png",
+      "mimeType": "image/png",
+      "width": 800,
+      "height": 600
+    }
+  ]
+}
