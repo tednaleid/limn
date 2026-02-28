@@ -1361,6 +1361,14 @@ export class Editor {
 
   // --- Undo/redo ---
 
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+
   undo(): void {
     const entry = this.undoStack.pop();
     if (!entry) return;

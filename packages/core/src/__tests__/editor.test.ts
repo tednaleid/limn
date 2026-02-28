@@ -193,6 +193,37 @@ describe("Editor", () => {
       editor.redo(); // Should be a no-op
       editor.expectNodeCount(5);
     });
+
+    test("canUndo is false initially, true after mutation", () => {
+      expect(editor.canUndo()).toBe(false);
+      editor.addChild("n0");
+      expect(editor.canUndo()).toBe(true);
+    });
+
+    test("canRedo is false initially, true after undo", () => {
+      expect(editor.canRedo()).toBe(false);
+      editor.addChild("n0");
+      expect(editor.canRedo()).toBe(false);
+      editor.undo();
+      expect(editor.canRedo()).toBe(true);
+    });
+
+    test("canRedo becomes false after new mutation", () => {
+      editor.addChild("n0");
+      editor.undo();
+      expect(editor.canRedo()).toBe(true);
+      editor.addChild("n1");
+      expect(editor.canRedo()).toBe(false);
+    });
+
+    test("canUndo is false after undoing everything", () => {
+      editor.addChild("n0");
+      editor.addChild("n1");
+      expect(editor.canUndo()).toBe(true);
+      editor.undo();
+      editor.undo();
+      expect(editor.canUndo()).toBe(false);
+    });
   });
 
   describe("keyboard dispatch (via TestEditor)", () => {
