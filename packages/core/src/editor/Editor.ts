@@ -17,6 +17,14 @@ import {
 } from "../layout/layout";
 import { nextBranchColor } from "../theme/palette";
 import { stripMarkdown, parseMarkdownLines } from "../markdown/inlineMarkdown";
+import {
+  type EasyMotionState,
+  initialEasyMotionState,
+  enterEasyMotion,
+  handleEasyMotionKey as easyMotionHandleKey,
+} from "./easymotion";
+
+export { generateEasyMotionLabels } from "./easymotion";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -61,39 +69,6 @@ export const stubTextMeasurer: TextMeasurer = {
   },
 };
 
-/** Generate easymotion labels for a distance-sorted list of node IDs.
- *  Returns a Map from label string to node ID. Nodes earlier in the array
- *  (closer) get shorter labels. */
-export function generateEasyMotionLabels(nodeIds: string[]): Map<string, string> {
-  const result = new Map<string, string>();
-  const n = nodeIds.length;
-  if (n === 0) return result;
-
-  // Number of prefix letters needed for double-char labels
-  const P = n <= 26 ? 0 : Math.min(26, Math.ceil((n - 26) / 25));
-  const singleCount = 26 - P;
-
-  // Single-char labels: skip the first P letters (reserved as prefixes)
-  let nodeIdx = 0;
-  for (let i = 0; i < singleCount && nodeIdx < n; i++) {
-    const label = String.fromCharCode(97 + P + i); // 'a' + P + i
-    const id = nodeIds[nodeIdx++];
-    if (id !== undefined) result.set(label, id);
-  }
-
-  // Double-char labels: each prefix letter followed by a-z
-  for (let p = 0; p < P && nodeIdx < n; p++) {
-    const prefix = String.fromCharCode(97 + p); // 'a' + p
-    for (let s = 0; s < 26 && nodeIdx < n; s++) {
-      const label = prefix + String.fromCharCode(97 + s);
-      const id = nodeIds[nodeIdx++];
-      if (id !== undefined) result.set(label, id);
-    }
-  }
-
-  return result;
-}
-
 export class Editor {
   protected store: MindMapStore;
   protected textMeasurer: TextMeasurer;
@@ -124,11 +99,7 @@ export class Editor {
   private imageResizeChanged = false;
 
   // EasyMotion state
-  private easyMotionActive = false;
-  private easyMotionByLabel = new Map<string, string>();  // label -> nodeId
-  private easyMotionByNode = new Map<string, string>();   // nodeId -> label
-  private easyMotionBuffer = "";
-  private easyMotionPrefixes = new Set<string>();
+  private easyMotion: EasyMotionState = initialEasyMotionState();
 
   // Viewport dimensions (set by web layer for zoom-to-fit)
   private viewportWidth = 0;
@@ -449,110 +420,46 @@ export class Editor {
   // --- EasyMotion ---
 
   isEasyMotionActive(): boolean {
-    return this.easyMotionActive;
+    return this.easyMotion.active;
   }
 
   getEasyMotionLabel(nodeId: string): string | undefined {
-    return this.easyMotionByNode.get(nodeId);
+    return this.easyMotion.byNode.get(nodeId);
   }
 
   getEasyMotionBuffer(): string {
-    return this.easyMotionBuffer;
+    return this.easyMotion.buffer;
   }
 
   enterEasyMotionMode(): void {
-    const visible = this.store.getVisibleNodes();
-    const selectedId = this.selectedId;
-
-    // Filter out the selected node
-    const candidates = selectedId
-      ? visible.filter((n) => n.id !== selectedId)
-      : visible;
-
-    if (candidates.length === 0) return;
-
-    // Sort by distance from reference point
     let refX: number;
     let refY: number;
-    if (selectedId) {
-      const sel = this.store.getNode(selectedId);
+    if (this.selectedId) {
+      const sel = this.store.getNode(this.selectedId);
       refX = sel.x + sel.width / 2;
       refY = sel.y + sel.height / 2;
     } else {
-      // Use viewport center in world coordinates
       refX = (this.viewportWidth / 2 - this.camera.x) / this.camera.zoom;
       refY = (this.viewportHeight / 2 - this.camera.y) / this.camera.zoom;
     }
 
-    candidates.sort((a, b) => {
-      const da = Math.hypot(a.x + a.width / 2 - refX, a.y + a.height / 2 - refY);
-      const db = Math.hypot(b.x + b.width / 2 - refX, b.y + b.height / 2 - refY);
-      return da - db;
-    });
-
-    const nodeIds = candidates.map((n) => n.id);
-    const labelToNode = generateEasyMotionLabels(nodeIds);
-
-    this.easyMotionByLabel = labelToNode;
-    this.easyMotionByNode = new Map<string, string>();
-    for (const [label, id] of labelToNode) {
-      this.easyMotionByNode.set(id, label);
-    }
-
-    // Collect single-char prefixes (letters that start double-char labels)
-    this.easyMotionPrefixes = new Set<string>();
-    for (const label of labelToNode.keys()) {
-      if (label.length === 2) {
-        this.easyMotionPrefixes.add(label.charAt(0));
-      }
-    }
-
-    this.easyMotionBuffer = "";
-    this.easyMotionActive = true;
+    const newState = enterEasyMotion(this.store.getVisibleNodes(), this.selectedId, refX, refY);
+    if (!newState.active) return;
+    this.easyMotion = newState;
     this.notify();
   }
 
   exitEasyMotionMode(): void {
-    this.easyMotionActive = false;
-    this.easyMotionByLabel = new Map();
-    this.easyMotionByNode = new Map();
-    this.easyMotionPrefixes = new Set();
-    this.easyMotionBuffer = "";
+    this.easyMotion = initialEasyMotionState();
     this.notify();
   }
 
   handleEasyMotionKey(key: string): void {
-    if (!this.easyMotionActive) return;
-
-    if (this.easyMotionBuffer === "") {
-      // First character
-      const nodeId = this.easyMotionByLabel.get(key);
-      if (nodeId) {
-        // Single-char label match: select and exit
-        this.select(nodeId);
-        this.exitEasyMotionMode();
-        return;
-      }
-      if (this.easyMotionPrefixes.has(key)) {
-        // Valid prefix: buffer it and wait for second char
-        this.easyMotionBuffer = key;
-        this.notify();
-        return;
-      }
-      // Invalid key: cancel
-      this.exitEasyMotionMode();
-    } else {
-      // Second character after prefix
-      const fullLabel = this.easyMotionBuffer + key;
-      const nodeId = this.easyMotionByLabel.get(fullLabel);
-      if (nodeId) {
-        this.select(nodeId);
-        this.exitEasyMotionMode();
-        return;
-      }
-      // Invalid combo: cancel
-      this.exitEasyMotionMode();
-    }
+    if (!this.easyMotion.active) return;
+    const result = easyMotionHandleKey(this.easyMotion, key);
+    this.easyMotion = result.state;
+    if (result.selectedNodeId) this.select(result.selectedNodeId);
+    this.notify();
   }
 
   // --- Edit mode ---

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import { generateEasyMotionLabels } from "../editor/Editor";
+import { generateEasyMotionLabels } from "../editor/easymotion";
 import { TestEditor } from "../test-editor/TestEditor";
 import type { MindMapFileFormat } from "../serialization/schema";
 
