@@ -1,7 +1,7 @@
 # Limn
 
 [![CI](https://github.com/tednaleid/limn/actions/workflows/ci.yml/badge.svg)](https://github.com/tednaleid/limn/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tednaleid/<GIST_ID>/raw/limn-coverage.json)](https://github.com/tednaleid/limn/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tednaleid/41b99760446766c22cc7143632db43c6/raw/limn-coverage.json)](https://github.com/tednaleid/limn/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 
 A keyboard-first, offline-capable mind map progressive web app built with TypeScript, React, and SVG.
