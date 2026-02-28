@@ -23,6 +23,12 @@ describe("branch color palette", () => {
     const used = [...BRANCH_PALETTE];
     expect(nextBranchColor(used)).toBe(BRANCH_PALETTE[0]);
   });
+
+  it("nextBranchColor keeps cycling through the palette", () => {
+    // 9 existing colors (full palette + one repeat) should yield the second color
+    const used = [...BRANCH_PALETTE, BRANCH_PALETTE[0]!];
+    expect(nextBranchColor(used)).toBe(BRANCH_PALETTE[1]);
+  });
 });
 
 describe("branch color auto-assignment", () => {

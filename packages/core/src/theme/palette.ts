@@ -19,5 +19,6 @@ export function nextBranchColor(existingColors: string[]): string {
   for (const color of BRANCH_PALETTE) {
     if (!used.has(color)) return color;
   }
-  return BRANCH_PALETTE[0] ?? "#4285f4";
+  // All colors used; cycle based on count
+  return BRANCH_PALETTE[existingColors.length % BRANCH_PALETTE.length] ?? "#4285f4";
 }
