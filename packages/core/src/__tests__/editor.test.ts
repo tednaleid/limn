@@ -917,4 +917,51 @@ describe("Editor", () => {
       expect(json.meta.theme).toBe("dark");
     });
   });
+
+  describe("getNodeLinks", () => {
+    test("returns links from markdown text", () => {
+      editor.select("n0");
+      editor.enterEditMode();
+      editor.setText("n0", "see [docs](https://example.com) here");
+      editor.exitEditMode();
+      const links = editor.getNodeLinks("n0");
+      expect(links).toEqual([{ text: "docs", url: "https://example.com" }]);
+    });
+
+    test("returns empty array for plain text", () => {
+      expect(editor.getNodeLinks("n0")).toEqual([]);
+    });
+
+    test("returns multiple links", () => {
+      editor.select("n0");
+      editor.enterEditMode();
+      editor.setText("n0", "[a](http://a.com) and [b](http://b.com)");
+      editor.exitEditMode();
+      const links = editor.getNodeLinks("n0");
+      expect(links).toEqual([
+        { text: "a", url: "http://a.com" },
+        { text: "b", url: "http://b.com" },
+      ]);
+    });
+  });
+
+  describe("openLink", () => {
+    test("fires callback with URL of first link", () => {
+      const urls: string[] = [];
+      editor.onOpenLink((url) => urls.push(url));
+      editor.select("n0");
+      editor.enterEditMode();
+      editor.setText("n0", "see [docs](https://example.com)");
+      editor.exitEditMode();
+      editor.openLink("n0");
+      expect(urls).toEqual(["https://example.com"]);
+    });
+
+    test("does nothing when node has no links", () => {
+      const urls: string[] = [];
+      editor.onOpenLink((url) => urls.push(url));
+      editor.openLink("n0");
+      expect(urls).toEqual([]);
+    });
+  });
 });

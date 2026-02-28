@@ -16,7 +16,7 @@ import {
   resolveTreeOverlap,
 } from "../layout/layout";
 import { nextBranchColor } from "../theme/palette";
-import { stripMarkdown } from "../markdown/inlineMarkdown";
+import { stripMarkdown, parseMarkdownLines } from "../markdown/inlineMarkdown";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -143,6 +143,7 @@ export class Editor {
   private exportCallback: (() => void) | null = null;
   private themeChangeCallback: ((theme: string) => void) | null = null;
   private clearCallback: (() => void) | null = null;
+  private openLinkCallback: ((url: string) => void) | null = null;
 
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
@@ -379,6 +380,35 @@ export class Editor {
   /** Register a callback for clear operations. */
   onClear(cb: () => void): void {
     this.clearCallback = cb;
+  }
+
+  /** Register a callback for opening links. */
+  onOpenLink(cb: (url: string) => void): void {
+    this.openLinkCallback = cb;
+  }
+
+  /** Extract all links from a node's markdown text. */
+  getNodeLinks(nodeId: string): { text: string; url: string }[] {
+    const node = this.store.getNode(nodeId);
+    const lines = parseMarkdownLines(node.text);
+    const links: { text: string; url: string }[] = [];
+    for (const segments of lines) {
+      for (const seg of segments) {
+        if (seg.style.link) {
+          links.push({ text: seg.text, url: seg.style.link });
+        }
+      }
+    }
+    return links;
+  }
+
+  /** Open the first link in a node via the registered callback. */
+  openLink(nodeId: string): void {
+    const links = this.getNodeLinks(nodeId);
+    const first = links[0];
+    if (first && this.openLinkCallback) {
+      this.openLinkCallback(first.url);
+    }
   }
 
   // --- Subscription (for useSyncExternalStore) ---

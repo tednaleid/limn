@@ -65,6 +65,15 @@ const bindings: KeyBinding[] = [
   },
   {
     key: "Enter",
+    modifiers: { meta: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.openLink(sel);
+    },
+  },
+  {
+    key: "Enter",
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
