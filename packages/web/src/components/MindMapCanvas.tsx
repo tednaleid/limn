@@ -3,6 +3,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { MindMapNode } from "@limn/core";
+import { stripMarkdown } from "@limn/core";
 import { useEditor } from "../hooks/useEditor";
 import { useAssetUrls } from "../hooks/useAssetUrls";
 import { NodeView } from "./NodeView";
@@ -459,7 +460,7 @@ export function MindMapCanvas() {
                 aria-level={depth + 1}
                 aria-selected={node.id === selectedId}
                 aria-expanded={hasChildren ? !node.collapsed : undefined}
-                aria-label={node.text || "Empty node"}
+                aria-label={stripMarkdown(node.text) || "Empty node"}
 
                 style={{
                   cursor: isDragging ? "grabbing" : "pointer",

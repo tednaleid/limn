@@ -1,13 +1,14 @@
 // ABOUTME: SVG component rendering a single mind map node.
 // ABOUTME: Displays text with optional selection highlight, collapse indicator, and images.
 
-import type { MindMapNode } from "@limn/core";
-import { ROOT_FONT_SIZE } from "@limn/core";
+import type { MindMapNode, StyledSegment } from "@limn/core";
+import { ROOT_FONT_SIZE, parseInlineMarkdown, isPlainSegments } from "@limn/core";
 
 const PADDING_X = 10;
 const PADDING_Y = 6;
 const FONT_SIZE = 14;
 const LINE_HEIGHT = 20;
+const FONT_FAMILY = "system-ui, -apple-system, sans-serif";
 
 interface NodeViewProps {
   node: MindMapNode;
@@ -91,20 +92,44 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
           </text>
         </g>
       )}
-      {/* Text lines */}
-      {lines.map((line, i) => (
-        <text
-          key={i}
-          x={PADDING_X}
-          y={paddingY + fontSize + i * lineHeight}
-          fontSize={fontSize}
-          fontWeight={fontWeight}
-          fontFamily="system-ui, -apple-system, sans-serif"
-          style={{ fill: branchColor ?? "var(--text-color)" }}
-        >
-          {line || "\u00A0"}
-        </text>
-      ))}
+      {/* Text lines with inline markdown rendering */}
+      {lines.map((line, i) => {
+        const segments = parseInlineMarkdown(line);
+        const textY = paddingY + fontSize + i * lineHeight;
+        const fill = branchColor ?? "var(--text-color)";
+
+        if (isPlainSegments(segments)) {
+          return (
+            <text
+              key={i}
+              x={PADDING_X}
+              y={textY}
+              fontSize={fontSize}
+              fontWeight={fontWeight}
+              fontFamily={FONT_FAMILY}
+              style={{ fill }}
+            >
+              {segments[0]?.text || "\u00A0"}
+            </text>
+          );
+        }
+
+        return (
+          <text
+            key={i}
+            x={PADDING_X}
+            y={textY}
+            fontSize={fontSize}
+            fontWeight={fontWeight}
+            fontFamily={FONT_FAMILY}
+            style={{ fill }}
+          >
+            {segments.map((seg, j) =>
+              renderSegment(seg, j, fontWeight),
+            )}
+          </text>
+        );
+      })}
       {/* Right edge resize handle (visible on selected) */}
       {isSelected && (
         <rect
@@ -119,4 +144,35 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
       )}
     </g>
   );
+}
+
+/** Render a single styled segment as a tspan (or link-wrapped tspan). */
+function renderSegment(
+  seg: StyledSegment,
+  key: number,
+  baseFontWeight: number,
+) {
+  const boldWeight = baseFontWeight >= 600 ? 800 : 700;
+  const tspan = (
+    <tspan
+      key={key}
+      fontWeight={seg.style.bold ? boldWeight : undefined}
+      fontStyle={seg.style.italic ? "italic" : undefined}
+      fontFamily={seg.style.code ? "monospace" : undefined}
+      textDecoration={seg.style.strikethrough ? "line-through" : undefined}
+      fill={seg.style.link ? "var(--selection-border)" : undefined}
+    >
+      {seg.text}
+    </tspan>
+  );
+
+  if (seg.style.link) {
+    return (
+      <a key={key} href={seg.style.link} target="_blank" rel="noopener noreferrer">
+        {tspan}
+      </a>
+    );
+  }
+
+  return tspan;
 }
