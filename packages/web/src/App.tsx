@@ -2,9 +2,10 @@
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Editor } from "@limn/core";
+import { Editor, AutoSaveController } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 import { EditorContext } from "./hooks/useEditor";
+import { PersistenceContext } from "./hooks/usePersistence";
 import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -12,7 +13,7 @@ import { HamburgerMenu } from "./components/HamburgerMenu";
 import { ToolbarOverlay } from "./components/ToolbarOverlay";
 import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
-import { setupAutoSave, loadFromIDB, saveAssetBlob, loadAllAssetBlobs } from "./persistence/local";
+import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
 import { saveToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
@@ -75,9 +76,10 @@ const DOC_ID = "demo";
 
 export function App() {
   const editor = useMemo(() => new Editor(domTextMeasurer), []);
+  const provider = useMemo(() => new WebPersistenceProvider(DOC_ID), []);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from URL hash, IndexedDB, or fall back to demo map
+  // Load from URL hash, provider (IndexedDB), or fall back to demo map
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.startsWith("#data=")) {
@@ -91,20 +93,20 @@ export function App() {
       }
     }
 
-    loadFromIDB(DOC_ID).then(async (saved) => {
+    provider.load().then(async (saved) => {
       editor.loadJSON(saved ?? DEMO_MAP);
       editor.remeasureAllNodes();
-      // Restore image blob URLs from IndexedDB
+      // Restore image blob URLs
       const assets = editor.getAssets();
       if (assets.length > 0) {
-        const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
+        const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
         if (urls.size > 0) {
           setAssetUrls(urls);
         }
       }
       setLoaded(true);
     });
-  }, [editor]);
+  }, [editor, provider]);
 
   // Apply theme from document metadata and listen for system preference changes
   useEffect(() => {
@@ -124,14 +126,19 @@ export function App() {
     return () => mq.removeEventListener("change", onChange);
   }, [editor, loaded]);
 
-  // Set up auto-save after initial load
+  // Set up auto-save and cross-tab sync after initial load
   useEffect(() => {
     if (!loaded) return;
-    return setupAutoSave(editor, DOC_ID, (data) => {
+    const autoSave = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
+    const unsubExternal = provider.onExternalChange((data) => {
       editor.loadJSON(data);
       editor.remeasureAllNodes();
     });
-  }, [editor, loaded]);
+    return () => {
+      autoSave.dispose();
+      unsubExternal();
+    };
+  }, [editor, provider, loaded]);
 
   // File status: current filename and transient "Saved" indicator
   const [filename, setFilename] = useState<string | null>(null);
@@ -141,7 +148,7 @@ export function App() {
   useEffect(() => {
     editor.onSave(async () => {
       try {
-        const name = await saveToFile(editor);
+        const name = await saveToFile(editor, provider);
         setFilename(name);
         setSaveFlash(true);
       } catch (err) {
@@ -154,12 +161,12 @@ export function App() {
     });
     editor.onOpen(async () => {
       try {
-        const name = await openFile(editor);
+        const name = await openFile(editor, provider);
         setFilename(name);
-        // Restore asset blob URLs from IndexedDB after loading
+        // Restore asset blob URLs after loading
         const assets = editor.getAssets();
         if (assets.length > 0) {
-          const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
+          const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
           if (urls.size > 0) {
             setAssetUrls(urls);
           }
@@ -182,7 +189,7 @@ export function App() {
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
-  }, [editor]);
+  }, [editor, provider]);
 
   // Initialize filename from any previously set file handle
   useEffect(() => {
@@ -252,7 +259,7 @@ export function App() {
               next.set(assetId, blobUrl);
               return next;
             });
-            saveAssetBlob(assetId, file);
+            provider.saveAsset(assetId, file);
           };
           img.src = blobUrl;
           break;
@@ -262,23 +269,25 @@ export function App() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [editor]);
+  }, [editor, provider]);
 
   if (!loaded) {
     return <div style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>Loading...</div>;
   }
 
   return (
-    <EditorContext.Provider value={editor}>
-      <AssetUrlContext.Provider value={assetUrls}>
-        <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-          <MindMapCanvas />
-          <HamburgerMenu />
-          <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />
-          <ToolbarOverlay />
-          <UpdateBanner />
-        </div>
-      </AssetUrlContext.Provider>
-    </EditorContext.Provider>
+    <PersistenceContext.Provider value={provider}>
+      <EditorContext.Provider value={editor}>
+        <AssetUrlContext.Provider value={assetUrls}>
+          <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+            <MindMapCanvas />
+            <HamburgerMenu />
+            <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />
+            <ToolbarOverlay />
+            <UpdateBanner />
+          </div>
+        </AssetUrlContext.Provider>
+      </EditorContext.Provider>
+    </PersistenceContext.Provider>
   );
 }

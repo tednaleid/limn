@@ -3,10 +3,9 @@
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
-import type { Editor } from "@limn/core";
+import type { Editor, PersistenceProvider } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
-import { loadAssetBlob, saveAssetBlob } from "./local";
 
 const MINDMAP_EXTENSION = ".mindmap";
 const MINDMAP_MIME = "application/octet-stream";
@@ -126,7 +125,7 @@ export async function buildMindmapZip(
  * On Safari/Firefox: triggers a download via <a download>.
  * Returns the filename that was saved to (for UI feedback).
  */
-export async function saveToFile(editor: Editor): Promise<string> {
+export async function saveToFile(editor: Editor, provider: PersistenceProvider): Promise<string> {
   const data = editor.toJSON();
   const assets = editor.getAssets();
 
@@ -136,7 +135,7 @@ export async function saveToFile(editor: Editor): Promise<string> {
   const assetBlobs = new Map<string, Blob>();
   await Promise.all(
     assets.map(async (asset) => {
-      const blob = await loadAssetBlob(asset.id);
+      const blob = await provider.loadAsset(asset.id);
       if (blob) assetBlobs.set(asset.id, blob);
     }),
   );
@@ -164,7 +163,7 @@ export async function saveToFile(editor: Editor): Promise<string> {
  * Supports both ZIP bundles and legacy plain JSON files.
  * Asset blobs are stored in IndexedDB for later retrieval.
  */
-export async function openFile(editor: Editor): Promise<string> {
+export async function openFile(editor: Editor, provider?: PersistenceProvider): Promise<string> {
   const file = await fileOpen({
     ...FILE_OPTIONS,
     id: "limn",
@@ -175,9 +174,11 @@ export async function openFile(editor: Editor): Promise<string> {
   editor.loadJSON(data);
   editor.remeasureAllNodes();
 
-  // Store asset blobs in IndexedDB
-  for (const [assetId, blob] of assetBlobs) {
-    await saveAssetBlob(assetId, blob);
+  // Store asset blobs via provider for later retrieval
+  if (provider) {
+    for (const [assetId, blob] of assetBlobs) {
+      await provider.saveAsset(assetId, blob);
+    }
   }
 
   // Remember the handle for subsequent saves (Chromium only)

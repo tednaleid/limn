@@ -11,7 +11,7 @@ import { EdgeView } from "./EdgeView";
 import { TextEditor } from "./TextEditor";
 import { ReparentIndicator } from "./ReparentIndicator";
 import { EasyMotionLabels } from "./EasyMotionLabels";
-import { saveAssetBlob, loadAllAssetBlobs } from "../persistence/local";
+import { usePersistence } from "../hooks/usePersistence";
 import { parseMindmapFile } from "../persistence/file";
 
 const MIN_ZOOM = 0.1;
@@ -20,6 +20,7 @@ const DRAG_THRESHOLD = 4; // pixels before a pointerDown becomes a drag
 
 export function MindMapCanvas() {
   const editor = useEditor();
+  const provider = usePersistence();
   const svgRef = useRef<SVGSVGElement>(null);
   const isPanning = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -388,13 +389,13 @@ export function MindMapCanvas() {
 
           // Persist asset blobs to IndexedDB
           for (const [assetId, blob] of assetBlobs) {
-            await saveAssetBlob(assetId, blob);
+            await provider.saveAsset(assetId, blob);
           }
 
           // Restore blob URLs for imported assets
           const assets = editor.getAssets();
           if (assets.length > 0) {
-            const urls = await loadAllAssetBlobs(assets.map((a) => a.id));
+            const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
             for (const [assetId, blobUrl] of urls) {
               window.dispatchEvent(new CustomEvent("limn:asset-added", {
                 detail: { assetId, blobUrl },
@@ -450,7 +451,7 @@ export function MindMapCanvas() {
           }
 
           // Persist blob to IndexedDB and notify App of the blob URL
-          saveAssetBlob(assetId, imageFile);
+          provider.saveAsset(assetId, imageFile);
           window.dispatchEvent(new CustomEvent("limn:asset-added", {
             detail: { assetId, blobUrl },
           }));

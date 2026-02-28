@@ -61,3 +61,7 @@ export {
   isPlainSegments,
 } from "./markdown/inlineMarkdown";
 export type { TextStyle, StyledSegment } from "./markdown/inlineMarkdown";
+
+export type { PersistenceProvider } from "./persistence/types";
+export { AutoSaveController } from "./persistence/AutoSaveController";
+export type { AutoSaveOptions } from "./persistence/AutoSaveController";
