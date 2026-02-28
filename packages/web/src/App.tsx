@@ -164,6 +164,9 @@ export function App() {
     editor.onClear(() => {
       clearFileHandle();
     });
+    editor.onOpenLink((url) => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
   }, [editor]);
 
   useKeyboardHandler(editor);

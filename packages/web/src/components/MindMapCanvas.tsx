@@ -37,6 +37,14 @@ export function MindMapCanvas() {
   const isResizingImage = useRef(false);
   const imageResizeNodeId = useRef<string | null>(null);
 
+  // Link click tracking: save the element clicked on pointerdown
+  const pointerDownTarget = useRef<Element | null>(null);
+
+  // Link hover tooltip state
+  const [linkTooltip, setLinkTooltip] = useState<{ x: number; y: number; url: string } | null>(null);
+  const linkTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
+
   const camera = editor.getCamera();
   const allVisibleNodes = editor.getVisibleNodes();
   const selectedId = editor.getSelectedId();
@@ -191,6 +199,7 @@ export function MindMapCanvas() {
         if (nodeGroup) {
           pendingNodeId.current = nodeGroup.getAttribute("data-node-id");
           pointerStart.current = { x: e.clientX, y: e.clientY };
+          pointerDownTarget.current = target;
           isDraggingNode.current = false;
           svgRef.current?.setPointerCapture(e.pointerId);
         }
@@ -251,7 +260,7 @@ export function MindMapCanvas() {
   );
 
   const handlePointerUp = useCallback(
-    (_e: React.PointerEvent) => {
+    (e: React.PointerEvent) => {
       if (isResizingImage.current) {
         editor.endImageResize();
         isResizingImage.current = false;
@@ -276,6 +285,18 @@ export function MindMapCanvas() {
         if (isDraggingNode.current) {
           // Was dragging: end drag
           editor.endDrag();
+        } else if ((e.metaKey || e.ctrlKey) && pointerDownTarget.current) {
+          // Cmd+Click on a link: open it
+          const linkEl = pointerDownTarget.current.closest("a[href]");
+          if (linkEl) {
+            const href = linkEl.getAttribute("href");
+            if (href) {
+              window.open(href, "_blank", "noopener,noreferrer");
+            }
+          } else {
+            // Cmd+Click on non-link: select normally
+            editor.select(nodeId);
+          }
         } else {
           // Was a click (no drag threshold exceeded): select
           if (editor.isEditing()) {
@@ -287,6 +308,7 @@ export function MindMapCanvas() {
         }
         pendingNodeId.current = null;
         isDraggingNode.current = false;
+        pointerDownTarget.current = null;
       }
     },
     [editor],
@@ -316,6 +338,32 @@ export function MindMapCanvas() {
       editor.addRoot("", worldX, worldY);
     },
     [editor, camera],
+  );
+
+  // Show tooltip when hovering over link text in a node
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as Element;
+      const linkEl = target.closest("a[href]");
+      if (linkEl) {
+        const href = linkEl.getAttribute("href");
+        if (href) {
+          // Clear any pending timer and start a new one
+          if (linkTooltipTimer.current) clearTimeout(linkTooltipTimer.current);
+          linkTooltipTimer.current = setTimeout(() => {
+            setLinkTooltip({ x: e.clientX, y: e.clientY, url: href });
+          }, 300);
+          return;
+        }
+      }
+      // Not over a link: clear tooltip and timer
+      if (linkTooltipTimer.current) {
+        clearTimeout(linkTooltipTimer.current);
+        linkTooltipTimer.current = null;
+      }
+      if (linkTooltip) setLinkTooltip(null);
+    },
+    [linkTooltip],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -435,6 +483,7 @@ export function MindMapCanvas() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onMouseMove={handleMouseMove}
         onDoubleClick={handleCanvasDoubleClick}
       >
         <rect className="canvas-bg" width="100%" height="100%" style={{ fill: "var(--canvas-bg)" }} />
@@ -492,6 +541,27 @@ export function MindMapCanvas() {
       </svg>
       {editingNode && (
         <TextEditor editor={editor} node={editingNode} camera={camera} branchColor={editor.getBranchColor(editingNode.id)} />
+      )}
+      {linkTooltip && (
+        <div
+          style={{
+            position: "absolute",
+            left: linkTooltip.x + 8,
+            top: linkTooltip.y + 16,
+            padding: "4px 8px",
+            fontSize: 12,
+            color: "var(--text-muted)",
+            background: "var(--editor-bg)",
+            border: "1px solid var(--collapse-border)",
+            borderRadius: 4,
+            pointerEvents: "none",
+            zIndex: 20,
+            whiteSpace: "nowrap",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          {isMac ? "Cmd" : "Ctrl"}+click to follow link
+        </div>
       )}
     </div>
   );

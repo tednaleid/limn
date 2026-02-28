@@ -168,7 +168,7 @@ function renderSegment(
 
   if (seg.style.link) {
     return (
-      <a key={key} href={seg.style.link} target="_blank" rel="noopener noreferrer">
+      <a key={key} href={seg.style.link} onClick={(e) => e.preventDefault()}>
         {tspan}
       </a>
     );
