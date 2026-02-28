@@ -390,6 +390,14 @@ const bindings: KeyBinding[] = [
   },
   {
     key: "s",
+    modifiers: { meta: true, shift: true },
+    mode: "both",
+    action: (editor) => {
+      editor.requestSaveAs();
+    },
+  },
+  {
+    key: "s",
     modifiers: { meta: true },
     mode: "both",
     action: (editor) => {

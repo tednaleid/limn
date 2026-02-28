@@ -53,6 +53,7 @@ export function HamburgerMenu() {
 
   const handleOpen = () => { editor.requestOpen(); close(); };
   const handleSave = () => { editor.requestSave(); close(); };
+  const handleSaveAs = () => { editor.requestSaveAs(); close(); };
   const handleExport = () => { editor.requestExport(); close(); };
   const handleClear = () => { editor.clear(); close(); };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
@@ -103,7 +104,8 @@ export function HamburgerMenu() {
           }}
         >
           <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} />
-          <MenuItem label="Save..." shortcut="Cmd+S" onClick={handleSave} />
+          <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} />
+          <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} />
           <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
           <MenuDivider />
           <MenuItem label="New" onClick={handleClear} />

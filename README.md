@@ -100,7 +100,8 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Key | Action |
 |-----|--------|
 | Cmd+Z / Cmd+Shift+Z | Undo / Redo |
-| Cmd+S / Cmd+O | Save / Open file |
+| Cmd+S / Cmd+Shift+S | Save / Save As |
+| Cmd+O | Open file |
 | Cmd+Shift+E | Export SVG |
 | Cmd+= / Cmd+- | Zoom in / out |
 | Cmd+0 | Zoom to fit |

@@ -159,6 +159,41 @@ export async function saveToFile(editor: Editor, provider: PersistenceProvider):
 }
 
 /**
+ * Save the current editor state to a new .mindmap file (always shows file picker).
+ * Clears the current handle so the next Cmd+S save goes to the new location.
+ * Returns the filename that was saved to (for UI feedback).
+ */
+export async function saveAsToFile(editor: Editor, provider: PersistenceProvider): Promise<string> {
+  const data = editor.toJSON();
+  const assets = editor.getAssets();
+
+  const assetBlobs = new Map<string, Blob>();
+  await Promise.all(
+    assets.map(async (asset) => {
+      const blob = await provider.loadAsset(asset.id);
+      if (blob) assetBlobs.set(asset.id, blob);
+    }),
+  );
+
+  const zipBlob = await buildMindmapZip(data, assetBlobs);
+
+  const defaultName = currentFilename ?? `${data.meta.id}${MINDMAP_EXTENSION}`;
+
+  // Pass undefined as handle to always show the file picker
+  const handle = await fileSave(zipBlob, {
+    fileName: defaultName,
+    ...FILE_OPTIONS,
+  }, undefined);
+
+  if (handle) {
+    currentHandle = handle;
+    currentFilename = handle.name;
+  }
+
+  return currentFilename ?? defaultName;
+}
+
+/**
  * Open a .mindmap file and load it into the editor.
  * Supports both ZIP bundles and legacy plain JSON files.
  * Asset blobs are stored in IndexedDB for later retrieval.

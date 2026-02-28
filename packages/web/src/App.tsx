@@ -14,7 +14,7 @@ import { ToolbarOverlay } from "./components/ToolbarOverlay";
 import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
-import { saveToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
+import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
@@ -157,6 +157,16 @@ export function App() {
           return;
         }
         console.error("Save failed:", err);
+      }
+    });
+    editor.onSaveAs(async () => {
+      try {
+        const name = await saveAsToFile(editor, provider);
+        setFilename(name);
+        setSaveFlash(true);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Save As failed:", err);
       }
     });
     editor.onOpen(async () => {

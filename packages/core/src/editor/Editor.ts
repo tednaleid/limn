@@ -114,6 +114,7 @@ export class Editor {
 
   // External action callbacks (set by web layer)
   private saveCallback: (() => void) | null = null;
+  private saveAsCallback: (() => void) | null = null;
   private openCallback: (() => void) | null = null;
   private exportCallback: (() => void) | null = null;
   private themeChangeCallback: ((theme: string) => void) | null = null;
@@ -322,6 +323,11 @@ export class Editor {
     this.saveCallback = cb;
   }
 
+  /** Register a callback for save-as requests (Cmd+Shift+S). */
+  onSaveAs(cb: () => void): void {
+    this.saveAsCallback = cb;
+  }
+
   /** Register a callback for open requests (Cmd+O). */
   onOpen(cb: () => void): void {
     this.openCallback = cb;
@@ -330,6 +336,11 @@ export class Editor {
   /** Request a save operation (called by dispatch on Cmd+S). */
   requestSave(): void {
     this.saveCallback?.();
+  }
+
+  /** Request a save-as operation (called by dispatch on Cmd+Shift+S). */
+  requestSaveAs(): void {
+    this.saveAsCallback?.();
   }
 
   /** Request a file open operation (called by dispatch on Cmd+O). */
