@@ -3,6 +3,9 @@
 
 import { z } from "zod/v4";
 
+/** Current file format version. Increment when the schema changes. */
+export const CURRENT_FORMAT_VERSION = 1;
+
 const imageRefSchema = z.object({
   assetId: z.string(),
   width: z.number(),

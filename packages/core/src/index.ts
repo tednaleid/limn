@@ -28,7 +28,8 @@ export type {
   MindMapFileNode,
 } from "./serialization/schema";
 
-export { CURRENT_FORMAT_VERSION, migrateToLatest } from "./serialization/migration";
+export { CURRENT_FORMAT_VERSION } from "./serialization/schema";
+export { migrateToLatest } from "./serialization/migration";
 
 export { compressToUrl, decompressFromUrl } from "./export/url";
 

@@ -2,9 +2,9 @@
 // ABOUTME: Runs ordered migrations to bring old files up to the current version.
 
 import type { MindMapFileFormat } from "./schema";
+import { CURRENT_FORMAT_VERSION } from "./schema";
 
-/** Current file format version. Increment when the schema changes. */
-export const CURRENT_FORMAT_VERSION = 1;
+export { CURRENT_FORMAT_VERSION };
 
 /**
  * Ordered list of migration functions.

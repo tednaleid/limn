@@ -4,8 +4,7 @@
 import type { MindMapNode, MindMapMeta } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
 import type { MindMapFileFormat, MindMapFileNode } from "./schema";
-import { mindMapFileSchema } from "./schema";
-import { CURRENT_FORMAT_VERSION } from "./migration";
+import { mindMapFileSchema, CURRENT_FORMAT_VERSION } from "./schema";
 
 /**
  * Deserialize nested file format into a flat MindMapStore.
