@@ -62,11 +62,12 @@ bun run build      # production build
 | Tab | Create child node |
 | Enter | Edit selected node (or create root if nothing selected) |
 | Shift+Enter | Create sibling node |
+| Cmd+Enter | Open link in selected node |
 | Backspace | Delete node |
 | Space | Toggle collapse |
 | `;` | EasyMotion: labels appear on all visible nodes, type a label to jump |
-| Opt+Up/Down | Reorder among siblings |
-| Opt+Left/Right | Indent / Outdent |
+| Alt+Up/Down or Alt+k/j | Reorder among siblings |
+| Alt+Left/Right or Alt+h/l | Indent / Outdent |
 | Shift+Tab | Detach node to root |
 | Escape | Deselect |
 
@@ -85,7 +86,30 @@ bun run build      # production build
 |-----|--------|
 | Cmd+Z / Cmd+Shift+Z | Undo / Redo |
 | Cmd+S / Cmd+O | Save / Open file |
+| Cmd+Shift+E | Export SVG |
 | Cmd+= / Cmd+- | Zoom in / out |
 | Cmd+0 | Zoom to fit |
 | Cmd+1 | Zoom to selected node |
-| Shift+Arrows | Pan canvas |
+| Shift+Arrows / Shift+hjkl | Pan canvas |
+
+**Mouse:**
+
+| Action | Effect |
+|--------|--------|
+| Click node | Select node |
+| Double-click node | Enter edit mode |
+| Double-click canvas | Create new root node |
+| Cmd+Click link | Open link in new tab |
+| Drag node | Move node (reparent when dropped on another node) |
+
+## Inline markdown
+
+Node text supports inline markdown formatting. Raw markdown is shown while editing; rendered formatting is shown in nav mode.
+
+| Syntax | Result |
+|--------|--------|
+| `**bold**` | **bold** |
+| `*italic*` | *italic* |
+| `` `code` `` | `code` |
+| `~~strikethrough~~` | ~~strikethrough~~ |
+| `[text](url)` | clickable link (Cmd+Click or Cmd+Enter to follow) |
