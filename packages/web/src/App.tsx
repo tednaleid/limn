@@ -8,9 +8,10 @@ import { EditorContext } from "./hooks/useEditor";
 import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { HamburgerMenu } from "./components/HamburgerMenu";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { setupAutoSave, loadFromIDB, saveAssetBlob, loadAllAssetBlobs } from "./persistence/local";
-import { saveToFile, openFile } from "./persistence/file";
+import { saveToFile, openFile, clearFileHandle } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
@@ -157,6 +158,12 @@ export function App() {
     editor.onExport(() => {
       exportSvg();
     });
+    editor.onThemeChange((theme) => {
+      applyTheme(resolveThemeName(theme));
+    });
+    editor.onClear(() => {
+      clearFileHandle();
+    });
   }, [editor]);
 
   useKeyboardHandler(editor);
@@ -241,6 +248,7 @@ export function App() {
       <AssetUrlContext.Provider value={assetUrls}>
         <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
           <MindMapCanvas />
+          <HamburgerMenu />
           <UpdateBanner />
         </div>
       </AssetUrlContext.Provider>

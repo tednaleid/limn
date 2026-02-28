@@ -48,3 +48,8 @@ body,
 .node-image-group:hover .image-resize-dot {
   opacity: 1;
 }
+
+/* Menu item hover state */
+[role="menuitem"]:hover {
+  background: var(--selection-bg);
+}
