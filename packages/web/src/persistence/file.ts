@@ -95,23 +95,20 @@ function parseZipMindmap(bytes: Uint8Array): {
 }
 
 /**
- * Save the current editor state to a .mindmap ZIP file.
- * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
- * On Safari/Firefox: triggers a download via <a download>.
+ * Build a .mindmap ZIP Blob from document data and pre-loaded asset blobs.
+ * Pure function: no IndexedDB access, no File System Access API.
  */
-export async function saveToFile(editor: Editor): Promise<void> {
-  const data = editor.toJSON();
+export async function buildMindmapZip(
+  data: MindMapFileFormat,
+  assetBlobs: Map<string, Blob>,
+): Promise<Blob> {
   const json = JSON.stringify(data, null, 2);
-  const assets = editor.getAssets();
-
-  // Build ZIP contents
   const zipFiles: Record<string, Uint8Array> = {
     "data.json": strToU8(json),
   };
 
-  // Add asset blobs from IndexedDB
-  for (const asset of assets) {
-    const blob = await loadAssetBlob(asset.id);
+  for (const asset of data.assets ?? []) {
+    const blob = assetBlobs.get(asset.id);
     if (blob) {
       const buffer = await blob.arrayBuffer();
       zipFiles[`assets/${asset.filename}`] = new Uint8Array(buffer);
@@ -120,11 +117,34 @@ export async function saveToFile(editor: Editor): Promise<void> {
 
   const zipped = zipSync(zipFiles);
   const zipBuf = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
-  const blob = new Blob([zipBuf], { type: MINDMAP_MIME });
+  return new Blob([zipBuf], { type: MINDMAP_MIME });
+}
+
+/**
+ * Save the current editor state to a .mindmap ZIP file.
+ * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
+ * On Safari/Firefox: triggers a download via <a download>.
+ */
+export async function saveToFile(editor: Editor): Promise<void> {
+  const data = editor.toJSON();
+  const assets = editor.getAssets();
+
+  // Load all asset blobs in parallel before building ZIP.
+  // This minimizes async work between the user gesture and fileSave(),
+  // which needs transient user activation for showSaveFilePicker.
+  const assetBlobs = new Map<string, Blob>();
+  await Promise.all(
+    assets.map(async (asset) => {
+      const blob = await loadAssetBlob(asset.id);
+      if (blob) assetBlobs.set(asset.id, blob);
+    }),
+  );
+
+  const zipBlob = await buildMindmapZip(data, assetBlobs);
 
   const defaultName = currentFilename ?? `${data.meta.id}${MINDMAP_EXTENSION}`;
 
-  const handle = await fileSave(blob, {
+  const handle = await fileSave(zipBlob, {
     fileName: defaultName,
     ...FILE_OPTIONS,
   }, currentHandle ?? undefined);
