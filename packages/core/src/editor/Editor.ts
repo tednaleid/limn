@@ -7,7 +7,6 @@ import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serial
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import {
   branchDirection,
-  centerChildren,
   positionNewChild,
   positionNewSibling,
   reflowSubtree,
@@ -40,6 +39,13 @@ import {
   clampNodeWidth,
   computeImageResize,
 } from "./resize";
+import {
+  type DragState,
+  initialDragState,
+  initDrag,
+  moveSubtree,
+  computeDragUpdate,
+} from "./drag";
 
 export const ROOT_FONT_SIZE = 16;
 
@@ -90,12 +96,7 @@ export class Editor {
   private camera: Camera = { x: 0, y: 0, zoom: 1 };
 
   // Drag state
-  private dragging = false;
-  private dragNodeId: string | null = null;
-  private dragOffset = { x: 0, y: 0 };
-  private dragMoved = false;
-  private dragReordered = false;
-  private reparentTargetId: string | null = null;
+  private drag: DragState = initialDragState();
 
   // Resize state
   private widthResize: WidthResizeState = initialWidthResizeState();
@@ -784,195 +785,64 @@ export class Editor {
   // --- Drag ---
 
   isDragging(): boolean {
-    return this.dragging;
+    return this.drag.active;
   }
 
   getReparentTarget(): string | null {
-    return this.reparentTargetId;
+    return this.drag.reparentTargetId;
   }
 
   startDrag(nodeId: string, worldX: number, worldY: number): void {
-    if (this.editing) {
-      this.exitEditMode();
-    }
+    if (this.editing) this.exitEditMode();
     this.pushUndo("drag");
-    const node = this.store.getNode(nodeId);
     this.selectedId = nodeId;
-    this.dragging = true;
-    this.dragNodeId = nodeId;
-    this.dragOffset = { x: worldX - node.x, y: worldY - node.y };
-    this.dragMoved = false;
-    this.dragReordered = false;
-    this.reparentTargetId = null;
+    this.drag = initDrag(this.store.getNode(nodeId), worldX, worldY);
     this.notify();
   }
 
   updateDrag(worldX: number, worldY: number): void {
-    if (!this.dragging || this.dragNodeId === null) return;
-
-    const node = this.store.getNode(this.dragNodeId);
-    const newX = worldX - this.dragOffset.x;
-    const newY = worldY - this.dragOffset.y;
-    const dx = newX - node.x;
-    const dy = newY - node.y;
-
-    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return;
-
-    this.dragMoved = true;
-
-    // Move the node and its entire subtree
-    this.moveSubtree(this.dragNodeId, dx, dy);
-
-    // Check for sibling reorder (non-root nodes only)
-    if (node.parentId !== null) {
-      this.checkDragReorder(this.dragNodeId);
-    }
-
-    // Check for reparent proximity
-    this.reparentTargetId = this.findReparentTarget(this.dragNodeId);
-
+    this.drag = computeDragUpdate(this.store, this.drag, worldX, worldY);
     this.notify();
   }
 
   endDrag(): void {
-    if (!this.dragging || this.dragNodeId === null) {
-      this.dragging = false;
-      this.dragNodeId = null;
-      this.reparentTargetId = null;
+    if (!this.drag.active || this.drag.nodeId === null) {
+      this.drag = initialDragState();
       return;
     }
 
-    const nodeId = this.dragNodeId;
+    const nodeId = this.drag.nodeId;
 
-    if (this.reparentTargetId !== null) {
+    if (this.drag.reparentTargetId !== null) {
       // Reparent the node and reposition entire subtree as child of target
       const oldX = this.store.getNode(nodeId).x;
       const oldY = this.store.getNode(nodeId).y;
-      this.store.moveNode(nodeId, this.reparentTargetId);
+      this.store.moveNode(nodeId, this.drag.reparentTargetId);
       positionNewChild(this.store, nodeId);
       const newNode = this.store.getNode(nodeId);
       const dx = newNode.x - oldX;
       const dy = newNode.y - oldY;
       for (const childId of newNode.children) {
-        this.moveSubtree(childId, dx, dy);
+        moveSubtree(this.store, childId, dx, dy);
       }
       reflowSubtree(this.store, nodeId);
       relayoutFromNode(this.store, nodeId);
-    } else if (this.dragMoved) {
+    } else if (this.drag.moved) {
       // Reflow children if node was dragged to the other side of its root
       reflowSubtree(this.store, nodeId);
       // Snap to correct layout position after sibling reorder
-      if (this.dragReordered) {
+      if (this.drag.reordered) {
         relayoutFromNode(this.store, nodeId);
       }
     }
 
-    if (!this.dragMoved && this.reparentTargetId === null) {
+    if (!this.drag.moved && this.drag.reparentTargetId === null) {
       // No movement and no reparent: pop the undo entry (no-op drag)
       this.undoStack.pop();
     }
 
-    this.dragging = false;
-    this.dragNodeId = null;
-    this.reparentTargetId = null;
+    this.drag = initialDragState();
     this.notify();
-  }
-
-  /** Check if the dragged node has crossed an adjacent sibling and swap if so. */
-  private checkDragReorder(draggedId: string): void {
-    const dragged = this.store.getNode(draggedId);
-    if (dragged.parentId === null) return;
-
-    const parent = this.store.getNode(dragged.parentId);
-    const draggedCenterY = dragged.y + dragged.height / 2;
-    let didSwap = false;
-
-    // While-loop handles fast drags past multiple siblings
-    let swapped = true;
-    while (swapped) {
-      swapped = false;
-      const idx = parent.children.indexOf(draggedId);
-      if (idx === -1) break;
-
-      // Check sibling below
-      const belowId = parent.children[idx + 1];
-      if (belowId !== undefined) {
-        const below = this.store.getNode(belowId);
-        const belowCenterY = below.y + below.height / 2;
-        if (draggedCenterY > belowCenterY) {
-          parent.children[idx + 1] = draggedId;
-          parent.children[idx] = belowId;
-          swapped = true;
-          didSwap = true;
-          continue;
-        }
-      }
-
-      // Check sibling above
-      const aboveId = idx > 0 ? parent.children[idx - 1] : undefined;
-      if (aboveId !== undefined) {
-        const above = this.store.getNode(aboveId);
-        const aboveCenterY = above.y + above.height / 2;
-        if (draggedCenterY < aboveCenterY) {
-          parent.children[idx - 1] = draggedId;
-          parent.children[idx] = aboveId;
-          swapped = true;
-          didSwap = true;
-          continue;
-        }
-      }
-    }
-
-    if (!didSwap) return;
-
-    this.dragReordered = true;
-
-    // Reposition non-dragged siblings: save dragged position, re-center, restore dragged
-    const savedX = dragged.x;
-    const savedY = dragged.y;
-    centerChildren(this.store, dragged.parentId);
-    const afterCenter = this.store.getNode(draggedId);
-    const dx = savedX - afterCenter.x;
-    const dy = savedY - afterCenter.y;
-    if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
-      this.moveSubtree(draggedId, dx, dy);
-    }
-  }
-
-  /** Move a node and all its descendants by a delta. */
-  private moveSubtree(nodeId: string, dx: number, dy: number): void {
-    const node = this.store.getNode(nodeId);
-    this.store.setNodePosition(nodeId, node.x + dx, node.y + dy);
-    for (const childId of node.children) {
-      this.moveSubtree(childId, dx, dy);
-    }
-  }
-
-  /** Find a reparent target: the node whose bounding box contains the dragged node's center. */
-  private findReparentTarget(draggedId: string): string | null {
-    const dragged = this.store.getNode(draggedId);
-    const draggedCenterX = dragged.x + dragged.width / 2;
-    const draggedCenterY = dragged.y + dragged.height / 2;
-
-    for (const node of this.store.getVisibleNodes()) {
-      if (node.id === draggedId) continue;
-      // Cannot reparent to own descendant
-      if (this.store.isDescendant(node.id, draggedId)) continue;
-      // Cannot reparent to current parent (already there)
-      if (node.id === dragged.parentId) continue;
-
-      // Check if dragged node's center is within this node's bounding box
-      if (
-        draggedCenterX >= node.x &&
-        draggedCenterX <= node.x + node.width &&
-        draggedCenterY >= node.y &&
-        draggedCenterY <= node.y + node.height
-      ) {
-        return node.id;
-      }
-    }
-
-    return null;
   }
 
   // --- Width resize ---
