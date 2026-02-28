@@ -9,6 +9,7 @@ import { AssetUrlContext, type AssetUrlMap } from "./hooks/useAssetUrls";
 import { MindMapCanvas } from "./components/MindMapCanvas";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { HamburgerMenu } from "./components/HamburgerMenu";
+import { ToolbarOverlay } from "./components/ToolbarOverlay";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { setupAutoSave, loadFromIDB, saveAssetBlob, loadAllAssetBlobs } from "./persistence/local";
 import { saveToFile, openFile, clearFileHandle } from "./persistence/file";
@@ -252,6 +253,7 @@ export function App() {
         <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
           <MindMapCanvas />
           <HamburgerMenu />
+          <ToolbarOverlay />
           <UpdateBanner />
         </div>
       </AssetUrlContext.Provider>

@@ -53,3 +53,8 @@ body,
 [role="menuitem"]:hover {
   background: var(--selection-bg);
 }
+
+/* Toolbar button hover state */
+.toolbar-btn:hover:not(:disabled) {
+  background: var(--selection-bg);
+}
