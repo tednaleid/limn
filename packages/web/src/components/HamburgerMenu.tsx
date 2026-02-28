@@ -106,7 +106,7 @@ export function HamburgerMenu() {
           <MenuItem label="Save..." shortcut="Cmd+S" onClick={handleSave} />
           <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
           <MenuDivider />
-          <MenuItem label="Clear canvas" onClick={handleClear} />
+          <MenuItem label="New" onClick={handleClear} />
           <MenuDivider />
           <ThemeRow currentTheme={currentTheme} onSelect={handleTheme} />
         </div>

@@ -497,6 +497,7 @@ export class Editor {
   clear(): void {
     this.pushUndo("clear");
     this.store = new MindMapStore();
+    this.meta = { ...this.meta, id: `limn-${Date.now()}` };
     this.selectedId = null;
     this.editing = false;
     this.clearCallback?.();
