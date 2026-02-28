@@ -1,5 +1,9 @@
 # Limn
 
+[![CI](https://github.com/tednaleid/limn/actions/workflows/ci.yml/badge.svg)](https://github.com/tednaleid/limn/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/tednaleid/<GIST_ID>/raw/limn-coverage.json)](https://github.com/tednaleid/limn/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+
 A keyboard-first, offline-capable mind map progressive web app built with TypeScript, React, and SVG.
 
 ## Quick start
@@ -28,7 +32,8 @@ just test          # run all unit tests
 just test-watch    # run tests in watch mode
 just test-file drag  # run a specific test file (by name)
 just lint          # run ESLint
-just check         # run tests + lint (CI check)
+just coverage      # run tests with coverage report
+just check         # run tests (with coverage) + lint + typecheck (CI check)
 just build         # production build
 just typecheck     # TypeScript type checking
 ```

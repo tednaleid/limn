@@ -12,6 +12,10 @@ install:
 test:
     bun run test
 
+# Run tests with coverage
+coverage:
+    bun run test:coverage
+
 # Run tests in watch mode
 test-watch:
     bun run test:watch
@@ -37,7 +41,7 @@ build:
     bun run build
 
 # Run tests, lint, and type-check (CI check)
-check: test lint typecheck
+check: coverage lint typecheck
 
 # Install pre-commit hook that runs `just check`
 install-hooks:

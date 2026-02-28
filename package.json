@@ -9,10 +9,12 @@
     "test:e2e": "playwright test",
     "dev": "bun run --filter @limn/web dev",
     "build": "bun run --filter @limn/web build",
-    "lint": "eslint packages/"
+    "lint": "eslint packages/",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^10.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",

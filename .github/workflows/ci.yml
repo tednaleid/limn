@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: extractions/setup-just@v2
+
+      - name: Install dependencies
+        run: just install
+
+      - name: Run checks (tests with coverage, lint, typecheck)
+        run: just check
+
+      - name: Extract coverage percentage
+        id: coverage
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          pct=$(jq '.total.lines.pct' packages/core/coverage/coverage-summary.json)
+          echo "pct=$pct" >> "$GITHUB_OUTPUT"
+
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: <GIST_ID>
+          filename: limn-coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.pct }}%
+          valColorRange: ${{ steps.coverage.outputs.pct }}
+          minColorRange: 50
+          maxColorRange: 100
