@@ -3,8 +3,8 @@
     - keyboard shortcuts overlay
     - find/cmd-f?
 
-- zoom buttons/level - similar to excalidraw
-- undo/redo buttons
+- ~~zoom buttons/level - similar to excalidraw~~ DONE
+- ~~undo/redo buttons~~ DONE
 
 - multi-select? this might be more complication than we want, let's see how usability is
 
