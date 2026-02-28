@@ -67,7 +67,7 @@ export function HamburgerMenu() {
           height: 36,
           border: "none",
           borderRadius: 6,
-          background: open ? "var(--selection-bg)" : "transparent",
+          background: open ? "var(--selection-bg)" : "var(--editor-bg)",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",

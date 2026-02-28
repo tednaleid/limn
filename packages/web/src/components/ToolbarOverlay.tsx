@@ -69,7 +69,6 @@ const groupStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   background: "var(--editor-bg)",
-  border: "1px solid var(--collapse-border)",
   borderRadius: 8,
   padding: 2,
   gap: 2,
