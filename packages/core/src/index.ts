@@ -53,3 +53,10 @@ export { BRANCH_PALETTE, nextBranchColor } from "./theme/palette";
 export { dispatch } from "./keybindings/dispatch";
 export type { Modifiers } from "./keybindings/dispatch";
 export { TestEditor } from "./test-editor/TestEditor";
+export {
+  parseInlineMarkdown,
+  parseMarkdownLines,
+  stripMarkdown,
+  isPlainSegments,
+} from "./markdown/inlineMarkdown";
+export type { TextStyle, StyledSegment } from "./markdown/inlineMarkdown";
