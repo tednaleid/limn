@@ -57,10 +57,11 @@ export interface MindMap {
 }
 
 export interface TextMeasurer {
-  measure(text: string, style?: NodeStyle): { width: number; height: number };
+  measure(text: string, style?: NodeStyle, literal?: boolean): { width: number; height: number };
   reflow(
     text: string,
     maxWidth: number,
     style?: NodeStyle,
+    literal?: boolean,
   ): { width: number; height: number };
 }

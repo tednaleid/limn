@@ -976,6 +976,55 @@ describe("Editor", () => {
     });
   });
 
+  describe("literal measurement during editing", () => {
+    test("setText during editing uses literal measurement (wider with markdown chars)", () => {
+      // n1 is a non-root node, fontSize 14, charWidth=8
+      editor.select("n1");
+      editor.enterEditMode();
+      // "[link](https://google.com)" = 26 raw chars → literal width = 26*8+16 = 224
+      editor.setText("n1", "[link](https://google.com)");
+      const node = editor.getNode("n1");
+      expect(node.width).toBe(224);
+    });
+
+    test("exitEditMode remeasures with rendered markdown (narrower)", () => {
+      editor.select("n1");
+      editor.enterEditMode();
+      editor.setText("n1", "[link](https://google.com)");
+      editor.exitEditMode();
+      const node = editor.getNode("n1");
+      // stripMarkdown("[link](https://google.com)") = "link" (4 chars) → 4*8+16 = 48 → min 100
+      expect(node.width).toBe(100);
+    });
+
+    test("enterEditMode remeasures with literal text (wider)", () => {
+      // Set text while not editing so it uses rendered measurement
+      editor.select("n1");
+      editor.enterEditMode();
+      editor.setText("n1", "[link](https://google.com)");
+      editor.exitEditMode();
+      expect(editor.getNode("n1").width).toBe(100);
+
+      // Now enter edit mode again: should remeasure with literal text
+      editor.enterEditMode();
+      expect(editor.getNode("n1").width).toBe(224);
+    });
+
+    test("non-edited nodes still use rendered measurement", () => {
+      // Set markdown text on n1 without editing
+      editor.select("n1");
+      editor.enterEditMode();
+      editor.setText("n1", "[link](https://google.com)");
+      editor.exitEditMode();
+
+      // Edit a different node (n2) — n1 should keep rendered width
+      editor.select("n2");
+      editor.enterEditMode();
+      editor.setText("n2", "plain text");
+      expect(editor.getNode("n1").width).toBe(100);
+    });
+  });
+
   describe("openLink", () => {
     test("fires callback with URL of first link", () => {
       const urls: string[] = [];

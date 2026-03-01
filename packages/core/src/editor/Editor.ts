@@ -66,23 +66,23 @@ interface HistoryEntry {
 /** Stub text measurer that estimates from character count.
  *  Uses stripMarkdown to measure display text, not raw markers. */
 export const stubTextMeasurer: TextMeasurer = {
-  measure(text: string, style?: NodeStyle) {
+  measure(text: string, style?: NodeStyle, literal?: boolean) {
     const scale = (style?.fontSize ?? 14) / 14;
     const charWidth = Math.round(8 * scale);
     const lineHeight = Math.round(20 * scale);
     const paddingY = Math.round(6 * scale);
-    const display = stripMarkdown(text);
+    const display = literal ? text : stripMarkdown(text);
     const lines = display.split("\n");
     const maxLineLen = Math.max(...lines.map((l) => l.length), 0);
     return { width: Math.max(maxLineLen * charWidth + 16, 100), height: lines.length * lineHeight + paddingY * 2 };
   },
-  reflow(text: string, maxWidth: number, style?: NodeStyle) {
+  reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
     const scale = (style?.fontSize ?? 14) / 14;
     const charWidth = Math.round(8 * scale);
     const lineHeight = Math.round(20 * scale);
     const paddingY = Math.round(6 * scale);
     const charsPerLine = Math.floor((maxWidth - 16) / charWidth);
-    const display = stripMarkdown(text);
+    const display = literal ? text : stripMarkdown(text);
     const lines = display.split("\n");
     let totalLines = 0;
     for (const line of lines) {
@@ -546,8 +546,8 @@ export class Editor {
 
   enterEditMode(): void {
     if (this.selectedId === null) return;
-    this.remeasureNode(this.selectedId);
     this.editing = true;
+    this.remeasureNode(this.selectedId);
     this.notify();
   }
 
@@ -562,6 +562,9 @@ export class Editor {
         const nodeToDelete = this.selectedId;
         this.selectFallbackAfterDelete(nodeToDelete);
         this.store.deleteNode(nodeToDelete);
+      } else {
+        // Remeasure with rendered markdown (literal=false) now that editing ended
+        this.remeasureNode(this.selectedId);
       }
     }
     this.notify();
@@ -1339,11 +1342,12 @@ export class Editor {
     const style = node.parentId === null
       ? { ...node.style, fontSize: node.style?.fontSize ?? ROOT_FONT_SIZE, fontWeight: node.style?.fontWeight ?? 600 }
       : node.style;
+    const literal = this.editing && nodeId === this.selectedId;
     if (node.widthConstrained) {
-      const { height } = this.textMeasurer.reflow(node.text, node.width, style);
+      const { height } = this.textMeasurer.reflow(node.text, node.width, style, literal);
       node.height = height;
     } else {
-      const { width, height } = this.textMeasurer.measure(node.text, style);
+      const { width, height } = this.textMeasurer.measure(node.text, style, literal);
       node.width = width;
       node.height = height;
     }

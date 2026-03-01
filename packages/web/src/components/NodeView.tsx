@@ -126,7 +126,7 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
             style={{ fill }}
           >
             {segments.map((seg, j) =>
-              renderSegment(seg, j, fontWeight),
+              renderSegment(seg, j, fontWeight, branchColor),
             )}
           </text>
         );
@@ -152,6 +152,7 @@ function renderSegment(
   seg: StyledSegment,
   key: number,
   baseFontWeight: number,
+  branchColor?: string,
 ) {
   const boldWeight = baseFontWeight >= 600 ? 800 : 700;
   const tspan = (
@@ -161,7 +162,7 @@ function renderSegment(
       fontStyle={seg.style.italic ? "italic" : undefined}
       fontFamily={seg.style.code ? "monospace" : undefined}
       textDecoration={seg.style.strikethrough ? "line-through" : undefined}
-      fill={seg.style.link ? "var(--selection-border)" : undefined}
+      fill={seg.style.link ? (branchColor ?? "var(--selection-border)") : undefined}
     >
       {seg.text}
     </tspan>

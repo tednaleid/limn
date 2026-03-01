@@ -72,12 +72,16 @@ function markdownToHtml(text: string): string {
 
 function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
   return {
-    measure(text: string, style?: NodeStyle) {
+    measure(text: string, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
       el.style.whiteSpace = "pre";
       el.style.width = "";
-      el.innerHTML = markdownToHtml(text);
+      if (literal) {
+        el.textContent = text || "\u00A0";
+      } else {
+        el.innerHTML = markdownToHtml(text);
+      }
       // getBoundingClientRect gives sub-pixel precision; offsetWidth rounds
       // to an integer which can cause the textarea to be fractionally too
       // narrow, wrapping text that should fit on one line.
@@ -88,13 +92,17 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
       return { width, height };
     },
 
-    reflow(text: string, maxWidth: number, style?: NodeStyle) {
+    reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
       el.style.whiteSpace = "pre-wrap";
       el.style.wordBreak = "break-word";
       el.style.width = `${maxWidth}px`;
-      el.innerHTML = markdownToHtml(text);
+      if (literal) {
+        el.textContent = text || "\u00A0";
+      } else {
+        el.innerHTML = markdownToHtml(text);
+      }
       const height = Math.max(32, Math.ceil(el.offsetHeight));
       return { width: maxWidth, height };
     },
