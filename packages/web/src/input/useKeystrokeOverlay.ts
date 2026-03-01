@@ -7,7 +7,7 @@ import { formatKeystrokeParts } from "./formatKeystroke";
 /** Delay before released keys start fading (ms). */
 const FADE_DELAY_MS = 20;
 /** Duration of the CSS opacity fade (ms). Must match the transition in KeystrokeOverlay. */
-const FADE_DURATION_MS = 200;
+const FADE_DURATION_MS = 800;
 
 /** The Ctrl+Shift+K toggle combo -- skip displaying it in the overlay. */
 function isToggleCombo(held: Set<string>): boolean {

@@ -65,7 +65,7 @@ export function KeystrokeOverlay({ enabled }: { enabled: boolean }) {
             alignItems: "center",
             gap: 8,
             opacity: transientOpacity,
-            transition: "opacity 200ms ease",
+            transition: "opacity 800ms ease",
           }}
         >
           <BadgeGroup parts={transientParts} showLeadingPlus={stableParts.length > 0} />
