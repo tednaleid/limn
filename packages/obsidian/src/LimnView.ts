@@ -92,7 +92,12 @@ export class LimnView extends TextFileView {
   }
 
   private mountReact(): void {
-    this.reactRoot = createRoot(this.contentEl);
+    // Mount React into a sub-div so the measurement element (a sibling in
+    // contentEl) stays outside React's managed subtree.
+    const container = this.contentEl.createDiv();
+    container.style.width = "100%";
+    container.style.height = "100%";
+    this.reactRoot = createRoot(container);
     this.reactRoot.render(
       createElement(PersistenceContext.Provider, { value: this.provider },
         createElement(EditorContext.Provider, { value: this.editor },
