@@ -285,6 +285,17 @@ export function reflowSubtree(store: MindMapStore, nodeId: string): void {
   }
 }
 
+/** Recursively re-center children bottom-up through an entire subtree. */
+export function relayoutSubtree(store: MindMapStore, nodeId: string): void {
+  const node = store.getNode(nodeId);
+  if (node.collapsed || node.children.length === 0) return;
+  // Recurse into children first (bottom-up)
+  for (const childId of node.children) {
+    relayoutSubtree(store, childId);
+  }
+  centerChildren(store, nodeId);
+}
+
 const TREE_PADDING = 40;
 
 /**

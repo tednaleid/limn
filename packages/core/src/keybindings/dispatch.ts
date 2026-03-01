@@ -234,6 +234,14 @@ const bindings: KeyBinding[] = [
       editor.enterEasyMotionReparent();
     },
   },
+  {
+    key: "r",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.reflowChildren(sel);
+    },
+  },
   // Vim-style hjkl navigation (mirrors arrow keys)
   {
     key: "h",

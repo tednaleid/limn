@@ -12,6 +12,7 @@ import {
   reflowSubtree,
   relayoutAfterDelete,
   relayoutFromNode,
+  relayoutSubtree,
   resolveTreeOverlap,
 } from "../layout/layout";
 import { nextBranchColor } from "../theme/palette";
@@ -674,6 +675,17 @@ export class Editor {
     if (!this.store.getNode(nodeId).collapsed) {
       this.resolveOverlapForNode(nodeId);
     }
+    this.notify();
+  }
+
+  reflowChildren(nodeId: string): void {
+    const node = this.store.getNode(nodeId);
+    if (node.children.length === 0) return;
+    this.pushUndo("reflow-children");
+    reflowSubtree(this.store, nodeId);       // fix x-positions
+    relayoutSubtree(this.store, nodeId);     // re-center y bottom-up
+    relayoutFromNode(this.store, nodeId);    // cascade up ancestors
+    this.resolveOverlapForNode(nodeId);      // push other trees
     this.notify();
   }
 

@@ -41,6 +41,7 @@ export {
   centerChildren,
   shiftSubtree,
   reflowSubtree,
+  relayoutSubtree,
   relayoutFromNode,
   relayoutAfterDelete,
   treeBoundingBox,

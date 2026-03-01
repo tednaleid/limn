@@ -90,6 +90,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Alt+Left/Right or Alt+h/l | Indent / Outdent |
 | Shift+Tab | Detach node to root |
 | Alt+`;` | Reparent to target (EasyMotion labels appear, type to attach) |
+| r | Reflow children to computed layout |
 | Escape | Deselect |
 
 **Edit mode:**

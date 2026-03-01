@@ -35,6 +35,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Alt", "\u2192"], description: "Indent", altKeys: ["l"] },
       { keys: ["Shift", "Tab"], description: "Detach node to root" },
       { keys: ["Alt", ";"], description: "Reparent to target (EasyMotion)" },
+      { keys: ["r"], description: "Reflow children to computed layout" },
       { keys: ["Escape"], description: "Deselect" },
     ],
   },
