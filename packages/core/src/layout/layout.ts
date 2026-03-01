@@ -5,6 +5,19 @@ import type { MindMapStore } from "../store/MindMapStore";
 
 export const H_OFFSET = 250;
 export const V_GAP = 20;
+const CHILD_GAP = H_OFFSET - 100; // 150px gap between parent edge and child
+
+/**
+ * Compute the x position of a child relative to its parent.
+ * For right-side branches, position past the parent's right edge.
+ * For left-side branches, position at a fixed offset left of parent.
+ */
+export function childXFromParent(parentX: number, parentWidth: number, direction: number): number {
+  if (direction >= 0) {
+    return parentX + parentWidth + CHILD_GAP;
+  }
+  return parentX - H_OFFSET;
+}
 
 /**
  * Compute the visible subtree height of a node.
@@ -62,8 +75,8 @@ export function positionNewChild(store: MindMapStore, childId: string, direction
     }
   }
 
-  // Horizontal: fixed offset in branch direction
-  const x = parent.x + H_OFFSET * direction;
+  // Horizontal: offset from parent edge in branch direction
+  const x = childXFromParent(parent.x, parent.width, direction);
   store.setNodePosition(childId, x, parent.y);
 
   // Now re-center all siblings vertically
@@ -280,7 +293,7 @@ export function reflowSubtree(store: MindMapStore, nodeId: string): void {
 
   for (const child of children) {
     const dir = isRoot ? branchDirection(store, child.id) : parentDir;
-    const expectedX = node.x + H_OFFSET * dir;
+    const expectedX = childXFromParent(node.x, node.width, dir);
     if (Math.abs(child.x - expectedX) > 0.001) {
       store.setNodePosition(child.id, expectedX, child.y);
     }

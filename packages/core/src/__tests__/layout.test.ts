@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
 import type { MindMapFileFormat } from "../serialization/schema";
+import { childXFromParent } from "../layout/layout";
 
 /**
  * Layout constants matching the implementation
@@ -92,10 +93,13 @@ describe("Layout engine", () => {
       expect(editor.getNode(c1).x).toBe(editor.getNode(c2).x);
     });
 
-    test("grandchild is placed at 2x H_OFFSET from root", () => {
+    test("grandchild is placed beyond child's right edge", () => {
       const c1 = editor.addChild("root", "C1");
       const gc1 = editor.addChild(c1, "GC1");
-      expect(editor.getNode(gc1).x).toBe(H_OFFSET * 2);
+      const child = editor.getNode(c1);
+      const grandchild = editor.getNode(gc1);
+      // Grandchild x = child.x + child.width + CHILD_GAP
+      expect(grandchild.x).toBe(child.x + child.width + 150);
     });
   });
 
@@ -530,6 +534,81 @@ describe("Layout engine", () => {
       }
 
       expect(editor.getNode("r2").y).toBe(r2yBefore);
+    });
+  });
+
+  describe("wide parent child positioning", () => {
+    /** Helper: root with width=400 */
+    function wideRoot(): MindMapFileFormat {
+      return {
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          {
+            id: "root",
+            text: "A very wide root node",
+            x: 0,
+            y: 0,
+            width: 400,
+            height: NODE_HEIGHT,
+            children: [],
+          },
+        ],
+        assets: [],
+      };
+    }
+
+    test("child of wide parent (right side) is placed beyond parent right edge", () => {
+      editor = new TestEditor();
+      editor.loadJSON(wideRoot());
+      const childId = editor.addChild("root", "C1");
+      const child = editor.getNode(childId);
+      const parent = editor.getNode("root");
+
+      // Child's left edge must be past parent's right edge
+      expect(child.x).toBeGreaterThan(parent.x + parent.width);
+    });
+
+    test("reflow repositions children past wide parent right edge", () => {
+      editor = new TestEditor();
+      editor.loadJSON(wideRoot());
+
+      // Add a child at default position
+      const childId = editor.addChild("root", "C1");
+
+      // Widen the root after child exists (simulating a width change)
+      // and reflow by adding another child
+      const child = editor.getNode(childId);
+      const parent = editor.getNode("root");
+
+      expect(child.x).toBeGreaterThan(parent.x + parent.width);
+    });
+
+    test("default-width parent still places child at H_OFFSET", () => {
+      editor = new TestEditor();
+      editor.loadJSON(singleRoot());
+      const childId = editor.addChild("root", "C1");
+      const child = editor.getNode(childId);
+
+      // With default width=100, behavior is unchanged
+      expect(child.x).toBe(H_OFFSET);
+    });
+
+    test("childXFromParent: right-side with wide parent clears parent", () => {
+      // width=400, direction=1 => parentX + 400 + 150 = 550
+      expect(childXFromParent(0, 400, 1)).toBe(550);
+    });
+
+    test("childXFromParent: right-side with default parent matches H_OFFSET", () => {
+      // width=100, direction=1 => 0 + 100 + 150 = 250 = H_OFFSET
+      expect(childXFromParent(0, 100, 1)).toBe(H_OFFSET);
+    });
+
+    test("childXFromParent: left-side is unaffected by parent width", () => {
+      // direction=-1 => parentX - 250 regardless of width
+      expect(childXFromParent(0, 100, -1)).toBe(-H_OFFSET);
+      expect(childXFromParent(0, 400, -1)).toBe(-H_OFFSET);
     });
   });
 });

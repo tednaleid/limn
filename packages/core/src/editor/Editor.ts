@@ -6,8 +6,8 @@ import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import {
-  H_OFFSET,
   branchDirection,
+  childXFromParent,
   positionNewChild,
   positionNewSibling,
   reflowSubtree,
@@ -850,7 +850,7 @@ export class Editor {
     const currentDir = branchDirection(this.store, nodeId);
 
     this.pushUndo("move-node");
-    const newX = parent.x + H_OFFSET * (-currentDir);
+    const newX = childXFromParent(parent.x, parent.width, -currentDir);
     this.store.setNodePosition(nodeId, newX, node.y);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
