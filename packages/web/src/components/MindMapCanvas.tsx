@@ -521,6 +521,7 @@ export function MindMapCanvas() {
                 <NodeView
                   node={node}
                   isSelected={node.id === selectedId}
+                  isEditing={isEditing && node.id === selectedId}
                   isRoot={rootIds.has(node.id)}
                   isReparentTarget={node.id === reparentTargetId}
                   imageUrl={node.image ? assetUrls.get(node.image.assetId) : undefined}

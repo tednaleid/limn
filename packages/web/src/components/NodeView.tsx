@@ -13,13 +13,14 @@ const FONT_FAMILY = "system-ui, -apple-system, sans-serif";
 interface NodeViewProps {
   node: MindMapNode;
   isSelected: boolean;
+  isEditing?: boolean;
   isRoot: boolean;
   isReparentTarget?: boolean;
   imageUrl?: string;
   branchColor?: string;
 }
 
-export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl, branchColor }: NodeViewProps) {
+export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget, imageUrl, branchColor }: NodeViewProps) {
   const lines = node.text.split("\n");
   const hasImage = node.image && imageUrl;
   const fontSize = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
@@ -92,8 +93,8 @@ export function NodeView({ node, isSelected, isRoot, isReparentTarget, imageUrl,
           </text>
         </g>
       )}
-      {/* Text lines with inline markdown rendering */}
-      {lines.map((line, i) => {
+      {/* Text lines with inline markdown rendering (hidden during edit to avoid ghosting) */}
+      {!isEditing && lines.map((line, i) => {
         const segments = parseInlineMarkdown(line);
         const textY = paddingY + fontSize + i * lineHeight;
         const fill = branchColor ?? "var(--text-color)";
