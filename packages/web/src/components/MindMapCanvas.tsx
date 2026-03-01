@@ -12,7 +12,7 @@ import { TextEditor } from "./TextEditor";
 import { ReparentIndicator } from "./ReparentIndicator";
 import { EasyMotionLabels } from "./EasyMotionLabels";
 import { usePersistence } from "../hooks/usePersistence";
-import { parseMindmapFile } from "../persistence/file";
+import { parseLimnFile } from "../persistence/file";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 3;
@@ -383,11 +383,11 @@ export function MindMapCanvas() {
       e.preventDefault();
       const files = Array.from(e.dataTransfer.files);
 
-      // Check for .mindmap file first
-      const mindmapFile = files.find((f) => f.name.endsWith(".mindmap"));
-      if (mindmapFile) {
+      // Check for .limn file first
+      const limnFile = files.find((f) => f.name.endsWith(".limn"));
+      if (limnFile) {
         const world = screenToWorld(e.clientX, e.clientY);
-        parseMindmapFile(mindmapFile).then(async ({ data, assetBlobs }) => {
+        parseLimnFile(limnFile).then(async ({ data, assetBlobs }) => {
           editor.importRoots(data, world.x, world.y);
 
           // Persist asset blobs to IndexedDB
@@ -406,7 +406,7 @@ export function MindMapCanvas() {
             }
           }
         }).catch((err) => {
-          console.error("Failed to import .mindmap file:", err);
+          console.error("Failed to import .limn file:", err);
         });
         return;
       }

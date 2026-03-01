@@ -1,8 +1,8 @@
-// ABOUTME: Round-trip tests for .mindmap ZIP save/load.
-// ABOUTME: Verifies buildMindmapZip -> parseMindmapFile preserves all document state.
+// ABOUTME: Round-trip tests for .limn ZIP save/load.
+// ABOUTME: Verifies buildLimnZip -> parseLimnFile preserves all document state.
 
 import { describe, it, expect } from "vitest";
-import { buildMindmapZip, parseMindmapFile } from "../persistence/file";
+import { buildLimnZip, parseLimnFile } from "../persistence/file";
 import type { MindMapFileFormat } from "@limn/core";
 
 function makeFile(overrides: Partial<MindMapFileFormat> = {}): MindMapFileFormat {
@@ -21,8 +21,8 @@ async function roundTrip(
   data: MindMapFileFormat,
   assetBlobs: Map<string, Blob> = new Map(),
 ): Promise<{ data: MindMapFileFormat; assetBlobs: Map<string, Blob> }> {
-  const zip = await buildMindmapZip(data, assetBlobs);
-  return parseMindmapFile(zip);
+  const zip = await buildLimnZip(data, assetBlobs);
+  return parseLimnFile(zip);
 }
 
 describe("file round-trip", () => {
@@ -245,7 +245,7 @@ describe("file round-trip", () => {
     });
     const jsonBlob = new Blob([JSON.stringify(input)], { type: "application/json" });
 
-    const { data, assetBlobs } = await parseMindmapFile(jsonBlob);
+    const { data, assetBlobs } = await parseLimnFile(jsonBlob);
     expect(data.roots[0]!.text).toBe("Legacy");
     expect(assetBlobs.size).toBe(0);
   });

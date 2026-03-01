@@ -1,4 +1,4 @@
-// ABOUTME: Zod schema for the .mindmap file format.
+// ABOUTME: Zod schema for the .limn file format.
 // ABOUTME: Validates file structure on load; defines file format types.
 
 import { z } from "zod/v4";

@@ -31,7 +31,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - **Core has zero browser dependencies.** Nothing in `packages/core/` imports React, DOM APIs, or browser globals. Text measurement uses a `TextMeasurer` interface (DI); web provides a DOM-based implementation, tests provide a stub.
 - **Diff-based undo.** Store captures diffs automatically. No Command classes.
 - **Positions are stored.** Layout engine computes initial positions; users can reposition nodes. File format includes x/y coordinates.
-- **Images use sidecar storage.** `file.mindmap` + `file.assets/` directory. Never base64 in JSON.
+- **Images use sidecar storage.** `file.limn` + `file.assets/` directory. Never base64 in JSON.
 - **TestEditor for logic tests.** Playwright is only for visual regression and browser-API integration. If it can be tested without a browser, it must be.
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
 - **DOM overlays must use CSS transform for zoom.** SVG text is rendered at base font size (14px) and scaled by the SVG group transform. Any DOM element overlaying the SVG canvas (textarea, tooltips, etc.) must use `transform: scale(zoom)` rather than multiplying font-size/padding by zoom. Scaling font-size produces different font hinting than the SVG path, causing visible size mismatches.

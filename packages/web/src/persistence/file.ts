@@ -1,5 +1,5 @@
 // ABOUTME: File save/load using browser-fs-access for File System Access API with fallback.
-// ABOUTME: Saves .mindmap files as ZIP bundles containing data.json + assets/.
+// ABOUTME: Saves .limn files as ZIP bundles containing data.json + assets/.
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
@@ -7,12 +7,12 @@ import type { Editor, PersistenceProvider } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 
-const MINDMAP_EXTENSION = ".mindmap";
-const MINDMAP_MIME = "application/octet-stream";
+const LIMN_EXTENSION = ".limn";
+const LIMN_MIME = "application/octet-stream";
 
 const FILE_OPTIONS = {
-  mimeTypes: [MINDMAP_MIME],
-  extensions: [MINDMAP_EXTENSION],
+  mimeTypes: [LIMN_MIME],
+  extensions: [LIMN_EXTENSION],
   description: "Limn Mind Map",
 };
 
@@ -35,10 +35,10 @@ export function clearFileHandle(): void {
 }
 
 /**
- * Parse a .mindmap file (ZIP bundle or legacy JSON).
+ * Parse a .limn file (ZIP bundle or legacy JSON).
  * Returns the parsed data and any asset blobs found in the archive.
  */
-export async function parseMindmapFile(file: File | Blob): Promise<{
+export async function parseLimnFile(file: File | Blob): Promise<{
   data: MindMapFileFormat;
   assetBlobs: Map<string, Blob>;
 }> {
@@ -47,7 +47,7 @@ export async function parseMindmapFile(file: File | Blob): Promise<{
 
   // Detect format: ZIP starts with PK (0x50, 0x4B)
   if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b) {
-    return parseZipMindmap(bytes);
+    return parseZipLimn(bytes);
   }
 
   // Legacy: plain JSON
@@ -57,8 +57,8 @@ export async function parseMindmapFile(file: File | Blob): Promise<{
   return { data, assetBlobs: new Map() };
 }
 
-/** Parse a ZIP-bundled .mindmap file. */
-function parseZipMindmap(bytes: Uint8Array): {
+/** Parse a ZIP-bundled .limn file. */
+function parseZipLimn(bytes: Uint8Array): {
   data: MindMapFileFormat;
   assetBlobs: Map<string, Blob>;
 } {
@@ -68,7 +68,7 @@ function parseZipMindmap(bytes: Uint8Array): {
   // Extract data.json
   const dataJsonBytes = files["data.json"];
   if (!dataJsonBytes) {
-    throw new Error("Invalid .mindmap file: missing data.json");
+    throw new Error("Invalid .limn file: missing data.json");
   }
   const raw = JSON.parse(strFromU8(dataJsonBytes));
   const data: MindMapFileFormat = migrateToLatest(raw);
@@ -94,10 +94,10 @@ function parseZipMindmap(bytes: Uint8Array): {
 }
 
 /**
- * Build a .mindmap ZIP Blob from document data and pre-loaded asset blobs.
+ * Build a .limn ZIP Blob from document data and pre-loaded asset blobs.
  * Pure function: no IndexedDB access, no File System Access API.
  */
-export async function buildMindmapZip(
+export async function buildLimnZip(
   data: MindMapFileFormat,
   assetBlobs: Map<string, Blob>,
 ): Promise<Blob> {
@@ -116,11 +116,11 @@ export async function buildMindmapZip(
 
   const zipped = zipSync(zipFiles);
   const zipBuf = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
-  return new Blob([zipBuf], { type: MINDMAP_MIME });
+  return new Blob([zipBuf], { type: LIMN_MIME });
 }
 
 /**
- * Save the current editor state to a .mindmap ZIP file.
+ * Save the current editor state to a .limn ZIP file.
  * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
  * On Safari/Firefox: triggers a download via <a download>.
  * Returns the filename that was saved to (for UI feedback).
@@ -140,9 +140,9 @@ export async function saveToFile(editor: Editor, provider: PersistenceProvider):
     }),
   );
 
-  const zipBlob = await buildMindmapZip(data, assetBlobs);
+  const zipBlob = await buildLimnZip(data, assetBlobs);
 
-  const defaultName = currentFilename ?? `${data.meta.id}${MINDMAP_EXTENSION}`;
+  const defaultName = currentFilename ?? `${data.meta.id}${LIMN_EXTENSION}`;
 
   const handle = await fileSave(zipBlob, {
     fileName: defaultName,
@@ -159,7 +159,7 @@ export async function saveToFile(editor: Editor, provider: PersistenceProvider):
 }
 
 /**
- * Save the current editor state to a new .mindmap file (always shows file picker).
+ * Save the current editor state to a new .limn file (always shows file picker).
  * Clears the current handle so the next Cmd+S save goes to the new location.
  * Returns the filename that was saved to (for UI feedback).
  */
@@ -175,9 +175,9 @@ export async function saveAsToFile(editor: Editor, provider: PersistenceProvider
     }),
   );
 
-  const zipBlob = await buildMindmapZip(data, assetBlobs);
+  const zipBlob = await buildLimnZip(data, assetBlobs);
 
-  const defaultName = currentFilename ?? `${data.meta.id}${MINDMAP_EXTENSION}`;
+  const defaultName = currentFilename ?? `${data.meta.id}${LIMN_EXTENSION}`;
 
   // Pass undefined as handle to always show the file picker
   const handle = await fileSave(zipBlob, {
@@ -194,7 +194,7 @@ export async function saveAsToFile(editor: Editor, provider: PersistenceProvider
 }
 
 /**
- * Open a .mindmap file and load it into the editor.
+ * Open a .limn file and load it into the editor.
  * Supports both ZIP bundles and legacy plain JSON files.
  * Asset blobs are stored in IndexedDB for later retrieval.
  */
@@ -204,7 +204,7 @@ export async function openFile(editor: Editor, provider?: PersistenceProvider): 
     id: "limn",
   });
 
-  const { data, assetBlobs } = await parseMindmapFile(file);
+  const { data, assetBlobs } = await parseLimnFile(file);
 
   editor.loadJSON(data);
   editor.remeasureAllNodes();

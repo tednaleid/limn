@@ -26,9 +26,9 @@ Key classes:
 
 ## File format
 
-`.limn` files contain plain JSON (the `MindMapFileFormat` structure from `@limn/core`).
-This is the same schema used by `.mindmap` files but without ZIP wrapping, since Obsidian
-handles binary assets as separate vault files.
+`.limn` files in Obsidian contain plain JSON (the `MindMapFileFormat` structure from
+`@limn/core`) without ZIP wrapping, since Obsidian handles binary assets as separate
+vault files. The web app stores `.limn` files as ZIP bundles.
 
 Image assets are stored in a sidecar folder: `MyMap.assets/` alongside `MyMap.limn`.
 

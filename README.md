@@ -60,11 +60,11 @@ bun run build      # production build
 - Diff-based undo/redo (snapshot capture, no Command classes)
 - SVG rendering with pan/zoom viewport
 - IndexedDB auto-save with cross-tab sync
-- Sidecar asset storage for images (`file.mindmap` + `file.assets/`)
+- Sidecar asset storage for images (`file.limn` + `file.assets/`)
 
 ## File format
 
-`.mindmap` files are ZIP bundles containing `data.json` and an `assets/` directory for images. The current format version is 1.
+`.limn` files are ZIP bundles containing `data.json` and an `assets/` directory for images. The current format version is 1.
 
 - Schema definition: `packages/core/src/serialization/schema.ts`
 - Golden fixture: `packages/core/src/serialization/fixtures/v1-complete.json`

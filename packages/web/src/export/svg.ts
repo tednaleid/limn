@@ -15,7 +15,7 @@ export function exportSvg(): void {
   const serializer = new XMLSerializer();
   const svgString = serializer.serializeToString(svgEl);
   const blob = new Blob([svgString], { type: "image/svg+xml" });
-  downloadBlob(blob, "mindmap.svg");
+  downloadBlob(blob, "limn.svg");
 }
 
 /**
@@ -47,7 +47,7 @@ export function exportPng(): void {
     URL.revokeObjectURL(url);
 
     canvas.toBlob((pngBlob) => {
-      if (pngBlob) downloadBlob(pngBlob, "mindmap.png");
+      if (pngBlob) downloadBlob(pngBlob, "limn.png");
     }, "image/png");
   };
   img.src = url;
