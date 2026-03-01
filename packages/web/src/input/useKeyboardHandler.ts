@@ -40,6 +40,8 @@ export function useKeyboardHandler(editor: Editor): void {
       let key = e.key;
       if (e.altKey && e.code.startsWith("Key")) {
         key = e.code.slice(3).toLowerCase();
+      } else if (e.altKey && e.code === "Semicolon") {
+        key = ";";
       }
 
       const handled = dispatch(editor, key, modifiers);
