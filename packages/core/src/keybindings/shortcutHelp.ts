@@ -22,19 +22,38 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["\u2192"], description: "Navigate right", altKeys: ["l"] },
       { keys: ["\u2191"], description: "Navigate up", altKeys: ["k"] },
       { keys: ["\u2193"], description: "Navigate down", altKeys: ["j"] },
+      { keys: [";"], description: "EasyMotion jump" },
+      { keys: ["Cmd", "Enter"], description: "Open link in selected node" },
+      { keys: ["Escape"], description: "Deselect" },
+    ],
+  },
+  {
+    title: "Node Operations",
+    type: "keyboard",
+    entries: [
       { keys: ["Tab"], description: "Create child node" },
       { keys: ["Enter"], description: "Edit selected node (or create root)" },
       { keys: ["Shift", "Enter"], description: "Create sibling node" },
-      { keys: ["Cmd", "Enter"], description: "Open link in selected node" },
       { keys: ["Backspace"], description: "Delete node" },
       { keys: ["Space"], description: "Toggle collapse" },
-      { keys: [";"], description: "EasyMotion jump" },
+    ],
+  },
+  {
+    title: "Structure",
+    type: "keyboard",
+    entries: [
       { keys: ["Alt", "\u2191"], description: "Reorder up", altKeys: ["k"] },
       { keys: ["Alt", "\u2193"], description: "Reorder down", altKeys: ["j"] },
       { keys: ["Alt", "\u2190"], description: "Outdent", altKeys: ["h"] },
       { keys: ["Alt", "\u2192"], description: "Indent", altKeys: ["l"] },
       { keys: ["Shift", "Tab"], description: "Detach node to root" },
       { keys: ["Alt", ";"], description: "Reparent to target (EasyMotion)" },
+    ],
+  },
+  {
+    title: "Positioning",
+    type: "keyboard",
+    entries: [
       { keys: ["Ctrl", "\u2190"], description: "Nudge node", altKeys: ["h"] },
       { keys: ["Ctrl", "\u2192"], description: "Nudge node", altKeys: ["l"] },
       { keys: ["Ctrl", "\u2191"], description: "Nudge node", altKeys: ["k"] },
@@ -44,11 +63,10 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Ctrl", "Alt", "\u2191"], description: "Nudge node (fine)", altKeys: ["k"] },
       { keys: ["Ctrl", "Alt", "\u2193"], description: "Nudge node (fine)", altKeys: ["j"] },
       { keys: ["r"], description: "Reflow children to computed layout" },
-      { keys: ["Escape"], description: "Deselect" },
     ],
   },
   {
-    title: "Editing",
+    title: "Text Editing",
     type: "keyboard",
     entries: [
       { keys: ["Enter"], description: "Exit edit, create sibling" },

@@ -3,13 +3,21 @@ import { SHORTCUT_GROUPS } from "../keybindings/shortcutHelp";
 import type { ShortcutGroup, ShortcutEntry } from "../keybindings/shortcutHelp";
 
 describe("shortcut help data", () => {
-  test("has four groups", () => {
-    expect(SHORTCUT_GROUPS).toHaveLength(4);
+  test("has seven groups", () => {
+    expect(SHORTCUT_GROUPS).toHaveLength(7);
   });
 
-  test("group titles are Navigation, Editing, Global, Mouse", () => {
+  test("group titles match expected order", () => {
     const titles = SHORTCUT_GROUPS.map((g) => g.title);
-    expect(titles).toEqual(["Navigation", "Editing", "Global", "Mouse"]);
+    expect(titles).toEqual([
+      "Navigation",
+      "Node Operations",
+      "Structure",
+      "Positioning",
+      "Text Editing",
+      "Global",
+      "Mouse",
+    ]);
   });
 
   test("each group has a valid type", () => {

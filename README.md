@@ -74,28 +74,43 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 
 ## Keyboard shortcuts
 
-**Nav mode:**
+**Navigation:**
 
 | Key | Action |
 |-----|--------|
 | Arrows / hjkl | Navigate between nodes |
+| `;` | EasyMotion: labels appear on all visible nodes, type a label to jump |
+| Cmd+Enter | Open link in selected node |
+| Escape | Deselect |
+
+**Node Operations:**
+
+| Key | Action |
+|-----|--------|
 | Tab | Create child node |
 | Enter | Edit selected node (or create root if nothing selected) |
 | Shift+Enter | Create sibling node |
-| Cmd+Enter | Open link in selected node |
 | Backspace | Delete node |
 | Space | Toggle collapse |
-| `;` | EasyMotion: labels appear on all visible nodes, type a label to jump |
+
+**Structure:**
+
+| Key | Action |
+|-----|--------|
 | Alt+Up/Down or Alt+k/j | Reorder among siblings |
 | Alt+Left/Right or Alt+h/l | Indent / Outdent |
 | Shift+Tab | Detach node to root |
 | Alt+`;` | Reparent to target (EasyMotion labels appear, type to attach) |
+
+**Positioning:**
+
+| Key | Action |
+|-----|--------|
 | Ctrl+Arrows / Ctrl+hjkl | Nudge node (20px) |
 | Ctrl+Alt+Arrows / Ctrl+Alt+hjkl | Nudge node (1px) |
 | r | Reflow children to computed layout |
-| Escape | Deselect |
 
-**Edit mode:**
+**Text Editing:**
 
 | Key | Action |
 |-----|--------|
