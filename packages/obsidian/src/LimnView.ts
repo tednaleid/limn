@@ -30,7 +30,7 @@ const DEFAULT_MAP: MindMapFileFormat = {
 };
 
 const obsidianMenuItems: MenuItemDef[] = [
-  { label: "Export SVG", onClick: () => exportSvg() },
+  { label: "Export SVG", shortcut: "Shift+Cmd+E", onClick: () => exportSvg() },
 ];
 
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
