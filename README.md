@@ -132,6 +132,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Cmd+1 | Zoom to selected node |
 | Shift+Arrows / Shift+hjkl | Pan canvas |
 | Shift+Alt+Arrows / Shift+Alt+hjkl | Pan canvas (fine) |
+| Ctrl+Shift+K | Toggle keystroke overlay (for demos) |
 
 **Mouse:**
 

@@ -21,9 +21,10 @@ export type MenuItemDef = { label: string; shortcut?: string; onClick: () => voi
 export interface HamburgerMenuProps {
   items?: MenuItemDef[];
   showTheme?: boolean;
+  keystrokeOverlay?: boolean;
 }
 
-export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
+export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: HamburgerMenuProps) {
   const editor = useEditor();
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -73,6 +74,10 @@ export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
   const handleExport = () => { editor.requestExport(); close(); };
   const handleClear = () => { editor.clear(); close(); };
   const handleShortcuts = () => { setShowShortcuts(true); close(); };
+  const handleKeystrokeOverlay = () => {
+    window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
+    close();
+  };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
 
   return (
@@ -137,6 +142,11 @@ export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
           )}
           <MenuDivider />
           <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} />
+          <MenuItem
+            label={keystrokeOverlay ? "\u2713 Keystroke Overlay" : "Keystroke Overlay"}
+            shortcut="Ctrl+Shift+K"
+            onClick={handleKeystrokeOverlay}
+          />
           {showTheme && (
             <>
               <MenuDivider />

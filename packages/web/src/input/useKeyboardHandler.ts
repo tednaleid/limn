@@ -28,6 +28,13 @@ export function useKeyboardHandler(editor: Editor): void {
         return;
       }
 
+      // Ctrl+Shift+K toggles keystroke overlay
+      if (e.key === "K" && e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey) {
+        window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
+        e.preventDefault();
+        return;
+      }
+
       const modifiers: Modifiers = {
         meta: e.metaKey,
         shift: e.shiftKey,

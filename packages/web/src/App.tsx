@@ -11,6 +11,7 @@ import { MindMapCanvas } from "./components/MindMapCanvas";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { HamburgerMenu } from "./components/HamburgerMenu";
 import { ToolbarOverlay } from "./components/ToolbarOverlay";
+import { KeystrokeOverlay } from "./components/KeystrokeOverlay";
 import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
@@ -210,6 +211,13 @@ export function App() {
 
   useKeyboardHandler(editor);
 
+  const [showKeystrokeOverlay, setShowKeystrokeOverlay] = useState(false);
+  useEffect(() => {
+    const toggle = () => setShowKeystrokeOverlay((v) => !v);
+    window.addEventListener("limn:toggle-keystroke-overlay", toggle);
+    return () => window.removeEventListener("limn:toggle-keystroke-overlay", toggle);
+  }, []);
+
   const [assetUrls, setAssetUrls] = useState<AssetUrlMap>(new Map());
 
   const handleAssetAdded = useCallback((e: Event) => {
@@ -291,9 +299,10 @@ export function App() {
         <AssetUrlContext.Provider value={assetUrls}>
           <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
             <MindMapCanvas />
-            <HamburgerMenu />
+            <HamburgerMenu keystrokeOverlay={showKeystrokeOverlay} />
             <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />
             <ToolbarOverlay />
+            <KeystrokeOverlay enabled={showKeystrokeOverlay} />
             <UpdateBanner />
           </div>
         </AssetUrlContext.Provider>
