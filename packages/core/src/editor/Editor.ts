@@ -74,7 +74,7 @@ export const stubTextMeasurer: TextMeasurer = {
     const display = literal ? text : stripMarkdown(text);
     const lines = display.split("\n");
     const maxLineLen = Math.max(...lines.map((l) => l.length), 0);
-    return { width: Math.max(maxLineLen * charWidth + 16, 100), height: lines.length * lineHeight + paddingY * 2 };
+    return { width: maxLineLen * charWidth + 16, height: lines.length * lineHeight + paddingY * 2 };
   },
   reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
     const scale = (style?.fontSize ?? 14) / 14;

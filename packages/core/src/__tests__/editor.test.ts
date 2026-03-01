@@ -457,6 +457,13 @@ describe("Editor", () => {
       // n0 is root → 3 lines * 26 + 8*2 = 94
       expect(node.height).toBe(94);
     });
+
+    test("short text produces narrow node without minimum width padding", () => {
+      // n1 is non-root → fontSize 14, charWidth=8
+      // "foo" = 3 chars → 3*8+16 = 40 (no 100px floor)
+      editor.setText("n1", "foo");
+      expect(editor.getNode("n1").width).toBe(40);
+    });
   });
 
   describe("toggleCollapse", () => {
@@ -1110,8 +1117,8 @@ describe("Editor", () => {
       editor.setText("n1", "[link](https://google.com)");
       editor.exitEditMode();
       const node = editor.getNode("n1");
-      // stripMarkdown("[link](https://google.com)") = "link" (4 chars) → 4*8+16 = 48 → min 100
-      expect(node.width).toBe(100);
+      // stripMarkdown("[link](https://google.com)") = "link" (4 chars) → 4*8+16 = 48
+      expect(node.width).toBe(48);
     });
 
     test("enterEditMode remeasures with literal text (wider)", () => {
@@ -1120,7 +1127,7 @@ describe("Editor", () => {
       editor.enterEditMode();
       editor.setText("n1", "[link](https://google.com)");
       editor.exitEditMode();
-      expect(editor.getNode("n1").width).toBe(100);
+      expect(editor.getNode("n1").width).toBe(48);
 
       // Now enter edit mode again: should remeasure with literal text
       editor.enterEditMode();
@@ -1138,7 +1145,8 @@ describe("Editor", () => {
       editor.select("n2");
       editor.enterEditMode();
       editor.setText("n2", "plain text");
-      expect(editor.getNode("n1").width).toBe(100);
+      // n1 still has rendered "link" width: 4*8+16 = 48
+      expect(editor.getNode("n1").width).toBe(48);
     });
   });
 

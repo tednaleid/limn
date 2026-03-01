@@ -9,8 +9,6 @@ const FONT_FAMILY = "system-ui, -apple-system, sans-serif";
 const LINE_HEIGHT = 20;
 const PADDING_X = 10;
 const PADDING_Y = 6;
-const MIN_WIDTH = 100;
-
 let measureEl: HTMLDivElement | null = null;
 
 function getMeasureElement(): HTMLDivElement {
@@ -87,7 +85,7 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
       // narrow, wrapping text that should fit on one line.
       // The +4 buffer accounts for SVG text rendering wider than DOM measurement.
       const rect = el.getBoundingClientRect();
-      const width = Math.max(MIN_WIDTH, Math.ceil(rect.width) + 4);
+      const width = Math.ceil(rect.width) + 4;
       const height = Math.max(32, Math.ceil(rect.height));
       return { width, height };
     },
