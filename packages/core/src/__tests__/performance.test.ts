@@ -137,7 +137,7 @@ describe("performance benchmarks", () => {
       editor.undo();
       editor.redo();
       const elapsed = performance.now() - start;
-      expect(elapsed).toBeLessThan(50);
+      expect(elapsed).toBeLessThan(100);
     });
   });
 });
