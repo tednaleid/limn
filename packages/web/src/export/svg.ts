@@ -1,30 +1,22 @@
 // ABOUTME: SVG export using XMLSerializer on the rendered SVG element.
 // ABOUTME: Triggers a download of the serialized SVG file.
 
-import { THEMES } from "../theme/themes";
-import type { Theme } from "../theme/themes";
+import { getCurrentDerivedVars } from "../theme/themes";
+import type { DerivedThemeVars } from "../theme/themes";
 
 /** Build a CSS style block that defines all theme variables on the svg element. */
-export function buildThemeStyleBlock(theme: Theme): string {
-  const vars = Object.entries(theme)
+export function buildThemeStyleBlock(vars: DerivedThemeVars): string {
+  const lines = Object.entries(vars)
     .map(([key, value]) => `  ${key}: ${value};`)
     .join("\n");
-  return `svg {\n${vars}\n}`;
-}
-
-/** Get the current resolved theme from the document. */
-function getCurrentTheme(): Theme {
-  const name = document.documentElement.getAttribute("data-theme") ?? "light";
-  const theme = THEMES[name] ?? THEMES["light"];
-  if (!theme) throw new Error(`Unknown theme: ${name}`);
-  return theme;
+  return `svg {\n${lines}\n}`;
 }
 
 /** Clone an SVG element and inject theme CSS variables into a <defs><style> block. */
 function serializeWithTheme(svgEl: Element): string {
   const clone = svgEl.cloneNode(true) as Element;
-  const theme = getCurrentTheme();
-  const css = buildThemeStyleBlock(theme);
+  const vars = getCurrentDerivedVars();
+  const css = buildThemeStyleBlock(vars);
 
   const ns = "http://www.w3.org/2000/svg";
   let defs = clone.querySelector("defs");

@@ -19,7 +19,7 @@ import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename
 import { exportSvg } from "./export/svg";
 import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
-import { applyTheme, resolveThemeName } from "./theme/themes";
+import { applyThemeFromMeta } from "./theme/themes";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -112,15 +112,14 @@ export function App() {
   // Apply theme from document metadata and listen for system preference changes
   useEffect(() => {
     if (!loaded) return;
-    const themeName = editor.getTheme();
-    applyTheme(resolveThemeName(themeName));
+    applyThemeFromMeta(editor.getTheme(), editor.getLightTheme(), editor.getDarkTheme());
 
-    // Re-apply when system preference changes (for "system"/"default" theme)
+    // Re-apply when system preference changes (for "system" mode)
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       const current = editor.getTheme();
-      if (current === "system" || current === "default") {
-        applyTheme(resolveThemeName(current));
+      if (current === "system") {
+        applyThemeFromMeta(current, editor.getLightTheme(), editor.getDarkTheme());
       }
     };
     mq.addEventListener("change", onChange);
@@ -190,8 +189,8 @@ export function App() {
     editor.onExport(() => {
       exportSvg();
     });
-    editor.onThemeChange((theme) => {
-      applyTheme(resolveThemeName(theme));
+    editor.onThemeChange(() => {
+      applyThemeFromMeta(editor.getTheme(), editor.getLightTheme(), editor.getDarkTheme());
     });
     editor.onClear(() => {
       clearFileHandle();

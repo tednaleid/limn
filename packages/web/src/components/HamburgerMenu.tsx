@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor } from "../hooks/useEditor";
 import { ShortcutsDialog } from "./ShortcutsDialog";
+import { THEME_REGISTRY, getThemesByMode } from "@limn/core";
+import type { ThemeKey } from "@limn/core";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -79,6 +81,8 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
     close();
   };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
+  const handleLightTheme = (key: ThemeKey) => { editor.setLightTheme(key); };
+  const handleDarkTheme = (key: ThemeKey) => { editor.setDarkTheme(key); };
 
   return (
     <>
@@ -151,6 +155,12 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
             <>
               <MenuDivider />
               <ThemeRow currentTheme={currentTheme} onSelect={handleTheme} />
+              <ThemeSubmenu
+                activeLightTheme={editor.getLightTheme()}
+                activeDarkTheme={editor.getDarkTheme()}
+                onSelectLight={handleLightTheme}
+                onSelectDark={handleDarkTheme}
+              />
             </>
           )}
         </div>
@@ -242,6 +252,103 @@ function ThemeRow({ currentTheme, onSelect }: {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function ThemeSubmenu({ activeLightTheme, activeDarkTheme, onSelectLight, onSelectDark }: {
+  activeLightTheme: string;
+  activeDarkTheme: string;
+  onSelectLight: (key: ThemeKey) => void;
+  onSelectDark: (key: ThemeKey) => void;
+}) {
+  const { light, dark } = getThemesByMode();
+
+  return (
+    <div style={{ padding: "4px 12px 6px" }}>
+      <ThemeGroup
+        label="Light"
+        keys={light}
+        activeKey={activeLightTheme}
+        onSelect={onSelectLight}
+      />
+      <ThemeGroup
+        label="Dark"
+        keys={dark}
+        activeKey={activeDarkTheme}
+        onSelect={onSelectDark}
+      />
+    </div>
+  );
+}
+
+function ThemeGroup({ label, keys, activeKey, onSelect }: {
+  label: string;
+  keys: ThemeKey[];
+  activeKey: string;
+  onSelect: (key: ThemeKey) => void;
+}) {
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>{label}</div>
+      {keys.map((key) => {
+        const theme = THEME_REGISTRY[key];
+        if (!theme) return null;
+        const active = key === activeKey;
+        return (
+          <button
+            key={key}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSelect(key)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              padding: "3px 4px",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: 13,
+              color: "var(--text-color)",
+              textAlign: "left",
+              borderRadius: 4,
+              gap: 6,
+            }}
+          >
+            <ThemeSwatches branches={theme.branches} background={theme.background} />
+            <span style={{ flex: 1 }}>{theme.name}</span>
+            {active && <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{"\u2713"}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ThemeSwatches({ branches, background }: {
+  branches: readonly string[];
+  background: string;
+}) {
+  // Show first 5 branch colors as small circles
+  return (
+    <div style={{
+      display: "flex",
+      gap: 2,
+      padding: "1px 2px",
+      borderRadius: 3,
+      background,
+    }}>
+      {branches.slice(0, 5).map((color, i) => (
+        <div
+          key={i}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: color,
+          }}
+        />
+      ))}
     </div>
   );
 }
