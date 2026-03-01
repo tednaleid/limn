@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor } from "../hooks/useEditor";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -25,6 +26,7 @@ export interface HamburgerMenuProps {
 export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
   const editor = useEditor();
   const [open, setOpen] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentTheme = normalizeTheme(editor.getTheme());
 
@@ -58,14 +60,23 @@ export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
     return () => window.removeEventListener("pointerdown", handleClick);
   }, [open, close]);
 
+  // Listen for ? key trigger from useKeyboardHandler
+  useEffect(() => {
+    const handleShowShortcuts = () => setShowShortcuts(true);
+    window.addEventListener("limn:show-shortcuts", handleShowShortcuts);
+    return () => window.removeEventListener("limn:show-shortcuts", handleShowShortcuts);
+  }, []);
+
   const handleOpen = () => { editor.requestOpen(); close(); };
   const handleSave = () => { editor.requestSave(); close(); };
   const handleSaveAs = () => { editor.requestSaveAs(); close(); };
   const handleExport = () => { editor.requestExport(); close(); };
   const handleClear = () => { editor.clear(); close(); };
+  const handleShortcuts = () => { setShowShortcuts(true); close(); };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
 
   return (
+    <>
     <div ref={menuRef} style={{ position: "absolute", top: 12, left: 12, zIndex: 1000 }}>
       <button
         onMouseDown={(e) => e.preventDefault()}
@@ -124,6 +135,8 @@ export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
               <MenuItem label="New" onClick={handleClear} />
             </>
           )}
+          <MenuDivider />
+          <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} />
           {showTheme && (
             <>
               <MenuDivider />
@@ -133,6 +146,8 @@ export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
         </div>
       )}
     </div>
+    {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+    </>
   );
 }
 
