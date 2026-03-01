@@ -39,8 +39,13 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
           width={node.width - 4}
           height={node.height - 4}
           rx={4}
-          style={{ fill: branchColor ?? "var(--selection-border)" }}
-          opacity={0.18}
+          style={{
+            fill: branchColor ?? "var(--selection-border)",
+            stroke: branchColor ?? "var(--selection-border)",
+          }}
+          fillOpacity={0.18}
+          strokeWidth={2}
+          strokeOpacity={0.6}
         />
       )}
       {/* Reparent target highlight */}
