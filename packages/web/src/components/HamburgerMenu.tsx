@@ -116,7 +116,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
             position: "absolute",
             top: 40,
             left: 0,
-            minWidth: 200,
+            minWidth: 240,
             background: "var(--editor-bg)",
             border: "1px solid var(--collapse-border)",
             borderRadius: 8,
@@ -184,7 +184,7 @@ function MenuItem({ label, shortcut, onClick }: {
         textAlign: "left",
       }}
     >
-      <span style={{ flex: 1 }}>{label}</span>
+      <span style={{ flex: 1, whiteSpace: "nowrap" }}>{label}</span>
       {shortcut && (
         <span style={{ fontSize: 12, color: "var(--text-muted)", marginLeft: 16 }}>{shortcut}</span>
       )}
