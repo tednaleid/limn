@@ -33,6 +33,12 @@ export function TextEditor({ editor, node, camera, branchColor }: TextEditorProp
       // Place cursor at end of text
       el.selectionStart = el.value.length;
       el.selectionEnd = el.value.length;
+      // DEBUG: compare expected vs computed styles
+      const cs = getComputedStyle(el);
+      console.log("[limn] textarea style debug:", {
+        expected: { fontSize: el.style.fontSize, fontFamily: el.style.fontFamily, lineHeight: el.style.lineHeight, letterSpacing: "normal", padding: el.style.padding },
+        computed: { fontSize: cs.fontSize, fontFamily: cs.fontFamily, lineHeight: cs.lineHeight, letterSpacing: cs.letterSpacing, padding: cs.padding },
+      });
     }
   }, []);
 

@@ -13,3 +13,12 @@
   visibility: hidden;
   pointer-events: none;
 }
+
+/* Protect the edit textarea from Obsidian's global CSS overrides */
+.limn-view textarea[data-limn-edit] {
+  font-family: system-ui, -apple-system, sans-serif !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  word-spacing: normal !important;
+  -webkit-text-size-adjust: none !important;
+}
