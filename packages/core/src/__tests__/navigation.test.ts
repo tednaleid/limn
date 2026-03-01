@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
+import { VIEWPORT_SCROLL_MARGIN } from "../editor/Editor";
 import type { MindMapFileFormat } from "../serialization/schema";
 
 const NODE_HEIGHT = 32;
@@ -845,6 +846,130 @@ describe("Navigation", () => {
       editor.select("c1");
       editor.pressKey("ArrowLeft");
       expect(editor.getSelectedId()).toBe("root");
+    });
+  });
+
+  describe("viewport auto-scroll on navigation", () => {
+    const VP_W = 800;
+    const VP_H = 600;
+
+    /** A node placed far below the viewport for off-screen tests */
+    function farBelowMap(): MindMapFileFormat {
+      return {
+        version: 1,
+        meta: { id: "test", theme: "default" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          {
+            id: "root",
+            text: "Root",
+            x: 100,
+            y: 100,
+            width: 100,
+            height: NODE_HEIGHT,
+            children: [
+              {
+                id: "far",
+                text: "Far Below",
+                x: 350,
+                y: 2000,
+                width: 100,
+                height: NODE_HEIGHT,
+                children: [],
+              },
+            ],
+          },
+        ],
+        assets: [],
+      };
+    }
+
+    test("navigating to an off-screen node pans the camera to bring it within margin", () => {
+      const editor = new TestEditor();
+      editor.loadJSON(farBelowMap());
+      editor.setViewportSize(VP_W, VP_H);
+      editor.setCamera(0, 0, 1); // viewport shows world y=[0, 600]
+      editor.select("root");
+
+      // Navigate right to "far" which is at y=2000, well off-screen
+      editor.navigateRight();
+      expect(editor.getSelectedId()).toBe("far");
+
+      const cam = editor.getCamera();
+      const node = editor.getNode("far");
+      const screenBottom = node.y * cam.zoom + cam.y + node.height * cam.zoom;
+      const screenTop = node.y * cam.zoom + cam.y;
+      const marginY = VP_H * VIEWPORT_SCROLL_MARGIN;
+
+      // Node should be within the viewport with margin
+      expect(screenTop).toBeGreaterThanOrEqual(marginY);
+      expect(screenBottom).toBeLessThanOrEqual(VP_H - marginY);
+    });
+
+    test("navigating to an on-screen node does not change camera", () => {
+      const editor = new TestEditor();
+      editor.loadJSON(rootWithThreeChildren());
+      editor.setViewportSize(VP_W, VP_H);
+      // Center camera so all nodes are well within viewport
+      editor.setCamera(300, 300, 1);
+      editor.select("c1");
+
+      const camBefore = { ...editor.getCamera() };
+      editor.navigateDown();
+      expect(editor.getSelectedId()).toBe("c2");
+
+      const camAfter = editor.getCamera();
+      expect(camAfter.x).toBe(camBefore.x);
+      expect(camAfter.y).toBe(camBefore.y);
+    });
+
+    test("select() auto-scrolls to a distant node (EasyMotion jump)", () => {
+      const editor = new TestEditor();
+      editor.loadJSON(farBelowMap());
+      editor.setViewportSize(VP_W, VP_H);
+      editor.setCamera(0, 0, 1);
+
+      editor.select("far");
+
+      const cam = editor.getCamera();
+      const node = editor.getNode("far");
+      const screenTop = node.y * cam.zoom + cam.y;
+      const screenBottom = screenTop + node.height * cam.zoom;
+      const marginY = VP_H * VIEWPORT_SCROLL_MARGIN;
+
+      expect(screenTop).toBeGreaterThanOrEqual(marginY);
+      expect(screenBottom).toBeLessThanOrEqual(VP_H - marginY);
+    });
+
+    test("margin is relative to viewport dimensions, not a fixed pixel value", () => {
+      const editor = new TestEditor();
+      editor.loadJSON(farBelowMap());
+
+      // Use a small viewport -- node comes from below, so minimal pan
+      // places the node's bottom edge at (viewportHeight - marginY).
+      const smallH = 300;
+      editor.setViewportSize(400, smallH);
+      editor.setCamera(0, 0, 1);
+      editor.select("far");
+      const camSmall = editor.getCamera();
+      const smallScreenBottom = 2000 * camSmall.zoom + camSmall.y + NODE_HEIGHT * camSmall.zoom;
+
+      // Use a large viewport
+      const largeH = 1200;
+      editor.setCamera(0, 0, 1); // reset camera
+      editor.setViewportSize(1600, largeH);
+      editor.select("far");
+      const camLarge = editor.getCamera();
+      const largeScreenBottom = 2000 * camLarge.zoom + camLarge.y + NODE_HEIGHT * camLarge.zoom;
+
+      // Node's bottom should land exactly at (viewportHeight - margin)
+      const smallMarginY = smallH * VIEWPORT_SCROLL_MARGIN;
+      const largeMarginY = largeH * VIEWPORT_SCROLL_MARGIN;
+
+      expect(smallScreenBottom).toBeCloseTo(smallH - smallMarginY, 0);
+      expect(largeScreenBottom).toBeCloseTo(largeH - largeMarginY, 0);
+      // The absolute margins differ because they're proportional to viewport size
+      expect(smallMarginY).not.toBeCloseTo(largeMarginY, 0);
     });
   });
 });

@@ -50,6 +50,9 @@ import {
 
 export const ROOT_FONT_SIZE = 16;
 
+/** Fraction of viewport width/height used as scroll margin when auto-scrolling to keep a node visible. */
+export const VIEWPORT_SCROLL_MARGIN = 0.15;
+
 /** Snapshot of document state for undo/redo. */
 interface HistoryEntry {
   label: string;
@@ -424,6 +427,7 @@ export class Editor {
   select(nodeId: string): void {
     this.store.getNode(nodeId); // Validate exists
     this.selectedId = nodeId;
+    this.ensureNodeVisible(nodeId);
     this.notify();
   }
 
@@ -836,13 +840,13 @@ export class Editor {
   navigateUp(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const target = findVerticalTarget(this.store, this.selectedId, "up");
-    if (target) { this.selectedId = target.id; this.notify(); }
+    if (target) { this.selectedId = target.id; this.ensureNodeVisible(target.id); this.notify(); }
   }
 
   navigateDown(): void {
     if (this.selectedId === null) { this.selectNearestToViewportCenter(); return; }
     const target = findVerticalTarget(this.store, this.selectedId, "down");
-    if (target) { this.selectedId = target.id; this.notify(); }
+    if (target) { this.selectedId = target.id; this.ensureNodeVisible(target.id); this.notify(); }
   }
 
   navigateLeft(): void {
@@ -851,6 +855,7 @@ export class Editor {
     if (result.targetId === null) return;
     if (result.shouldExpand) this.toggleCollapse(this.selectedId);
     this.selectedId = result.targetId;
+    this.ensureNodeVisible(result.targetId);
     this.notify();
   }
 
@@ -860,6 +865,7 @@ export class Editor {
     if (result.targetId === null) return;
     if (result.shouldExpand) this.toggleCollapse(this.selectedId);
     this.selectedId = result.targetId;
+    this.ensureNodeVisible(result.targetId);
     this.notify();
   }
 
@@ -1190,7 +1196,8 @@ export class Editor {
     if (this.viewportWidth === 0 || this.viewportHeight === 0) return;
 
     const node = this.store.getNode(nodeId);
-    const padding = 40;
+    const paddingX = this.viewportWidth * VIEWPORT_SCROLL_MARGIN;
+    const paddingY = this.viewportHeight * VIEWPORT_SCROLL_MARGIN;
     const zoom = this.camera.zoom;
 
     // Node bounding box in screen coordinates
@@ -1202,16 +1209,16 @@ export class Editor {
     let dx = 0;
     let dy = 0;
 
-    if (screenRight > this.viewportWidth - padding) {
-      dx = (this.viewportWidth - padding) - screenRight;
-    } else if (screenLeft < padding) {
-      dx = padding - screenLeft;
+    if (screenRight > this.viewportWidth - paddingX) {
+      dx = (this.viewportWidth - paddingX) - screenRight;
+    } else if (screenLeft < paddingX) {
+      dx = paddingX - screenLeft;
     }
 
-    if (screenBottom > this.viewportHeight - padding) {
-      dy = (this.viewportHeight - padding) - screenBottom;
-    } else if (screenTop < padding) {
-      dy = padding - screenTop;
+    if (screenBottom > this.viewportHeight - paddingY) {
+      dy = (this.viewportHeight - paddingY) - screenBottom;
+    } else if (screenTop < paddingY) {
+      dy = paddingY - screenTop;
     }
 
     if (dx !== 0 || dy !== 0) {
