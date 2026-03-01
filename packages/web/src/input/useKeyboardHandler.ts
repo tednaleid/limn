@@ -35,7 +35,14 @@ export function useKeyboardHandler(editor: Editor): void {
         alt: e.altKey,
       };
 
-      const handled = dispatch(editor, e.key, modifiers);
+      // On macOS, Alt+<key> produces special characters (e.g., Alt+j = ∆).
+      // When Alt is held, derive the base key from e.code so dispatch matches.
+      let key = e.key;
+      if (e.altKey && e.code.startsWith("Key")) {
+        key = e.code.slice(3).toLowerCase();
+      }
+
+      const handled = dispatch(editor, key, modifiers);
 
       // ? key opens shortcuts dialog (nav mode, no modifiers)
       if (
