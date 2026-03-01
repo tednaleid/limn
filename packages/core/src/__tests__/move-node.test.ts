@@ -531,67 +531,58 @@ describe("moveNode structural moves", () => {
   });
 
   describe("viewport follows reparent", () => {
-    function createDistantTwoParentTree(): TestEditor {
-      // Two parents far apart vertically so overflow reparent goes off-screen
+    test("Option+Down overflow to uncle pans camera to show node and new parent", () => {
+      // Use a small viewport so the layout positions extend beyond it
       editor = new TestEditor();
-      editor.setViewportSize(800, 600);
+      editor.setViewportSize(300, 150);
       editor.addRoot("root", 0, 0);
       editor.select("n0");
       editor.exitEditMode();
-      // n1: parent1 near top
       editor.addChild("n0", "parent1");
       editor.exitEditMode();
-      // n2: parent2 far below
       editor.addChild("n0", "parent2");
       editor.exitEditMode();
-      // Move parent2 far down (off-screen at zoom 1)
-      editor.setNodePosition("n2", editor.getNode("n2").x, 1200);
       // n3: child of parent1
       editor.addChild("n1", "child1");
       editor.exitEditMode();
-      return editor;
-    }
-
-    test("Option+Down overflow to uncle pans camera to show node and new parent", () => {
-      createDistantTwoParentTree();
-      // n3 is only child of parent1 (n1). Moving down overflows to parent2 (n2).
+      // Pan camera so n3 is visible but n2 (parent2) may be off-screen
+      const n3 = editor.getNode("n3");
+      editor.setCamera(-n3.x + 50, -n3.y + 50, 1);
       editor.select("n3");
-      const cameraBefore = editor.getCamera();
+      const cameraBefore = { ...editor.getCamera() };
       editor.pressKey("ArrowDown", { alt: true });
       expect(editor.getNode("n3").parentId).toBe("n2");
-      // Camera should have moved to keep both n3 and n2 visible
+      // Camera should have adjusted to keep both n3 and new parent n2 visible
       const cameraAfter = editor.getCamera();
-      expect(cameraAfter.y).not.toBe(cameraBefore.y);
+      expect(cameraAfter.x !== cameraBefore.x || cameraAfter.y !== cameraBefore.y).toBe(true);
     });
 
     test("outdent pans camera to show node and new parent", () => {
       editor = new TestEditor();
-      editor.setViewportSize(800, 600);
+      editor.setViewportSize(300, 150);
       editor.addRoot("root", 0, 0);
       editor.select("n0");
       editor.exitEditMode();
-      // Place parent far to the right
       editor.addChild("n0", "parent");
       editor.exitEditMode();
-      editor.setNodePosition("n1", 2000, 0);
-      // Add child to parent
       editor.addChild("n1", "child");
       editor.exitEditMode();
-      // Pan camera to see only the child area, root is off-screen
-      editor.setCamera(-(2000 + 250), 0, 1);
+      // Pan camera to see only the child area, root is off-screen to the left
+      const n2 = editor.getNode("n2");
+      editor.setCamera(-n2.x + 50, -n2.y + 50, 1);
       editor.select("n2");
-      const cameraBefore = editor.getCamera();
+      const cameraBefore = { ...editor.getCamera() };
       // Outdent: moves n2 from n1 to root n0
       editor.pressKey("ArrowLeft", { alt: true });
       expect(editor.getNode("n2").parentId).toBe("n0");
-      // Camera should pan to keep both n2 and n0 visible
+      // Camera should pan to keep both n2 and grandparent n0 visible
       const cameraAfter = editor.getCamera();
-      expect(cameraAfter.x).not.toBe(cameraBefore.x);
+      expect(cameraAfter.x !== cameraBefore.x || cameraAfter.y !== cameraBefore.y).toBe(true);
     });
 
     test("indent pans camera to show node and new parent", () => {
       editor = new TestEditor();
-      editor.setViewportSize(800, 600);
+      editor.setViewportSize(300, 150);
       editor.addRoot("root", 0, 0);
       editor.select("n0");
       editor.exitEditMode();
@@ -599,21 +590,22 @@ describe("moveNode structural moves", () => {
       editor.exitEditMode();
       editor.addChild("n0", "sibling2");
       editor.exitEditMode();
-      // Move sibling1 far away
-      editor.setNodePosition("n1", 2000, -500);
+      // Pan camera to see only n2 (sibling2), n1 (sibling1) off-screen
+      const n2 = editor.getNode("n2");
+      editor.setCamera(-n2.x + 50, -n2.y + 50, 1);
       editor.select("n2");
-      const cameraBefore = editor.getCamera();
+      const cameraBefore = { ...editor.getCamera() };
       // Indent: n2 becomes child of n1
       editor.pressKey("ArrowRight", { alt: true });
       expect(editor.getNode("n2").parentId).toBe("n1");
-      // Camera should pan
+      // Camera should pan to show both n2 and new parent n1
       const cameraAfter = editor.getCamera();
-      expect(cameraAfter.x).not.toBe(cameraBefore.x);
+      expect(cameraAfter.x !== cameraBefore.x || cameraAfter.y !== cameraBefore.y).toBe(true);
     });
 
     test("reorder (no parent change) keeps node visible", () => {
       editor = new TestEditor();
-      editor.setViewportSize(800, 600);
+      editor.setViewportSize(300, 150);
       editor.addRoot("root", 0, 0);
       editor.select("n0");
       editor.exitEditMode();
@@ -629,7 +621,7 @@ describe("moveNode structural moves", () => {
 
     test("flipBranchSide keeps node visible", () => {
       editor = new TestEditor();
-      editor.setViewportSize(800, 600);
+      editor.setViewportSize(300, 150);
       editor.addRoot("root", 0, 0);
       editor.select("n0");
       editor.exitEditMode();

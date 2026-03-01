@@ -539,6 +539,7 @@ export class Editor {
       relayoutFromNode(this.store, oldParentId);
     }
 
+    this.ensureNodesVisible([nodeId, newParentId]);
     this.notify();
   }
 
@@ -713,6 +714,7 @@ export class Editor {
     this.pushUndo("reorder-node");
     this.store.reorderNode(nodeId, direction);
     relayoutFromNode(this.store, nodeId);
+    this.ensureNodeVisible(nodeId);
     this.notify();
   }
 
@@ -768,6 +770,7 @@ export class Editor {
         relayoutFromNode(this.store, nodeId);
         // Re-layout old parent too
         relayoutFromNode(this.store, parent.id);
+        this.ensureNodesVisible([nodeId, targetParentId]);
         this.notify();
         return;
       }
@@ -835,6 +838,7 @@ export class Editor {
     if (oldParentId) {
       relayoutFromNode(this.store, oldParentId);
     }
+    this.ensureNodesVisible([nodeId, target.id]);
     this.notify();
   }
 
@@ -850,6 +854,7 @@ export class Editor {
     this.store.setNodePosition(nodeId, newX, node.y);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
+    this.ensureNodeVisible(nodeId);
     this.notify();
   }
 
@@ -876,6 +881,7 @@ export class Editor {
     relayoutFromNode(this.store, nodeId);
     // Re-layout old parent too
     relayoutFromNode(this.store, parent.id);
+    this.ensureNodesVisible([nodeId, grandparentId]);
     this.notify();
   }
 
@@ -898,6 +904,7 @@ export class Editor {
     relayoutFromNode(this.store, nodeId);
     // Re-layout old parent too
     relayoutFromNode(this.store, parent.id);
+    this.ensureNodesVisible([nodeId, prevSiblingId]);
     this.notify();
   }
 
@@ -1007,6 +1014,7 @@ export class Editor {
       }
       reflowSubtree(this.store, nodeId);
       relayoutFromNode(this.store, nodeId);
+      this.ensureNodesVisible([nodeId, this.drag.reparentTargetId]);
     } else if (this.drag.moved) {
       // Reflow children if node was dragged to the other side of its root
       reflowSubtree(this.store, nodeId);
@@ -1312,6 +1320,55 @@ export class Editor {
       dy = (this.viewportHeight - paddingY) - screenBottom;
     } else if (screenTop < paddingY) {
       dy = paddingY - screenTop;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      this.camera = {
+        x: this.camera.x + dx,
+        y: this.camera.y + dy,
+        zoom: this.camera.zoom,
+      };
+    }
+  }
+
+  /** Pan the camera minimally to bring multiple nodes on-screen. */
+  private ensureNodesVisible(nodeIds: string[]): void {
+    if (this.viewportWidth === 0 || this.viewportHeight === 0) return;
+    if (nodeIds.length === 0) return;
+
+    const paddingX = this.viewportWidth * VIEWPORT_SCROLL_MARGIN;
+    const paddingY = this.viewportHeight * VIEWPORT_SCROLL_MARGIN;
+    const zoom = this.camera.zoom;
+
+    // Compute union bounding box in screen coordinates
+    let minLeft = Infinity;
+    let minTop = Infinity;
+    let maxRight = -Infinity;
+    let maxBottom = -Infinity;
+
+    for (const id of nodeIds) {
+      const node = this.store.getNode(id);
+      const sl = node.x * zoom + this.camera.x;
+      const st = node.y * zoom + this.camera.y;
+      minLeft = Math.min(minLeft, sl);
+      minTop = Math.min(minTop, st);
+      maxRight = Math.max(maxRight, sl + node.width * zoom);
+      maxBottom = Math.max(maxBottom, st + node.height * zoom);
+    }
+
+    let dx = 0;
+    let dy = 0;
+
+    if (maxRight > this.viewportWidth - paddingX) {
+      dx = (this.viewportWidth - paddingX) - maxRight;
+    } else if (minLeft < paddingX) {
+      dx = paddingX - minLeft;
+    }
+
+    if (maxBottom > this.viewportHeight - paddingY) {
+      dy = (this.viewportHeight - paddingY) - maxBottom;
+    } else if (minTop < paddingY) {
+      dy = paddingY - minTop;
     }
 
     if (dx !== 0 || dy !== 0) {
