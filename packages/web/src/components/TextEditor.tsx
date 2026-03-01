@@ -8,6 +8,9 @@ import type { Editor, MindMapNode, Camera } from "@limn/core";
 const PADDING_X = 10;
 const PADDING_Y = 6;
 const FONT_SIZE = 14;
+// The DomTextMeasurer adds a buffer to node.width for SVG text rendering.
+// The textarea is DOM-based and doesn't need it, so we subtract it here.
+const SVG_TEXT_BUFFER = 4;
 
 interface TextEditorProps {
   editor: Editor;
@@ -22,7 +25,7 @@ export function TextEditor({ editor, node, camera, branchColor }: TextEditorProp
   // Position the textarea to overlay the node, accounting for camera transform
   const left = node.x * camera.zoom + camera.x;
   const top = node.y * camera.zoom + camera.y;
-  const width = node.width * camera.zoom;
+  const width = (node.width - SVG_TEXT_BUFFER) * camera.zoom;
   const height = node.height * camera.zoom;
 
   // Focus the textarea on mount
@@ -33,12 +36,6 @@ export function TextEditor({ editor, node, camera, branchColor }: TextEditorProp
       // Place cursor at end of text
       el.selectionStart = el.value.length;
       el.selectionEnd = el.value.length;
-      // DEBUG: compare expected vs computed styles
-      const cs = getComputedStyle(el);
-      console.log("[limn] textarea style debug:", {
-        expected: { fontSize: el.style.fontSize, fontFamily: el.style.fontFamily, lineHeight: el.style.lineHeight, letterSpacing: "normal", padding: el.style.padding },
-        computed: { fontSize: cs.fontSize, fontFamily: cs.fontFamily, lineHeight: cs.lineHeight, letterSpacing: cs.letterSpacing, padding: cs.padding },
-      });
     }
   }, []);
 
