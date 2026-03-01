@@ -90,6 +90,8 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Alt+Left/Right or Alt+h/l | Indent / Outdent |
 | Shift+Tab | Detach node to root |
 | Alt+`;` | Reparent to target (EasyMotion labels appear, type to attach) |
+| Ctrl+Arrows / Ctrl+hjkl | Nudge node (20px) |
+| Ctrl+Alt+Arrows / Ctrl+Alt+hjkl | Nudge node (1px) |
 | r | Reflow children to computed layout |
 | Escape | Deselect |
 
@@ -114,6 +116,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Cmd+0 | Zoom to fit |
 | Cmd+1 | Zoom to selected node |
 | Shift+Arrows / Shift+hjkl | Pan canvas |
+| Shift+Alt+Arrows / Shift+Alt+hjkl | Pan canvas (fine) |
 
 **Mouse:**
 
@@ -124,6 +127,8 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Double-click canvas | Create new root node |
 | Cmd+Click link | Open link in new tab |
 | Drag node | Move node (reparent when dropped on another node) |
+
+**Note:** On macOS, Ctrl+Arrow keys are bound to Mission Control by default (switching desktops). To use Ctrl+Arrow nudge bindings, disable these in System Settings > Keyboard > Keyboard Shortcuts > Mission Control, or use the Ctrl+hjkl equivalents instead.
 
 ## Obsidian plugin
 

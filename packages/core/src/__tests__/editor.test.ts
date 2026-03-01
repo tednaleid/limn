@@ -815,6 +815,123 @@ describe("Editor", () => {
     });
   });
 
+  describe("nudge node", () => {
+    test("Ctrl+Arrow moves node by 20px", () => {
+      editor.select("n1");
+      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(before.x + 20);
+      expect(editor.getNode("n1").y).toBe(before.y);
+    });
+
+    test("Ctrl+Arrow moves subtree (children follow)", () => {
+      editor.select("n1");
+      const childBefore = { x: editor.getNode("n3").x, y: editor.getNode("n3").y };
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getNode("n3").x).toBe(childBefore.x + 20);
+      expect(editor.getNode("n3").y).toBe(childBefore.y);
+    });
+
+    test("Ctrl+Alt+Arrow moves node by 1px", () => {
+      editor.select("n1");
+      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
+      editor.pressKey("ArrowDown", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").x).toBe(before.x);
+      expect(editor.getNode("n1").y).toBe(before.y + 1);
+    });
+
+    test("nudge is undoable", () => {
+      editor.select("n1");
+      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(before.x + 20);
+      editor.undo();
+      expect(editor.getNode("n1").x).toBe(before.x);
+    });
+
+    test("consecutive nudges squash into single undo entry", () => {
+      editor.select("n1");
+      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
+      editor.pressKey("ArrowRight", { ctrl: true });
+      editor.pressKey("ArrowRight", { ctrl: true });
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(before.x + 60);
+      editor.undo();
+      expect(editor.getNode("n1").x).toBe(before.x);
+    });
+
+    test("nudge on different node breaks squash", () => {
+      editor.select("n1");
+      const n1Before = editor.getNode("n1").x;
+      editor.pressKey("ArrowRight", { ctrl: true });
+      editor.select("n2");
+      const n2Before = editor.getNode("n2").x;
+      editor.pressKey("ArrowRight", { ctrl: true });
+      // Undo should only revert n2's nudge
+      editor.undo();
+      expect(editor.getNode("n2").x).toBe(n2Before);
+      expect(editor.getNode("n1").x).toBe(n1Before + 20);
+    });
+
+    test("non-nudge mutation breaks squash", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").x;
+      editor.pressKey("ArrowRight", { ctrl: true });
+      editor.setText("n0", "Changed");
+      editor.pressKey("ArrowRight", { ctrl: true });
+      // Undo reverts second nudge only
+      editor.undo();
+      expect(editor.getNode("n1").x).toBe(before + 20);
+    });
+
+    test("nudge with no selection is a no-op", () => {
+      editor.deselect();
+      // Should not throw
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getSelectedId()).toBeNull();
+    });
+
+    test("Ctrl+hjkl mirrors Ctrl+Arrow for nudge", () => {
+      editor.select("n1");
+      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
+      editor.pressKey("l", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(before.x + 20);
+      editor.pressKey("h", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(before.x);
+      editor.pressKey("j", { ctrl: true });
+      expect(editor.getNode("n1").y).toBe(before.y + 20);
+      editor.pressKey("k", { ctrl: true });
+      expect(editor.getNode("n1").y).toBe(before.y);
+    });
+  });
+
+  describe("fine canvas pan", () => {
+    test("Shift+Alt+Arrow pans by smaller amount than Shift+Arrow", () => {
+      editor.setCamera(0, 0, 1);
+      editor.setViewportSize(800, 600);
+      editor.pressKey("ArrowRight", { shift: true, alt: true });
+      const fineX = editor.getCamera().x;
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowRight", { shift: true });
+      const coarseX = editor.getCamera().x;
+      // Both should move left (negative x), but fine should be smaller magnitude
+      expect(fineX).toBeLessThan(0);
+      expect(coarseX).toBeLessThan(0);
+      expect(Math.abs(fineX)).toBeLessThan(Math.abs(coarseX));
+    });
+
+    test("Shift+Alt+hjkl mirrors Shift+Alt+Arrow for fine pan", () => {
+      editor.setCamera(0, 0, 1);
+      editor.setViewportSize(800, 600);
+      editor.pressKey("l", { shift: true, alt: true });
+      const hjklX = editor.getCamera().x;
+      editor.setCamera(0, 0, 1);
+      editor.pressKey("ArrowRight", { shift: true, alt: true });
+      const arrowX = editor.getCamera().x;
+      expect(hjklX).toBe(arrowX);
+    });
+  });
+
   describe("importRoots", () => {
     const importData: MindMapFileFormat = {
       version: 1,

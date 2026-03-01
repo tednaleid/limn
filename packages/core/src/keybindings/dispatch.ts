@@ -217,6 +217,117 @@ const bindings: KeyBinding[] = [
       if (sel) editor.moveNode(sel, "right");
     },
   },
+  // Ctrl+arrows: nudge node (coarse, 20px)
+  {
+    key: "ArrowUp",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, -20);
+    },
+  },
+  {
+    key: "ArrowDown",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, 20);
+    },
+  },
+  {
+    key: "ArrowLeft",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, -20, 0);
+    },
+  },
+  {
+    key: "ArrowRight",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 20, 0);
+    },
+  },
+  // Ctrl+Alt+arrows: nudge node (fine, 1px)
+  {
+    key: "ArrowUp",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, -1);
+    },
+  },
+  {
+    key: "ArrowDown",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, 1);
+    },
+  },
+  {
+    key: "ArrowLeft",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, -1, 0);
+    },
+  },
+  {
+    key: "ArrowRight",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 1, 0);
+    },
+  },
+  // Shift+Alt+arrows: fine pan (1% viewport)
+  {
+    key: "ArrowUp",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, (vp.height || 600) * 0.01);
+    },
+  },
+  {
+    key: "ArrowDown",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, -(vp.height || 600) * 0.01);
+    },
+  },
+  {
+    key: "ArrowLeft",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera((vp.width || 800) * 0.01, 0);
+    },
+  },
+  {
+    key: "ArrowRight",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(-(vp.width || 800) * 0.01, 0);
+    },
+  },
   // EasyMotion trigger
   {
     key: ";",
@@ -341,6 +452,117 @@ const bindings: KeyBinding[] = [
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.moveNode(sel, "right");
+    },
+  },
+  // Ctrl+hjkl: nudge node (coarse, 20px)
+  {
+    key: "k",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, -20);
+    },
+  },
+  {
+    key: "j",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, 20);
+    },
+  },
+  {
+    key: "h",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, -20, 0);
+    },
+  },
+  {
+    key: "l",
+    modifiers: { ctrl: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 20, 0);
+    },
+  },
+  // Ctrl+Alt+hjkl: nudge node (fine, 1px)
+  {
+    key: "k",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, -1);
+    },
+  },
+  {
+    key: "j",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 0, 1);
+    },
+  },
+  {
+    key: "h",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, -1, 0);
+    },
+  },
+  {
+    key: "l",
+    modifiers: { ctrl: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.nudgeNode(sel, 1, 0);
+    },
+  },
+  // Shift+Alt+hjkl: fine pan (1% viewport)
+  {
+    key: "k",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, (vp.height || 600) * 0.01);
+    },
+  },
+  {
+    key: "j",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(0, -(vp.height || 600) * 0.01);
+    },
+  },
+  {
+    key: "h",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera((vp.width || 800) * 0.01, 0);
+    },
+  },
+  {
+    key: "l",
+    modifiers: { shift: true, alt: true },
+    mode: "nav",
+    action: (editor) => {
+      const vp = editor.getViewportSize();
+      editor.panCamera(-(vp.width || 800) * 0.01, 0);
     },
   },
 

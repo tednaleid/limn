@@ -666,6 +666,16 @@ export class Editor {
     this.notify();
   }
 
+  nudgeNode(nodeId: string, dx: number, dy: number): void {
+    const squashLabel = `nudge:${nodeId}`;
+    if (this.lastUndoLabel !== squashLabel) {
+      this.pushUndo(squashLabel);
+    }
+    moveSubtree(this.store, nodeId, dx, dy);
+    this.ensureNodeVisible(nodeId);
+    this.notify();
+  }
+
   setText(nodeId: string, text: string): void {
     const squashLabel = `set-text:${nodeId}`;
     if (this.lastUndoLabel !== squashLabel) {
