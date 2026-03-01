@@ -178,6 +178,60 @@ export function findHorizontalTarget(
   return { targetId: fallback?.id ?? null, shouldExpand: false };
 }
 
+/** Spatial search for a reparent target in the given direction.
+ *  Same scoring as spatialFallback, but excludes the node itself,
+ *  all its descendants, and the current parent. */
+export function findSpatialReparentTarget(
+  store: MindMapStore,
+  nodeId: string,
+  direction: "up" | "down" | "left" | "right",
+): MindMapNode | null {
+  const current = store.getNode(nodeId);
+  const cx = current.x + current.width / 2;
+  const cy = current.y + current.height / 2;
+
+  let best: MindMapNode | null = null;
+  let bestScore = Infinity;
+
+  for (const node of store.getVisibleNodes()) {
+    if (node.id === nodeId) continue;
+    if (store.isDescendant(node.id, nodeId)) continue;
+    if (node.id === current.parentId) continue;
+
+    const nx = node.x + node.width / 2;
+    const ny = node.y + node.height / 2;
+
+    let inDirection: boolean;
+    let score: number;
+
+    switch (direction) {
+      case "up":
+        inDirection = ny < cy;
+        score = (cy - ny) + Math.abs(nx - cx) * CROSS_AXIS_WEIGHT;
+        break;
+      case "down":
+        inDirection = ny > cy;
+        score = (ny - cy) + Math.abs(nx - cx) * CROSS_AXIS_WEIGHT;
+        break;
+      case "left":
+        inDirection = nx < cx;
+        score = (cx - nx) + Math.abs(ny - cy) * CROSS_AXIS_WEIGHT;
+        break;
+      case "right":
+        inDirection = nx > cx;
+        score = (nx - cx) + Math.abs(ny - cy) * CROSS_AXIS_WEIGHT;
+        break;
+    }
+
+    if (inDirection && score < bestScore) {
+      best = node;
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
 /** Find the visible node closest to the viewport center. */
 export function findNearestToViewportCenter(
   store: MindMapStore,

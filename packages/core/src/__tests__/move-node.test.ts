@@ -165,12 +165,16 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n2").parentId).toBe("n1");
     });
 
-    test("outdent is no-op for direct children of root", () => {
+    test("toward-root on direct child of root flips to other side", () => {
       createThreeChildTree();
       editor.select("n1");
+      // n1 is on right side (x > 0), ArrowLeft = toward root
+      const xBefore = editor.getNode("n1").x;
+      expect(xBefore).toBeGreaterThan(0);
       editor.pressKey("ArrowLeft", { alt: true });
-      // n1 should still be child of root
+      // n1 should still be child of root, but on the left side
       expect(editor.getNode("n1").parentId).toBe("n0");
+      expect(editor.getNode("n1").x).toBeLessThan(0);
       editor.expectChildren("n0", ["n1", "n2", "n3"]);
     });
 
@@ -252,6 +256,216 @@ describe("moveNode structural moves", () => {
       editor.undo();
       expect(editor.getNode("n2").parentId).toBe("n0");
       editor.expectChildren("n0", ["n1", "n2", "n3"]);
+    });
+  });
+
+  describe("spatial reparent (vertical)", () => {
+    test("Alt+Up from first child of root reparents to nearest node above", () => {
+      // Two roots: top root with children, bottom root with children
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child1");
+      editor.exitEditMode();
+
+      editor.addRoot("root2", 0, 200);
+      editor.select("n2");
+      editor.exitEditMode();
+      editor.addChild("n2", "child2");
+      editor.exitEditMode();
+
+      // child2 (n3) is child of root2 (n2). First child, at boundary.
+      // root2 is root, so no uncle. Spatial reparent should find a target above.
+      editor.select("n3");
+      editor.pressKey("ArrowUp", { alt: true });
+      // n3 should reparent to the closest node above it
+      expect(editor.getNode("n3").parentId).not.toBe("n2");
+    });
+
+    test("Alt+Down from last child of root reparents to nearest node below", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child1");
+      editor.exitEditMode();
+
+      editor.addRoot("root2", 0, 200);
+      editor.select("n2");
+      editor.exitEditMode();
+      editor.addChild("n2", "child2");
+      editor.exitEditMode();
+
+      // child1 (n1) is child of root1 (n0). Only child, at boundary.
+      editor.select("n1");
+      editor.pressKey("ArrowDown", { alt: true });
+      // n1 should reparent to a node below
+      expect(editor.getNode("n1").parentId).not.toBe("n0");
+    });
+
+    test("spatial reparent does not target own descendants", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.addChild("n1", "grandchild");
+      editor.exitEditMode();
+
+      // n1 has child n2. Moving down, n2 is a descendant, must not reparent there.
+      editor.select("n1");
+      const parentBefore = editor.getNode("n1").parentId;
+      editor.pressKey("ArrowDown", { alt: true });
+      // No valid target exists (n0 is parent, n2 is descendant), so no-op
+      expect(editor.getNode("n1").parentId).toBe(parentBefore);
+    });
+
+    test("spatial reparent (vertical) is undoable", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child1");
+      editor.exitEditMode();
+
+      editor.addRoot("root2", 0, 200);
+      editor.select("n2");
+      editor.exitEditMode();
+      editor.addChild("n2", "child2");
+      editor.exitEditMode();
+
+      editor.select("n1");
+      const parentBefore = editor.getNode("n1").parentId;
+      editor.pressKey("ArrowDown", { alt: true });
+      const parentAfter = editor.getNode("n1").parentId;
+      expect(parentAfter).not.toBe(parentBefore);
+      editor.undo();
+      expect(editor.getNode("n1").parentId).toBe(parentBefore);
+    });
+  });
+
+  describe("side-flip", () => {
+    test("Alt+Left flips right-side root-child to left side", () => {
+      createThreeChildTree();
+      editor.select("n1");
+      expect(editor.getNode("n1").x).toBeGreaterThan(0);
+      editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n1").x).toBeLessThan(0);
+      expect(editor.getNode("n1").parentId).toBe("n0");
+    });
+
+    test("Alt+Right flips left-side root-child to right side", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child");
+      editor.exitEditMode();
+      // Move child to left side
+      editor.setNodePosition("n1", -250, 0);
+      editor.select("n1");
+      expect(editor.getNode("n1").x).toBeLessThan(0);
+      editor.pressKey("ArrowRight", { alt: true });
+      expect(editor.getNode("n1").x).toBeGreaterThan(0);
+      expect(editor.getNode("n1").parentId).toBe("n0");
+    });
+
+    test("flip cascades to descendants", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child");
+      editor.exitEditMode();
+      editor.addChild("n1", "grandchild");
+      editor.exitEditMode();
+
+      // child (n1) on right, grandchild (n2) further right
+      expect(editor.getNode("n1").x).toBeGreaterThan(0);
+      expect(editor.getNode("n2").x).toBeGreaterThan(editor.getNode("n1").x);
+      editor.select("n1");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // Both should now be on the left side
+      expect(editor.getNode("n1").x).toBeLessThan(0);
+      expect(editor.getNode("n2").x).toBeLessThan(editor.getNode("n1").x);
+    });
+
+    test("side-flip is undoable", () => {
+      createThreeChildTree();
+      editor.select("n1");
+      const xBefore = editor.getNode("n1").x;
+      editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n1").x).not.toBe(xBefore);
+      editor.undo();
+      expect(editor.getNode("n1").x).toBe(xBefore);
+    });
+
+    test("existing outdent unchanged for non-root parents", () => {
+      createTwoParentTree();
+      editor.select("n3");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // n3 should outdent to root (n0), not flip
+      expect(editor.getNode("n3").parentId).toBe("n0");
+    });
+  });
+
+  describe("spatial reparent (horizontal)", () => {
+    test("Alt+Right from first child (right side) reparents to node to the right", () => {
+      // Two roots side by side: left root with children, right root
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child1");
+      editor.exitEditMode();
+
+      editor.addRoot("root2", 600, 0);
+      editor.select("n2");
+      editor.exitEditMode();
+
+      // child1 (n1) is first (only) child of root1, right side, no previous sibling
+      // ArrowRight is away from parent for right-side branch, idx=0 → spatial reparent
+      editor.select("n1");
+      editor.pressKey("ArrowRight", { alt: true });
+      // n1 should reparent to root2, which is to the right
+      expect(editor.getNode("n1").parentId).toBe("n2");
+      // Attached on left side of target (direction hint = -1)
+      expect(editor.getNode("n1").x).toBeLessThan(editor.getNode("n2").x);
+    });
+
+    test("Alt+Left from first child (left side) reparents to node to the left", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child_left");
+      editor.exitEditMode();
+      // Move child to left side
+      editor.setNodePosition("n1", -250, 0);
+
+      editor.addRoot("root2", -600, 0);
+      editor.select("n2");
+      editor.exitEditMode();
+
+      // child_left (n1) is first (only) child of root1, left side, no previous sibling
+      // ArrowLeft is away from parent for left-side branch, idx=0 → spatial reparent
+      editor.select("n1");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // n1 should reparent to root2, which is to the left
+      expect(editor.getNode("n1").parentId).toBe("n2");
+      // Attached on right side of target (direction hint = 1)
+      expect(editor.getNode("n1").x).toBeGreaterThan(editor.getNode("n2").x);
+    });
+
+    test("existing indent unchanged when previous sibling exists", () => {
+      createThreeChildTree();
+      // n2 is second child, has previous sibling n1
+      editor.select("n2");
+      editor.pressKey("ArrowRight", { alt: true });
+      // Should indent into n1 as before
+      expect(editor.getNode("n2").parentId).toBe("n1");
     });
   });
 

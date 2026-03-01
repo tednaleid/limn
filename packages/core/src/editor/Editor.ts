@@ -6,6 +6,7 @@ import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import {
+  H_OFFSET,
   branchDirection,
   positionNewChild,
   positionNewSibling,
@@ -29,6 +30,7 @@ import {
   findVerticalTarget,
   findHorizontalTarget,
   findNearestToViewportCenter,
+  findSpatialReparentTarget,
 } from "./navigation";
 import {
   type WidthResizeState,
@@ -729,26 +731,45 @@ export class Editor {
 
     // Overflow: move to parent's adjacent sibling
     const grandparentId = parent.parentId;
-    if (grandparentId === null) return; // Parent is root, no overflow target
+    if (grandparentId !== null) {
+      const grandparent = this.store.getNode(grandparentId);
+      const parentIdx = grandparent.children.indexOf(parent.id);
 
-    const grandparent = this.store.getNode(grandparentId);
-    const parentIdx = grandparent.children.indexOf(parent.id);
+      const targetIdx = direction === "up" ? parentIdx - 1 : parentIdx + 1;
+      const targetParentId = grandparent.children[targetIdx];
+      if (targetParentId !== undefined) {
+        this.pushUndo("move-node");
+        const insertIndex = direction === "up"
+          ? this.store.getNode(targetParentId).children.length // Last child
+          : 0; // First child
+        this.store.moveNode(nodeId, targetParentId, insertIndex);
+        positionNewChild(this.store, nodeId);
+        reflowSubtree(this.store, nodeId);
+        relayoutFromNode(this.store, nodeId);
+        // Re-layout old parent too
+        relayoutFromNode(this.store, parent.id);
+        this.notify();
+        return;
+      }
+    }
 
-    const targetIdx = direction === "up" ? parentIdx - 1 : parentIdx + 1;
-    const targetParentId = grandparent.children[targetIdx];
-    if (targetParentId === undefined) return; // No adjacent sibling
-
-    this.pushUndo("move-node");
-    const insertIndex = direction === "up"
-      ? this.store.getNode(targetParentId).children.length // Last child
-      : 0; // First child
-    this.store.moveNode(nodeId, targetParentId, insertIndex);
-    positionNewChild(this.store, nodeId);
-    reflowSubtree(this.store, nodeId);
-    relayoutFromNode(this.store, nodeId);
-    // Re-layout old parent too
-    relayoutFromNode(this.store, parent.id);
-    this.notify();
+    // Spatial reparent fallback: no uncle available
+    const target = findSpatialReparentTarget(this.store, nodeId, direction);
+    if (target) {
+      this.pushUndo("move-node");
+      if (target.collapsed) {
+        target.collapsed = false;
+      }
+      const insertIndex = direction === "up"
+        ? target.children.length // Append as last child
+        : 0; // Insert as first child
+      this.store.moveNode(nodeId, target.id, insertIndex);
+      positionNewChild(this.store, nodeId);
+      reflowSubtree(this.store, nodeId);
+      relayoutFromNode(this.store, nodeId);
+      relayoutFromNode(this.store, parent.id);
+      this.notify();
+    }
   }
 
   private moveNodeHorizontal(nodeId: string, direction: "left" | "right"): void {
@@ -756,15 +777,68 @@ export class Editor {
     if (node.parentId === null) return;
 
     const dir = branchDirection(this.store, nodeId);
-    // On right-side branch: left = outdent, right = indent
-    // On left-side branch: right = outdent, left = indent
-    const isOutdent = (dir === 1 && direction === "left") || (dir === -1 && direction === "right");
+    // On right-side branch: left = toward parent, right = away from parent
+    // On left-side branch: right = toward parent, left = away from parent
+    const towardParent = (dir === 1 && direction === "left") || (dir === -1 && direction === "right");
 
-    if (isOutdent) {
-      this.outdentNode(nodeId);
+    if (towardParent) {
+      const parent = this.store.getNode(node.parentId);
+      if (parent.parentId === null) {
+        // Parent is root: flip to other side
+        this.flipBranchSide(nodeId);
+      } else {
+        this.outdentNode(nodeId);
+      }
     } else {
-      this.indentNode(nodeId);
+      // Away from parent
+      const parent = this.store.getNode(node.parentId);
+      const idx = parent.children.indexOf(nodeId);
+      if (idx > 0) {
+        this.indentNode(nodeId);
+      } else {
+        // No previous sibling: spatial reparent
+        this.spatialReparentHorizontal(nodeId, direction);
+      }
     }
+  }
+
+  private flipBranchSide(nodeId: string): void {
+    const node = this.store.getNode(nodeId);
+    if (node.parentId === null) return;
+
+    const parent = this.store.getNode(node.parentId);
+    const currentDir = branchDirection(this.store, nodeId);
+
+    this.pushUndo("move-node");
+    const newX = parent.x + H_OFFSET * (-currentDir);
+    this.store.setNodePosition(nodeId, newX, node.y);
+    reflowSubtree(this.store, nodeId);
+    relayoutFromNode(this.store, nodeId);
+    this.notify();
+  }
+
+  private spatialReparentHorizontal(nodeId: string, direction: "left" | "right"): void {
+    const target = findSpatialReparentTarget(this.store, nodeId, direction);
+    if (!target) return;
+
+    const node = this.store.getNode(nodeId);
+    const oldParentId = node.parentId;
+
+    this.pushUndo("move-node");
+    if (target.collapsed) {
+      target.collapsed = false;
+    }
+
+    // Attach on the side facing where we came from
+    const directionHint = direction === "right" ? -1 : 1;
+    this.store.moveNode(nodeId, target.id);
+    positionNewChild(this.store, nodeId, directionHint);
+    reflowSubtree(this.store, nodeId);
+    relayoutFromNode(this.store, nodeId);
+    if (oldParentId) {
+      relayoutFromNode(this.store, oldParentId);
+    }
+    this.notify();
   }
 
   private outdentNode(nodeId: string): void {
