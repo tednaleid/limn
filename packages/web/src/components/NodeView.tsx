@@ -97,7 +97,7 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
       {!isEditing && lines.map((line, i) => {
         const segments = parseInlineMarkdown(line);
         const textY = paddingY + fontSize + i * lineHeight;
-        const fill = branchColor ?? "var(--text-color)";
+        const fill = "var(--text-color)";
 
         if (isPlainSegments(segments)) {
           return (
