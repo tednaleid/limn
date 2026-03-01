@@ -5,6 +5,9 @@
   height: 100%;
   overflow: hidden;
   position: relative;
+  /* Use --text-normal directly for color, not --text-color, because Obsidian
+     defines its own --text-color variable that can shadow ours on buttons. */
+  color: var(--text-normal);
 
   /* Map Limn CSS variables to Obsidian's theme variables */
   --canvas-bg: var(--background-primary);
@@ -40,19 +43,27 @@
   text-indent: 0 !important;
 }
 
-/* Reset Obsidian button styles for toolbar and menu controls */
+/* Reset Obsidian button styles for toolbar and menu controls.
+   Obsidian defines its own --text-color CSS variable that shadows ours on
+   buttons and SVGs, so we use `inherit` to bypass the variable collision
+   and cascade from the .limn-view container's color instead. */
 .limn-view button {
   font-family: inherit;
   font-size: inherit;
   line-height: normal;
+  color: inherit !important;
   margin: 0;
   padding: 0;
   box-shadow: none !important;
 }
 
+.limn-view svg {
+  color: inherit !important;
+}
+
 .limn-view button:hover {
   background: var(--selection-bg) !important;
-  color: var(--text-color) !important;
+  color: inherit !important;
 }
 
 .limn-view button[role="menuitem"]:hover {

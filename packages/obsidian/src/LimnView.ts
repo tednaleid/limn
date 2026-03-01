@@ -97,6 +97,7 @@ export class LimnView extends TextFileView {
       for (const name of THEME_CSS_VARS) {
         el.style.removeProperty(name);
       }
+      el.style.removeProperty("color");
       return;
     }
     // Resolve the active theme and apply derived CSS vars as inline styles
@@ -109,6 +110,9 @@ export class LimnView extends TextFileView {
     for (const [key, value] of Object.entries(vars)) {
       el.style.setProperty(key, value);
     }
+    // Set color directly so buttons (which use `inherit`) get the right color.
+    // This bypasses Obsidian's --text-color variable that shadows ours.
+    el.style.color = vars["--text-color"];
   }
 
   async onClose(): Promise<void> {
