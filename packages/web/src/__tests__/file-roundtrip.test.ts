@@ -8,7 +8,7 @@ import type { MindMapFileFormat } from "@limn/core";
 function makeFile(overrides: Partial<MindMapFileFormat> = {}): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [],
     assets: [],
@@ -195,7 +195,7 @@ describe("file round-trip", () => {
 
   it("preserves camera and meta", async () => {
     const input = makeFile({
-      meta: { id: "my-map", theme: "dark" },
+      meta: { id: "my-map", mode: "dark", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 120, y: -50, zoom: 0.85 },
     });
     const { data } = await roundTrip(input);
@@ -272,7 +272,7 @@ describe("file round-trip", () => {
     // Inline the essential structure of the golden fixture
     const input: MindMapFileFormat = {
       version: 1,
-      meta: { id: "fixture-v1-complete", theme: "dark" },
+      meta: { id: "fixture-v1-complete", mode: "dark", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 120, y: -50, zoom: 0.85 },
       roots: [
         {

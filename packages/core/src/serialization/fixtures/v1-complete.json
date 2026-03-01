@@ -2,7 +2,9 @@
   "version": 1,
   "meta": {
     "id": "fixture-v1-complete",
-    "theme": "dark"
+    "mode": "dark",
+    "lightTheme": "catppuccin-latte",
+    "darkTheme": "catppuccin-mocha"
   },
   "camera": {
     "x": 120,
@@ -20,7 +22,7 @@
       "style": {
         "fontSize": 18,
         "fontWeight": 700,
-        "color": "#1a1a2e"
+        "colorIndex": 0
       },
       "children": [
         {

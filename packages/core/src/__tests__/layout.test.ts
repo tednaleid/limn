@@ -14,7 +14,7 @@ const NODE_HEIGHT = 32;
 function singleRoot(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -35,7 +35,7 @@ function singleRoot(): MindMapFileFormat {
 function rootWithChildren(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -295,7 +295,7 @@ describe("Layout engine", () => {
       editor = new TestEditor();
       const map: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -397,7 +397,7 @@ describe("Layout engine", () => {
       editor = new TestEditor();
       const map: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -458,7 +458,7 @@ describe("Layout engine", () => {
       // Both have children at the same x, creating real overlap.
       const map: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -499,7 +499,7 @@ describe("Layout engine", () => {
       editor = new TestEditor();
       const map: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -542,7 +542,7 @@ describe("Layout engine", () => {
     function wideRoot(): MindMapFileFormat {
       return {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {

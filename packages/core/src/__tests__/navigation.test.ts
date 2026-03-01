@@ -9,7 +9,7 @@ const NODE_HEIGHT = 32;
 function rootWithThreeChildren(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -58,7 +58,7 @@ function rootWithThreeChildren(): MindMapFileFormat {
 function bidirectionalMap(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -127,7 +127,7 @@ function bidirectionalMap(): MindMapFileFormat {
 function twoRoots(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -220,7 +220,7 @@ describe("Navigation", () => {
       // (yDist=2 + xDist*0.5=125 = 127) beats svg (yDist=200).
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [{
           id: "root", text: "Persistence", x: 0, y: 2, width: 100, height: NODE_HEIGHT,
@@ -250,7 +250,7 @@ describe("Navigation", () => {
       // Same fixture as above.
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [{
           id: "root", text: "Persistence", x: 0, y: 2, width: 100, height: NODE_HEIGHT,
@@ -419,7 +419,7 @@ describe("Navigation", () => {
       // Up from B should go to the nearby child above, not the far-away Root A.
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -466,7 +466,7 @@ describe("Navigation", () => {
     test("navigateDown on root prefers spatially close node over distant root", () => {
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -531,7 +531,7 @@ describe("Navigation", () => {
     function onlyChildWithDisconnectedRoot(): MindMapFileFormat {
       return {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -577,7 +577,7 @@ describe("Navigation", () => {
       // Let's add a node above. Use a different fixture:
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -637,7 +637,7 @@ describe("Navigation", () => {
       // Two disconnected roots above: one at same X (far in Y), one close in Y but far in X.
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -694,7 +694,7 @@ describe("Navigation", () => {
     test("right from leaf falls back to node to the right", () => {
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -741,7 +741,7 @@ describe("Navigation", () => {
     test("left from root with no left children falls back", () => {
       const file: MindMapFileFormat = {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -857,7 +857,7 @@ describe("Navigation", () => {
     function farBelowMap(): MindMapFileFormat {
       return {
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {

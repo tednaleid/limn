@@ -13,7 +13,7 @@ import v1Fixture from "../serialization/fixtures/v1-complete.json";
 
 const sampleFile: MindMapFileFormat = {
   version: 1,
-  meta: { id: "test-uuid", theme: "default" },
+  meta: { id: "test-uuid", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
   camera: { x: 0, y: 0, zoom: 1.0 },
   roots: [
     {
@@ -131,7 +131,7 @@ describe("serialization", () => {
     test("handles empty file", () => {
       const emptyFile: MindMapFileFormat = {
         version: 1,
-        meta: { id: "empty", theme: "default" },
+        meta: { id: "empty", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [],
         assets: [],
@@ -144,7 +144,7 @@ describe("serialization", () => {
     test("handles multiple roots", () => {
       const multiRoot: MindMapFileFormat = {
         version: 1,
-        meta: { id: "multi", theme: "default" },
+        meta: { id: "multi", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [
           {
@@ -184,7 +184,7 @@ describe("serialization", () => {
       const result = serialize(store, {
         id: "test",
         version: 1,
-        theme: "default",
+        mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
       });
       expect(result.version).toBe(1);
       expect(result.roots).toHaveLength(1);
@@ -199,7 +199,7 @@ describe("serialization", () => {
       const result = serialize(store, {
         id: "test",
         version: 1,
-        theme: "default",
+        mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
       });
       expect(result.roots[0]!.collapsed).toBeUndefined();
     });
@@ -211,7 +211,7 @@ describe("serialization", () => {
       const result = serialize(store, {
         id: "test",
         version: 1,
-        theme: "default",
+        mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
       });
       expect(result.roots[0]!.collapsed).toBe(true);
     });
@@ -222,7 +222,7 @@ describe("serialization", () => {
       const result = serialize(store, {
         id: "test",
         version: 1,
-        theme: "default",
+        mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
       });
       expect(result.roots[0]!.widthConstrained).toBeUndefined();
     });
@@ -234,7 +234,7 @@ describe("serialization", () => {
       const result = serialize(store, {
         id: "test",
         version: 1,
-        theme: "default",
+        mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
       });
       expect(result.roots[0]!.widthConstrained).toBe(true);
     });
@@ -393,7 +393,7 @@ describe("format stability", () => {
     expect(r1.style).toEqual({
       fontSize: 18,
       fontWeight: 700,
-      color: "#1a1a2e",
+      colorIndex: 0,
     });
 
     // image on r1c1c2 (Mockups)

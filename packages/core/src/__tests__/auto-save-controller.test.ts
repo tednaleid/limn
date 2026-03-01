@@ -28,7 +28,7 @@ describe("AutoSaveController", () => {
     editor = new TestEditor();
     editor.loadJSON({
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: [
         { id: "r", text: "Root", x: 0, y: 0, width: 100, height: 32, children: [] },

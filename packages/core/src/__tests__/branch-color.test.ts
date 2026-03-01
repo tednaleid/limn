@@ -108,7 +108,7 @@ describe("getBranchColor", () => {
     // Load a file without colors to simulate old data
     const fileData = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: [{
         id: "r1",

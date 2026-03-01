@@ -326,7 +326,7 @@ function buildFileFormat(nodes: GenNode[]): object {
     version: 1,
     meta: {
       id: crypto.randomUUID(),
-      theme: "default",
+      mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha",
     },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [root],

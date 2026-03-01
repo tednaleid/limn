@@ -116,7 +116,7 @@ export class Editor {
   private viewportHeight = 0;
 
   // Document metadata
-  protected meta: MindMapMeta = { id: "default", version: 1, theme: "default" };
+  protected meta: MindMapMeta = { id: "default", version: 1, mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" };
 
   // External action callbacks (set by web layer)
   private saveCallback: (() => void) | null = null;
@@ -232,14 +232,39 @@ export class Editor {
     return this.camera;
   }
 
+  /** Get the current theme mode ("light", "dark", or "system"). */
   getTheme(): string {
-    return this.meta.theme;
+    return this.meta.mode;
   }
 
-  /** Set the document theme. Notifies subscribers so the web layer can apply it. */
+  /** Set the theme mode ("light", "dark", or "system"). */
   setTheme(theme: string): void {
-    this.meta = { ...this.meta, theme };
+    this.meta = { ...this.meta, mode: theme };
     this.themeChangeCallback?.(theme);
+    this.notify();
+  }
+
+  /** Get the chosen light theme key. */
+  getLightTheme(): string {
+    return this.meta.lightTheme;
+  }
+
+  /** Get the chosen dark theme key. */
+  getDarkTheme(): string {
+    return this.meta.darkTheme;
+  }
+
+  /** Set the preferred light theme by key. */
+  setLightTheme(key: string): void {
+    this.meta = { ...this.meta, lightTheme: key };
+    this.themeChangeCallback?.(this.meta.mode);
+    this.notify();
+  }
+
+  /** Set the preferred dark theme by key. */
+  setDarkTheme(key: string): void {
+    this.meta = { ...this.meta, darkTheme: key };
+    this.themeChangeCallback?.(this.meta.mode);
     this.notify();
   }
 

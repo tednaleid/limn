@@ -45,7 +45,9 @@ export interface Camera {
 export interface MindMapMeta {
   id: string;
   version: number;
-  theme: string;
+  mode: string;
+  lightTheme: string;
+  darkTheme: string;
 }
 
 export interface MindMap {

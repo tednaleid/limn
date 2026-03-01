@@ -23,7 +23,7 @@ import { applyTheme, resolveThemeName } from "./theme/themes";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
-  meta: { id: "demo", theme: "default" },
+  meta: { id: "demo", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
   camera: { x: 400, y: 300, zoom: 1 },
   roots: [
     {

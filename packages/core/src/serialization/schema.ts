@@ -44,7 +44,9 @@ const cameraSchema = z.object({
 
 const metaSchema = z.object({
   id: z.string(),
-  theme: z.string(),
+  mode: z.string(),
+  lightTheme: z.string(),
+  darkTheme: z.string(),
 });
 
 export const mindMapFileSchema = z.object({
@@ -71,7 +73,7 @@ export interface MindMapFileNode {
 
 export interface MindMapFileFormat {
   version: number;
-  meta: { id: string; theme: string };
+  meta: { id: string; mode: string; lightTheme: string; darkTheme: string };
   camera: { x: number; y: number; zoom: number };
   roots: MindMapFileNode[];
   assets: Array<{

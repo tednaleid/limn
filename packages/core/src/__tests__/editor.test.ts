@@ -4,7 +4,7 @@ import type { MindMapFileFormat } from "../serialization/schema";
 
 const sampleMap: MindMapFileFormat = {
   version: 1,
-  meta: { id: "test", theme: "default" },
+  meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
   camera: { x: 0, y: 0, zoom: 1 },
   roots: [
     {
@@ -691,7 +691,7 @@ describe("Editor", () => {
       const fresh = new TestEditor();
       fresh.loadJSON({
         version: 1,
-        meta: { id: "test", theme: "default" },
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
         camera: { x: 0, y: 0, zoom: 1 },
         roots: [{
           id: "r", text: "Root", x: 0, y: 0, width: 100, height: 32,
@@ -942,7 +942,7 @@ describe("Editor", () => {
   describe("importRoots", () => {
     const importData: MindMapFileFormat = {
       version: 1,
-      meta: { id: "imported", theme: "default" },
+      meta: { id: "imported", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: [
         {
@@ -1069,7 +1069,7 @@ describe("Editor", () => {
     test("persists in serialized output", () => {
       editor.setTheme("dark");
       const json = editor.toJSON();
-      expect(json.meta.theme).toBe("dark");
+      expect(json.meta.mode).toBe("dark");
     });
   });
 

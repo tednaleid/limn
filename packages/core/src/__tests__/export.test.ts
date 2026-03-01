@@ -9,7 +9,7 @@ import type { MindMapFileFormat } from "../serialization/schema";
 function makeFile(overrides: Partial<MindMapFileFormat> = {}): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [],
     assets: [],

@@ -71,7 +71,7 @@ export function serialize(
 
   return {
     version: CURRENT_FORMAT_VERSION,
-    meta: { id: meta.id, theme: meta.theme },
+    meta: { id: meta.id, mode: meta.mode, lightTheme: meta.lightTheme, darkTheme: meta.darkTheme },
     camera,
     roots: store.getRoots().map(serializeNode),
     assets: [],

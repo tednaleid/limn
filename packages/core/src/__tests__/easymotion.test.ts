@@ -103,7 +103,7 @@ const NODE_HEIGHT = 32;
 function threeNodeMap(): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test", theme: "default" },
+    meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {
@@ -232,7 +232,7 @@ describe("EasyMotion key handling", () => {
     // Need >26 nodes to get prefixes. Create a large map.
     const largeMap: MindMapFileFormat = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: Array.from({ length: 28 }, (_, i) => ({
         id: `n${i}`,
@@ -258,7 +258,7 @@ describe("EasyMotion key handling", () => {
   test("second char after prefix selects two-char labeled node and exits", () => {
     const largeMap: MindMapFileFormat = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: Array.from({ length: 28 }, (_, i) => ({
         id: `n${i}`,
@@ -300,7 +300,7 @@ describe("EasyMotion key handling", () => {
   test("invalid second char after prefix exits easymotion, selection unchanged", () => {
     const largeMap: MindMapFileFormat = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: Array.from({ length: 28 }, (_, i) => ({
         id: `n${i}`,
@@ -391,7 +391,7 @@ describe("EasyMotion dispatch integration", () => {
     // Need >26 visible nodes to get prefixes
     const largeMap: MindMapFileFormat = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: Array.from({ length: 28 }, (_, i) => ({
         id: `n${i}`,

@@ -36,7 +36,7 @@ describe("View data round-trip", () => {
     const editor = new Editor(stubTextMeasurer);
     const defaultMap: MindMapFileFormat = {
       version: 1,
-      meta: { id: "test", theme: "default" },
+      meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
       camera: { x: 0, y: 0, zoom: 1 },
       roots: [],
       assets: [],

@@ -105,7 +105,7 @@ export class MockWorkspaceLeaf {
 export function createTestMap(overrides?: Partial<MindMapFileFormat>): MindMapFileFormat {
   return {
     version: 1,
-    meta: { id: "test-map", theme: "default" },
+    meta: { id: "test-map", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
     camera: { x: 0, y: 0, zoom: 1 },
     roots: [
       {

@@ -23,7 +23,7 @@ export const VIEW_TYPE_LIMN = "limn-view";
 
 const DEFAULT_MAP: MindMapFileFormat = {
   version: 1,
-  meta: { id: crypto.randomUUID(), theme: "default" },
+  meta: { id: crypto.randomUUID(), mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
   camera: { x: 200, y: 200, zoom: 1 },
   roots: [],
   assets: [],
