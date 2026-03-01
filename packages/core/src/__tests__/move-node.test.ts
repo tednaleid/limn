@@ -188,32 +188,93 @@ describe("moveNode structural moves", () => {
     });
   });
 
-  describe("no-op on root nodes", () => {
-    test("Option+Up is no-op on root node", () => {
+  describe("root node spatial reparent", () => {
+    test("no-op when no valid target exists (single root)", () => {
       createThreeChildTree();
       editor.select("n0");
       editor.pressKey("ArrowUp", { alt: true });
       expect(editor.getNode("n0").parentId).toBeNull();
-    });
-
-    test("Option+Down is no-op on root node", () => {
-      createThreeChildTree();
-      editor.select("n0");
       editor.pressKey("ArrowDown", { alt: true });
       expect(editor.getNode("n0").parentId).toBeNull();
-    });
-
-    test("Option+Left is no-op on root node", () => {
-      createThreeChildTree();
-      editor.select("n0");
       editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n0").parentId).toBeNull();
+      editor.pressKey("ArrowRight", { alt: true });
       expect(editor.getNode("n0").parentId).toBeNull();
     });
 
-    test("Option+Right is no-op on root node", () => {
-      createThreeChildTree();
+    test("Option+Down reparents root to node below", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addRoot("root2", 0, 200);
+      editor.select("n1");
+      editor.exitEditMode();
+
+      editor.select("n0");
+      editor.pressKey("ArrowDown", { alt: true });
+      expect(editor.getNode("n0").parentId).toBe("n1");
+    });
+
+    test("Option+Up reparents root to node above", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addRoot("root2", 0, 200);
+      editor.select("n1");
+      editor.exitEditMode();
+
+      editor.select("n1");
+      editor.pressKey("ArrowUp", { alt: true });
+      expect(editor.getNode("n1").parentId).toBe("n0");
+    });
+
+    test("Option+Right reparents root to node to the right", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addRoot("root2", 600, 0);
+      editor.select("n1");
+      editor.exitEditMode();
+
       editor.select("n0");
       editor.pressKey("ArrowRight", { alt: true });
+      expect(editor.getNode("n0").parentId).toBe("n1");
+      // Attached on left side of target
+      expect(editor.getNode("n0").x).toBeLessThan(editor.getNode("n1").x);
+    });
+
+    test("Option+Left reparents root to node to the left", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addRoot("root2", -600, 0);
+      editor.select("n1");
+      editor.exitEditMode();
+
+      editor.select("n0");
+      editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n0").parentId).toBe("n1");
+      // Attached on right side of target
+      expect(editor.getNode("n0").x).toBeGreaterThan(editor.getNode("n1").x);
+    });
+
+    test("root reparent is undoable", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addRoot("root2", 0, 200);
+      editor.select("n1");
+      editor.exitEditMode();
+
+      editor.select("n0");
+      editor.pressKey("ArrowDown", { alt: true });
+      expect(editor.getNode("n0").parentId).toBe("n1");
+      editor.undo();
       expect(editor.getNode("n0").parentId).toBeNull();
     });
   });
