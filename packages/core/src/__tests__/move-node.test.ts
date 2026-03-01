@@ -675,4 +675,84 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n2").parentId).toBe("n1");
     });
   });
+
+  describe("reparent reflows children to new position", () => {
+    test("spatial reparent across trees centers children around reparented node", () => {
+      editor = new TestEditor();
+      // Tree 1: root with a child that has grandchildren
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.addChild("n1", "gc1");
+      editor.exitEditMode();
+      editor.addChild("n1", "gc2");
+      editor.exitEditMode();
+      editor.addChild("n1", "gc3");
+      editor.exitEditMode();
+
+      // Tree 2: far below
+      editor.addRoot("root2", 0, 500);
+      editor.select("n5");
+      editor.exitEditMode();
+      editor.addChild("n5", "target");
+      editor.exitEditMode();
+
+      // Move "parent" (n1, which has gc1-gc3) down to tree 2 via spatial reparent
+      editor.select("n1");
+      editor.pressKey("ArrowDown", { alt: true });
+
+      // n1 should now be under a node in tree 2
+      const n1 = editor.getNode("n1");
+      expect(n1.parentId).not.toBe("n0");
+
+      // Children should be centered around n1's y, not stuck at old positions
+      const gc1 = editor.getNode("n2");
+      const gc2 = editor.getNode("n3");
+      const gc3 = editor.getNode("n4");
+      const childMidY = (gc1.y + gc3.y) / 2;
+      expect(Math.abs(childMidY - n1.y)).toBeLessThan(1);
+
+      // Children x should be offset from n1, not at old location
+      expect(gc1.x).toBeGreaterThan(n1.x);
+      expect(gc1.x).toBe(gc2.x);
+      expect(gc2.x).toBe(gc3.x);
+    });
+
+    test("drag reparent across trees centers children around reparented node", () => {
+      editor = new TestEditor();
+      // Tree 1: root with a child that has grandchildren
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.addChild("n1", "gc1");
+      editor.exitEditMode();
+      editor.addChild("n1", "gc2");
+      editor.exitEditMode();
+
+      // Tree 2: far below
+      editor.addRoot("root2", 0, 500);
+      editor.select("n4");
+      editor.exitEditMode();
+
+      // Drag n1 onto n4 (root2)
+      const n1 = editor.getNode("n1");
+      const n4 = editor.getNode("n4");
+      editor.pointerDown("n1", n1.x + 50, n1.y + 16);
+      editor.pointerMove(n4.x + 50, n4.y + 16);
+      editor.pointerUp();
+
+      const n1After = editor.getNode("n1");
+      expect(n1After.parentId).toBe("n4");
+
+      // Children should be centered around the reparented node
+      const gc1 = editor.getNode("n2");
+      const gc2 = editor.getNode("n3");
+      const childMidY = (gc1.y + gc2.y) / 2;
+      expect(Math.abs(childMidY - n1After.y)).toBeLessThan(1);
+    });
+  });
 });

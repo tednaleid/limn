@@ -835,6 +835,7 @@ export class Editor {
 
     this.clearSubtreeColors(nodeId);
     reflowSubtree(this.store, nodeId);
+    relayoutSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
     if (oldParentId) {
       relayoutFromNode(this.store, oldParentId);
@@ -1014,6 +1015,7 @@ export class Editor {
         moveSubtree(this.store, childId, dx, dy);
       }
       reflowSubtree(this.store, nodeId);
+      relayoutSubtree(this.store, nodeId);
       relayoutFromNode(this.store, nodeId);
       this.ensureNodesVisible([nodeId, this.drag.reparentTargetId]);
     } else if (this.drag.moved) {
