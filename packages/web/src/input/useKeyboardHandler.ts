@@ -37,6 +37,18 @@ export function useKeyboardHandler(editor: Editor): void {
 
       const handled = dispatch(editor, e.key, modifiers);
 
+      // ? key opens shortcuts dialog (nav mode, no modifiers)
+      if (
+        !handled &&
+        e.key === "?" &&
+        !editor.isEditing() &&
+        !e.metaKey && !e.ctrlKey && !e.altKey
+      ) {
+        window.dispatchEvent(new Event("limn:show-shortcuts"));
+        e.preventDefault();
+        return;
+      }
+
       if (handled || ALWAYS_PREVENT.has(e.key) || (e.metaKey && META_PREVENT.has(e.key))) {
         e.preventDefault();
         e.stopPropagation();
