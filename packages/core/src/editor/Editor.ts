@@ -533,6 +533,7 @@ export class Editor {
     this.clearSubtreeColors(nodeId);
     positionNewChild(this.store, nodeId);
     reflowSubtree(this.store, nodeId);
+    relayoutSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
 
     if (oldParentId) {

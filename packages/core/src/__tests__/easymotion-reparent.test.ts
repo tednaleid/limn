@@ -234,4 +234,38 @@ describe("EasyMotion reparent (Alt+;)", () => {
     // Node should not have moved
     expect(editor.getNode("n1").parentId).toBe("n0");
   });
+
+  test("reparented node's children are reflowed to new position", () => {
+    createThreeChildTree();
+    // Add grandchildren to n1
+    editor.addChild("n1", "gc1");
+    editor.exitEditMode();
+    editor.addChild("n1", "gc2");
+    editor.exitEditMode();
+
+    // Reparent n1 (with its two children) under n2
+    editor.select("n1");
+    editor.pressKey(";", { alt: true });
+
+    const label = editor.getEasyMotionLabel("n2");
+    expect(label).toBeDefined();
+    for (const ch of label!) {
+      editor.pressKey(ch);
+    }
+
+    expect(editor.getNode("n1").parentId).toBe("n2");
+
+    const n1 = editor.getNode("n1");
+    const gc1 = editor.getNode("n4");
+    const gc2 = editor.getNode("n5");
+
+    // Children should be centered around the reparented node's y
+    const childMidY = (gc1.y + gc2.y) / 2;
+    expect(Math.abs(childMidY - n1.y)).toBeLessThan(1);
+
+    // Children x should be offset from their parent (n1), not at old position
+    expect(gc1.x).toBeGreaterThan(n1.x);
+    expect(gc2.x).toBeGreaterThan(n1.x);
+    expect(gc1.x).toBe(gc2.x);
+  });
 });
