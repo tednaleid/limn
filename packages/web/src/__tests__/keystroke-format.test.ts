@@ -5,28 +5,28 @@ import { describe, test, expect } from "vitest";
 import { formatKeystrokeParts } from "../input/formatKeystroke";
 
 describe("formatKeystrokeParts", () => {
-  test("single letter key uppercased", () => {
-    expect(formatKeystrokeParts(new Set(["a"]))).toEqual(["A"]);
+  test("single letter key stays lowercase", () => {
+    expect(formatKeystrokeParts(new Set(["a"]))).toEqual(["a"]);
   });
 
   test("modifier ordering: Ctrl, Opt, Shift, Cmd", () => {
     const held = new Set(["Control", "Alt", "Shift", "Meta", "x"]);
-    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "Opt", "Shift", "Cmd", "X"]);
+    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "Opt", "Shift", "Cmd", "x"]);
   });
 
   test("Meta maps to Cmd", () => {
     const held = new Set(["Meta", "z"]);
-    expect(formatKeystrokeParts(held)).toEqual(["Cmd", "Z"]);
+    expect(formatKeystrokeParts(held)).toEqual(["Cmd", "z"]);
   });
 
   test("Control maps to Ctrl", () => {
     const held = new Set(["Control", "a"]);
-    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "A"]);
+    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "a"]);
   });
 
   test("Alt maps to Opt", () => {
     const held = new Set(["Alt", "j"]);
-    expect(formatKeystrokeParts(held)).toEqual(["Opt", "J"]);
+    expect(formatKeystrokeParts(held)).toEqual(["Opt", "j"]);
   });
 
   test("arrow keys use unicode symbols", () => {
@@ -56,16 +56,16 @@ describe("formatKeystrokeParts", () => {
     expect(formatKeystrokeParts(new Set(["Backspace"]))).toEqual(["Backspace"]);
   });
 
-  test("modifier-only shows ellipsis", () => {
-    expect(formatKeystrokeParts(new Set(["Shift"]))).toEqual(["Shift", "..."]);
+  test("modifier-only shows just the modifier", () => {
+    expect(formatKeystrokeParts(new Set(["Shift"]))).toEqual(["Shift"]);
   });
 
-  test("multiple modifiers only shows ellipsis", () => {
+  test("multiple modifiers only shows the modifiers", () => {
     const held = new Set(["Control", "Shift"]);
-    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "Shift", "..."]);
+    expect(formatKeystrokeParts(held)).toEqual(["Ctrl", "Shift"]);
   });
 
-  test("modifier + non-modifier key does not show ellipsis", () => {
+  test("modifier + non-modifier key shows both", () => {
     const held = new Set(["Shift", "Enter"]);
     expect(formatKeystrokeParts(held)).toEqual(["Shift", "Enter"]);
   });
