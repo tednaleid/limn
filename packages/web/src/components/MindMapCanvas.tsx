@@ -351,8 +351,11 @@ export function MindMapCanvas() {
         if (href) {
           // Clear any pending timer and start a new one
           if (linkTooltipTimer.current) clearTimeout(linkTooltipTimer.current);
+          const rect = (e.currentTarget as Element).getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
           linkTooltipTimer.current = setTimeout(() => {
-            setLinkTooltip({ x: e.clientX, y: e.clientY, url: href });
+            setLinkTooltip({ x, y, url: href });
           }, 300);
           return;
         }
