@@ -16,8 +16,9 @@ just serve       # starts Vite dev server at http://localhost:5173
 ## Project structure
 
 ```
-packages/core/    # Framework-agnostic TS library (no React, no browser APIs)
-packages/web/     # React web app (rendering, input handling, persistence)
+packages/core/       # Framework-agnostic TS library (no React, no browser APIs)
+packages/web/        # React web app (rendering, input handling, persistence)
+packages/obsidian/   # Obsidian plugin (opens .limn files inside Obsidian)
 ```
 
 ## Development commands
@@ -117,6 +118,11 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Double-click canvas | Create new root node |
 | Cmd+Click link | Open link in new tab |
 | Drag node | Move node (reparent when dropped on another node) |
+
+## Obsidian plugin
+
+Limn is available as an Obsidian plugin. See [OBSIDIAN-PLUGIN.md](OBSIDIAN-PLUGIN.md)
+for development setup, building, and distribution.
 
 ## Inline markdown
 
