@@ -443,19 +443,19 @@ describe("Editor", () => {
     });
 
     test("updates node dimensions via text measurer", () => {
-      // n0 is root → fontSize 16, charWidth=9, lineHeight=23, paddingY=7
+      // n0 is root → fontSize 18, charWidth=10, lineHeight=26, paddingY=8
       editor.setText("n0", "A much longer text string for testing");
       const node = editor.getNode("n0");
-      // 37 chars → 37 * 9 + 16 = 349
-      expect(node.width).toBe(349);
-      expect(node.height).toBe(37); // 1 line * 23 + 7*2
+      // 37 chars → 37 * 10 + 16 = 386
+      expect(node.width).toBe(386);
+      expect(node.height).toBe(42); // 1 line * 26 + 8*2
     });
 
     test("updates dimensions for multi-line text", () => {
       editor.setText("n0", "Line 1\nLine 2\nLine 3");
       const node = editor.getNode("n0");
-      // n0 is root → 3 lines * 23 + 7*2 = 83
-      expect(node.height).toBe(83);
+      // n0 is root → 3 lines * 26 + 8*2 = 94
+      expect(node.height).toBe(94);
     });
   });
 

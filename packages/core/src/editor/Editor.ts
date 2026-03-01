@@ -50,7 +50,7 @@ import {
   computeDragUpdate,
 } from "./drag";
 
-export const ROOT_FONT_SIZE = 16;
+export const ROOT_FONT_SIZE = 18;
 
 /** Fraction of viewport width/height used as scroll margin when auto-scrolling to keep a node visible. */
 export const VIEWPORT_SCROLL_MARGIN = 0.15;
