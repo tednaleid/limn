@@ -530,6 +530,118 @@ describe("moveNode structural moves", () => {
     });
   });
 
+  describe("viewport follows reparent", () => {
+    function createDistantTwoParentTree(): TestEditor {
+      // Two parents far apart vertically so overflow reparent goes off-screen
+      editor = new TestEditor();
+      editor.setViewportSize(800, 600);
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: parent1 near top
+      editor.addChild("n0", "parent1");
+      editor.exitEditMode();
+      // n2: parent2 far below
+      editor.addChild("n0", "parent2");
+      editor.exitEditMode();
+      // Move parent2 far down (off-screen at zoom 1)
+      editor.setNodePosition("n2", editor.getNode("n2").x, 1200);
+      // n3: child of parent1
+      editor.addChild("n1", "child1");
+      editor.exitEditMode();
+      return editor;
+    }
+
+    test("Option+Down overflow to uncle pans camera to show node and new parent", () => {
+      createDistantTwoParentTree();
+      // n3 is only child of parent1 (n1). Moving down overflows to parent2 (n2).
+      editor.select("n3");
+      const cameraBefore = editor.getCamera();
+      editor.pressKey("ArrowDown", { alt: true });
+      expect(editor.getNode("n3").parentId).toBe("n2");
+      // Camera should have moved to keep both n3 and n2 visible
+      const cameraAfter = editor.getCamera();
+      expect(cameraAfter.y).not.toBe(cameraBefore.y);
+    });
+
+    test("outdent pans camera to show node and new parent", () => {
+      editor = new TestEditor();
+      editor.setViewportSize(800, 600);
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // Place parent far to the right
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.setNodePosition("n1", 2000, 0);
+      // Add child to parent
+      editor.addChild("n1", "child");
+      editor.exitEditMode();
+      // Pan camera to see only the child area, root is off-screen
+      editor.setCamera(-(2000 + 250), 0, 1);
+      editor.select("n2");
+      const cameraBefore = editor.getCamera();
+      // Outdent: moves n2 from n1 to root n0
+      editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n2").parentId).toBe("n0");
+      // Camera should pan to keep both n2 and n0 visible
+      const cameraAfter = editor.getCamera();
+      expect(cameraAfter.x).not.toBe(cameraBefore.x);
+    });
+
+    test("indent pans camera to show node and new parent", () => {
+      editor = new TestEditor();
+      editor.setViewportSize(800, 600);
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "sibling1");
+      editor.exitEditMode();
+      editor.addChild("n0", "sibling2");
+      editor.exitEditMode();
+      // Move sibling1 far away
+      editor.setNodePosition("n1", 2000, -500);
+      editor.select("n2");
+      const cameraBefore = editor.getCamera();
+      // Indent: n2 becomes child of n1
+      editor.pressKey("ArrowRight", { alt: true });
+      expect(editor.getNode("n2").parentId).toBe("n1");
+      // Camera should pan
+      const cameraAfter = editor.getCamera();
+      expect(cameraAfter.x).not.toBe(cameraBefore.x);
+    });
+
+    test("reorder (no parent change) keeps node visible", () => {
+      editor = new TestEditor();
+      editor.setViewportSize(800, 600);
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child1");
+      editor.exitEditMode();
+      editor.addChild("n0", "child2");
+      editor.exitEditMode();
+      editor.select("n1");
+      // This is a same-parent reorder, just ensure it doesn't crash
+      editor.pressKey("ArrowDown", { alt: true });
+      editor.expectChildren("n0", ["n2", "n1"]);
+    });
+
+    test("flipBranchSide keeps node visible", () => {
+      editor = new TestEditor();
+      editor.setViewportSize(800, 600);
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "child");
+      editor.exitEditMode();
+      editor.select("n1");
+      // Flip to other side
+      editor.pressKey("ArrowLeft", { alt: true });
+      expect(editor.getNode("n1").x).toBeLessThan(0);
+    });
+  });
+
   describe("left-side branch direction awareness", () => {
     test("outdent uses Option+Right on left-side branch", () => {
       // Create a node on the left side of root

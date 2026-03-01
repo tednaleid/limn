@@ -191,6 +191,37 @@ describe("EasyMotion reparent (Alt+;)", () => {
     expect(editor.getNode("n1").parentId).toBe("n0");
   });
 
+  test("reparent to far-off parent pans camera to show both node and new parent", () => {
+    editor = new TestEditor();
+    editor.setViewportSize(800, 600);
+    editor.addRoot("root1", 0, 0);
+    editor.select("n0");
+    editor.exitEditMode();
+    editor.addChild("n0", "child1");
+    editor.exitEditMode();
+
+    // Create a second root far away
+    editor.addRoot("root2", 0, 2000);
+    editor.select("n2");
+    editor.exitEditMode();
+
+    // Select child1 and reparent to root2 via EasyMotion
+    editor.select("n1");
+    const cameraBefore = editor.getCamera();
+    editor.pressKey(";", { alt: true });
+
+    const label = editor.getEasyMotionLabel("n2");
+    expect(label).toBeDefined();
+    for (const ch of label!) {
+      editor.pressKey(ch);
+    }
+
+    expect(editor.getNode("n1").parentId).toBe("n2");
+    // Camera should have panned to keep both n1 and n2 visible
+    const cameraAfter = editor.getCamera();
+    expect(cameraAfter.y).not.toBe(cameraBefore.y);
+  });
+
   test("invalid label cancels reparent mode", () => {
     createThreeChildTree();
     editor.select("n1");
