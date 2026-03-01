@@ -39,7 +39,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
     >
       <div
         style={{
-          maxWidth: 520,
+          maxWidth: 560,
           width: "90%",
           maxHeight: "80%",
           background: "var(--editor-bg)",
@@ -133,7 +133,7 @@ function ShortcutRow({ entry, isMouse }: { entry: ShortcutEntry; isMouse: boolea
         fontSize: 13,
       }}
     >
-      <div style={{ minWidth: 150, display: "flex", alignItems: "center", gap: 4 }}>
+      <div style={{ minWidth: 180, display: "flex", alignItems: "center", gap: 4 }}>
         {isMouse ? (
           <span style={{ color: "var(--text-muted)" }}>
             {entry.keys.join(" + ")}
