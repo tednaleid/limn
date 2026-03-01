@@ -13,6 +13,7 @@
     "./text/DomTextMeasurer": "./src/text/DomTextMeasurer.ts",
     "./components/ToolbarOverlay": "./src/components/ToolbarOverlay.tsx",
     "./components/HamburgerMenu": "./src/components/HamburgerMenu.tsx",
+    "./components/ShortcutsDialog": "./src/components/ShortcutsDialog.tsx",
     "./export/svg": "./src/export/svg.ts"
   },
   "scripts": {
