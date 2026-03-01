@@ -17,7 +17,7 @@ import {
   resolveTreeOverlap,
 } from "../layout/layout";
 import { nextBranchColorIndex } from "../theme/palette";
-import { resolveTheme } from "../theme/theme";
+import { resolveTheme, DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME } from "../theme/theme";
 import type { ThemeDefinition } from "../theme/theme";
 import { stripMarkdown, parseMarkdownLines } from "../markdown/inlineMarkdown";
 import {
@@ -1174,7 +1174,15 @@ export class Editor {
   loadJSON(data: MindMapFileFormat): void {
     this.store = deserialize(data);
     this.store.setAssets((data.assets ?? []).map((a) => ({ ...a })));
-    this.meta = { ...data.meta, version: data.version };
+    // Fill in missing meta fields for backward compatibility with old data
+    const meta = data.meta as Record<string, unknown>;
+    this.meta = {
+      id: (meta.id as string) ?? "default",
+      version: data.version,
+      mode: (meta.mode as string) ?? (meta.theme as string) ?? "system",
+      lightTheme: (meta.lightTheme as string) ?? DEFAULT_LIGHT_THEME,
+      darkTheme: (meta.darkTheme as string) ?? DEFAULT_DARK_THEME,
+    };
     this.camera = data.camera ?? { x: 0, y: 0, zoom: 1 };
     this.selectedId = null;
     this.editing = false;

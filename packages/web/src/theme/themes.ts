@@ -3,13 +3,9 @@
 
 import {
   resolveTheme,
-  DEFAULT_LIGHT_THEME,
 } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
 import { deriveThemeVars } from "@limn/core";
-import type { DerivedThemeVars } from "@limn/core";
-
-export type { DerivedThemeVars };
 
 /**
  * Resolve the OS color scheme preference to "light" or "dark".
@@ -59,13 +55,3 @@ export function applyThemeFromMeta(
   applyThemeByKey(key);
 }
 
-/**
- * Get the DerivedThemeVars for the currently applied theme.
- * Reads the data-theme attribute from the document.
- */
-export function getCurrentDerivedVars(): DerivedThemeVars {
-  const key = document.documentElement.getAttribute("data-theme") ?? DEFAULT_LIGHT_THEME;
-  const effective = key.includes("light") || key.includes("latte") ? "light" : "dark";
-  const theme = resolveTheme(key, effective as "light" | "dark");
-  return deriveThemeVars(theme);
-}

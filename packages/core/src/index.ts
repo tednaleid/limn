@@ -51,7 +51,7 @@ export {
 } from "./layout/layout";
 
 export { Editor, stubTextMeasurer, ROOT_FONT_SIZE } from "./editor/Editor";
-export { BRANCH_PALETTE, nextBranchColorIndex } from "./theme/palette";
+export { nextBranchColorIndex } from "./theme/palette";
 export type { ThemeDefinition, ThemeKey } from "./theme/theme";
 export {
   THEME_REGISTRY,
