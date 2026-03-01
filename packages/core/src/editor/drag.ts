@@ -82,6 +82,11 @@ export function computeDragUpdate(
   return { ...state, moved: true, reordered, reparentTargetId };
 }
 
+/** Check if two nodes are on the same side of their parent. */
+function sameSide(a: MindMapNode, b: MindMapNode, parent: MindMapNode): boolean {
+  return (a.x < parent.x) === (b.x < parent.x);
+}
+
 /** Check if the dragged node has crossed an adjacent sibling and swap if so.
  *  Returns true if any swap occurred. */
 export function checkDragReorder(store: MindMapStore, draggedId: string): boolean {
@@ -90,6 +95,9 @@ export function checkDragReorder(store: MindMapStore, draggedId: string): boolea
 
   const parent = store.getNode(dragged.parentId);
   const draggedCenterY = dragged.y + dragged.height / 2;
+  // When the parent is a root, left-side and right-side children are
+  // centered independently, so only reorder among same-side siblings.
+  const checkSide = parent.parentId === null;
   let didSwap = false;
 
   // While-loop handles fast drags past multiple siblings
@@ -103,13 +111,17 @@ export function checkDragReorder(store: MindMapStore, draggedId: string): boolea
     const belowId = parent.children[idx + 1];
     if (belowId !== undefined) {
       const below = store.getNode(belowId);
-      const belowCenterY = below.y + below.height / 2;
-      if (draggedCenterY > belowCenterY) {
-        parent.children[idx + 1] = draggedId;
-        parent.children[idx] = belowId;
-        swapped = true;
-        didSwap = true;
-        continue;
+      if (checkSide && !sameSide(dragged, below, parent)) {
+        // Skip: different sides of root are centered independently
+      } else {
+        const belowCenterY = below.y + below.height / 2;
+        if (draggedCenterY > belowCenterY) {
+          parent.children[idx + 1] = draggedId;
+          parent.children[idx] = belowId;
+          swapped = true;
+          didSwap = true;
+          continue;
+        }
       }
     }
 
@@ -117,13 +129,17 @@ export function checkDragReorder(store: MindMapStore, draggedId: string): boolea
     const aboveId = idx > 0 ? parent.children[idx - 1] : undefined;
     if (aboveId !== undefined) {
       const above = store.getNode(aboveId);
-      const aboveCenterY = above.y + above.height / 2;
-      if (draggedCenterY < aboveCenterY) {
-        parent.children[idx - 1] = draggedId;
-        parent.children[idx] = aboveId;
-        swapped = true;
-        didSwap = true;
-        continue;
+      if (checkSide && !sameSide(dragged, above, parent)) {
+        // Skip: different sides of root are centered independently
+      } else {
+        const aboveCenterY = above.y + above.height / 2;
+        if (draggedCenterY < aboveCenterY) {
+          parent.children[idx - 1] = draggedId;
+          parent.children[idx] = aboveId;
+          swapped = true;
+          didSwap = true;
+          continue;
+        }
       }
     }
   }

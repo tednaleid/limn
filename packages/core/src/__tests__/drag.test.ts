@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
 import { resetIdCounter } from "../store/MindMapStore";
+import type { MindMapFileFormat } from "../serialization/schema";
 
 describe("drag to reposition", () => {
   beforeEach(() => {
@@ -437,5 +438,65 @@ describe("drag to reorder siblings", () => {
     expect(editor.getNode("n2").y).toBeLessThan(child2yBefore);
 
     editor.pointerUp();
+  });
+
+  it("should not spuriously reorder across sides when parent is root", () => {
+    const editor = new TestEditor();
+    const map: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: [
+        {
+          id: "root",
+          text: "Root",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 32,
+          children: [
+            {
+              id: "left1",
+              text: "Left",
+              x: -250,
+              y: 0,
+              width: 100,
+              height: 32,
+              children: [],
+            },
+            {
+              id: "right1",
+              text: "Right 1",
+              x: 250,
+              y: -26,
+              width: 100,
+              height: 32,
+              children: [],
+            },
+            {
+              id: "right2",
+              text: "Right 2",
+              x: 250,
+              y: 26,
+              width: 100,
+              height: 32,
+              children: [],
+            },
+          ],
+        },
+      ],
+      assets: [],
+    };
+    editor.loadJSON(map);
+
+    // Small drag of right1 downward -- should not trigger cross-side reorder
+    const right1 = editor.getNode("right1");
+    const yBefore = right1.y;
+    editor.pointerDown("right1", right1.x + 10, right1.y + 10);
+    editor.pointerMove(right1.x + 10, right1.y + 15);
+    editor.pointerUp();
+
+    // Node should stay near where it was dropped, not snap back to layout
+    expect(editor.getNode("right1").y).toBeCloseTo(yBefore + 5, 0);
   });
 });
