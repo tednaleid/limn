@@ -6,6 +6,8 @@
 
 A keyboard-first, offline-capable mind map progressive web app built with TypeScript, React, and SVG.
 
+**Try it:** [tednaleid.github.io/limn](https://tednaleid.github.io/limn/)
+
 ## Quick start
 
 ```bash
