@@ -22,11 +22,14 @@ interface TextEditorProps {
 export function TextEditor({ editor, node, camera, branchColor }: TextEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Position the textarea to overlay the node, accounting for camera transform
+  // Position the textarea at the node's screen location, then use CSS
+  // transform: scale(zoom) to match how SVG scales text. This ensures
+  // the textarea renders at the same base font size (14px) as the SVG
+  // text, avoiding hinting differences between e.g. 14px and 24.78px.
   const left = node.x * camera.zoom + camera.x;
   const top = node.y * camera.zoom + camera.y;
-  const width = (node.width - SVG_TEXT_BUFFER) * camera.zoom;
-  const height = node.height * camera.zoom;
+  const width = node.width - SVG_TEXT_BUFFER;
+  const height = node.height;
 
   // Focus the textarea on mount
   useEffect(() => {
@@ -96,15 +99,17 @@ export function TextEditor({ editor, node, camera, branchColor }: TextEditorProp
         top: `${top}px`,
         width: `${width}px`,
         minHeight: `${height}px`,
-        padding: `${PADDING_Y * camera.zoom}px ${PADDING_X * camera.zoom}px`,
-        fontSize: `${(node.parentId === null ? ROOT_FONT_SIZE : FONT_SIZE) * camera.zoom}px`,
+        transform: `scale(${camera.zoom})`,
+        transformOrigin: "0 0",
+        padding: `${PADDING_Y}px ${PADDING_X}px`,
+        fontSize: `${node.parentId === null ? ROOT_FONT_SIZE : FONT_SIZE}px`,
         fontFamily: "system-ui, -apple-system, sans-serif",
         fontWeight: node.parentId === null ? 600 : 400,
-        lineHeight: `${Math.round((node.parentId === null ? ROOT_FONT_SIZE : FONT_SIZE) * (20 / 14)) * camera.zoom}px`,
+        lineHeight: `${Math.round((node.parentId === null ? ROOT_FONT_SIZE : FONT_SIZE) * (20 / 14))}px`,
         border: "none",
-        borderRadius: `${6 * camera.zoom}px`,
+        borderRadius: `${6}px`,
         outline: "none",
-        boxShadow: `0 0 0 ${2 * camera.zoom}px ${branchColor ?? "var(--editor-shadow)"}`,
+        boxShadow: `0 0 0 ${2}px ${branchColor ?? "var(--editor-shadow)"}`,
         background: "var(--editor-bg)",
         color: branchColor ?? "var(--text-color)",
         resize: "none",

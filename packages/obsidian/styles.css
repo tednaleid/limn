@@ -14,3 +14,14 @@
   pointer-events: none;
 }
 
+/* Prevent Obsidian theme CSS from altering textarea font rendering.
+   Inline React styles cannot use !important, so Obsidian rules may win. */
+.limn-view textarea[data-limn-edit] {
+  -webkit-font-smoothing: auto !important;
+  -moz-osx-font-smoothing: auto !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  text-transform: none !important;
+  text-indent: 0 !important;
+}
+

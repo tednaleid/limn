@@ -34,6 +34,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - **Images use sidecar storage.** `file.mindmap` + `file.assets/` directory. Never base64 in JSON.
 - **TestEditor for logic tests.** Playwright is only for visual regression and browser-API integration. If it can be tested without a browser, it must be.
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
+- **DOM overlays must use CSS transform for zoom.** SVG text is rendered at base font size (14px) and scaled by the SVG group transform. Any DOM element overlaying the SVG canvas (textarea, tooltips, etc.) must use `transform: scale(zoom)` rather than multiplying font-size/padding by zoom. Scaling font-size produces different font hinting than the SVG path, causing visible size mismatches.
 - **Multiple roots supported.** A mind map is a forest of trees. Roots can be created and deleted freely. Empty canvas is valid.
 - **Multi-line node text.** Shift+Enter inserts newline in edit mode. Enter exits edit mode and creates sibling.
 - **Key-to-action routing lives in core.** DOM event listeners live in `web/`, but they delegate to a dispatch function in `core/` that maps keys to Editor actions. TestEditor uses the same dispatch, so keyboard behavior is testable without a browser.
