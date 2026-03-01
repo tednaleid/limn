@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Limn — keyboard-first, offline-capable mind map progressive web app.
+Limn — keyboard-first, offline-capable mind map progressive web app and Obsidian plugin.
 
 ## Development Methodology
 
@@ -11,10 +11,11 @@ For this project, you are allowed to commit, and are actually REQUIRED to commit
 ## Structure
 
 ```
-README.md         # description of the app, keyboard shortcuts
-TODO.md           # initial ideas that contain possible future work, must be planned before implementing
-packages/core/    # Framework-agnostic TS library — NO React, NO browser APIs
-packages/web/     # React web app — rendering, input handling, persistence
+README.md           # description of the app, keyboard shortcuts
+TODO.md             # initial ideas that contain possible future work, must be planned before implementing
+OBSIDIAN_PLUGIN.md  # details about how limn is used as a plugin within the Obsidian markdown editor
+packages/core/      # Framework-agnostic TS library — NO React, NO browser APIs
+packages/web/       # React web app — rendering, input handling, persistence
 ```
 
 ## Commands
@@ -24,6 +25,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - Use `bunx` instead of `npx` for running package binaries (this is a Bun project).
 - Save Playwright MCP screenshots to `/tmp`, not the project directory.
 - `just serve` already uses `tee` for output redirection. Do not add shell redirect operators (`2>&1 &`) when invoking it.
+- NEVER use command substitution when committing, Ted will never approve this, always use a heredoc
 
 ## Architecture invariants
 
@@ -34,14 +36,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - **Images use sidecar storage.** `file.limn` + `file.assets/` directory. Never base64 in JSON.
 - **TestEditor for logic tests.** Playwright is only for visual regression and browser-API integration. If it can be tested without a browser, it must be.
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
-- **DOM overlays must use CSS transform for zoom.** SVG text is rendered at base font size (14px) and scaled by the SVG group transform. Any DOM element overlaying the SVG canvas (textarea, tooltips, etc.) must use `transform: scale(zoom)` rather than multiplying font-size/padding by zoom. Scaling font-size produces different font hinting than the SVG path, causing visible size mismatches.
 - **Multiple roots supported.** A mind map is a forest of trees. Roots can be created and deleted freely. Empty canvas is valid.
-- **Multi-line node text.** Shift+Enter inserts newline in edit mode. Enter exits edit mode and creates sibling.
 - **Key-to-action routing lives in core.** DOM event listeners live in `web/`, but they delegate to a dispatch function in `core/` that maps keys to Editor actions. TestEditor uses the same dispatch, so keyboard behavior is testable without a browser.
 - **Undo tracks only document data.** Camera position and selection state are excluded from the diff/undo system. The store distinguishes "document state" (nodes, structure, text) from "session state" (camera, selection).
-- **Root nodes have no siblings.** Creating a sibling (Shift+Enter in nav mode, Enter in edit mode) is a no-op on root nodes. New roots are created only via Enter with nothing selected, or double-click on canvas.
-- **Empty nodes are auto-deleted.** If a user exits edit mode (Escape) on a node with empty text, the node is deleted and selection falls back to previous sibling, then parent.
 - **File format changes require Ted's approval.** Any modification to `schema.ts`, serialization behavior, or the file format shape (adding/removing/renaming fields) must be discussed first. Non-breaking additions bump the package minor version. Breaking changes bump the major version and require a migration in `migration.ts`. The golden fixture must be updated to cover any new fields.
-
-# REMINDERS
-- NEVER use command substitution when committing, Ted will never approve this, always use a heredoc

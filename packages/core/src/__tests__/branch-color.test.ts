@@ -4,31 +4,30 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
 import { resetIdCounter } from "../store/MindMapStore";
-import { BRANCH_PALETTE, nextBranchColor } from "../theme/palette";
+import { nextBranchColorIndex } from "../theme/palette";
+import { BRANCH_COUNT } from "../theme/theme";
 
 describe("branch color palette", () => {
-  it("has at least 8 colors", () => {
-    expect(BRANCH_PALETTE.length).toBeGreaterThanOrEqual(8);
+  it("has 14 branch colors per theme", () => {
+    expect(BRANCH_COUNT).toBe(14);
   });
 
-  it("nextBranchColor picks the first unused color", () => {
-    expect(nextBranchColor([])).toBe(BRANCH_PALETTE[0]);
+  it("nextBranchColorIndex picks the first unused index", () => {
+    expect(nextBranchColorIndex([])).toBe(0);
   });
 
-  it("nextBranchColor skips already-used colors", () => {
-    const used = [BRANCH_PALETTE[0]!];
-    expect(nextBranchColor(used)).toBe(BRANCH_PALETTE[1]);
+  it("nextBranchColorIndex skips already-used indices", () => {
+    expect(nextBranchColorIndex([0])).toBe(1);
   });
 
-  it("nextBranchColor cycles when all colors used", () => {
-    const used = [...BRANCH_PALETTE];
-    expect(nextBranchColor(used)).toBe(BRANCH_PALETTE[0]);
+  it("nextBranchColorIndex cycles when all indices used", () => {
+    const allUsed = Array.from({ length: BRANCH_COUNT }, (_, i) => i);
+    expect(nextBranchColorIndex(allUsed)).toBe(0);
   });
 
-  it("nextBranchColor keeps cycling through the palette", () => {
-    // 9 existing colors (full palette + one repeat) should yield the second color
-    const used = [...BRANCH_PALETTE, BRANCH_PALETTE[0]!];
-    expect(nextBranchColor(used)).toBe(BRANCH_PALETTE[1]);
+  it("nextBranchColorIndex keeps cycling", () => {
+    const used = [...Array.from({ length: BRANCH_COUNT }, (_, i) => i), 0];
+    expect(nextBranchColorIndex(used)).toBe(1);
   });
 });
 
@@ -39,21 +38,21 @@ describe("branch color auto-assignment", () => {
     editor = new TestEditor();
   });
 
-  it("addRoot assigns a branch color", () => {
+  it("addRoot assigns a branch colorIndex", () => {
     editor.addRoot("Root 1", 0, 0);
     editor.exitEditMode();
     const root = editor.getRoots()[0]!;
-    expect(root.style?.color).toBe(BRANCH_PALETTE[0]);
+    expect(root.style?.colorIndex).toBe(0);
   });
 
-  it("second root gets a different color than the first", () => {
+  it("second root gets a different colorIndex than the first", () => {
     editor.addRoot("Root 1", 0, 0);
     editor.exitEditMode();
     editor.addRoot("Root 2", 0, 100);
     editor.exitEditMode();
     const roots = editor.getRoots();
-    expect(roots[0]!.style?.color).toBe(BRANCH_PALETTE[0]);
-    expect(roots[1]!.style?.color).toBe(BRANCH_PALETTE[1]);
+    expect(roots[0]!.style?.colorIndex).toBe(0);
+    expect(roots[1]!.style?.colorIndex).toBe(1);
   });
 });
 
@@ -64,23 +63,25 @@ describe("getBranchColor", () => {
     editor = new TestEditor();
   });
 
-  it("returns the root's color for the root node", () => {
+  it("returns a hex color for the root node", () => {
     editor.addRoot("Root", 0, 0);
     editor.exitEditMode();
     const rootId = editor.getRoots()[0]!.id;
-    expect(editor.getBranchColor(rootId)).toBe(BRANCH_PALETTE[0]);
+    const color = editor.getBranchColor(rootId);
+    expect(color).toBeDefined();
+    expect(color).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it("returns the root's color for a child node", () => {
+  it("returns the same color for a child node", () => {
     editor.addRoot("Root", 0, 0);
     editor.exitEditMode();
     const rootId = editor.getRoots()[0]!.id;
     const childId = editor.addChild(rootId, "Child");
     editor.exitEditMode();
-    expect(editor.getBranchColor(childId)).toBe(BRANCH_PALETTE[0]);
+    expect(editor.getBranchColor(childId)).toBe(editor.getBranchColor(rootId));
   });
 
-  it("returns the root's color for a grandchild node", () => {
+  it("returns the same color for a grandchild node", () => {
     editor.addRoot("Root", 0, 0);
     editor.exitEditMode();
     const rootId = editor.getRoots()[0]!.id;
@@ -88,7 +89,7 @@ describe("getBranchColor", () => {
     editor.exitEditMode();
     const grandchildId = editor.addChild(childId, "Grandchild");
     editor.exitEditMode();
-    expect(editor.getBranchColor(grandchildId)).toBe(BRANCH_PALETTE[0]);
+    expect(editor.getBranchColor(grandchildId)).toBe(editor.getBranchColor(rootId));
   });
 
   it("returns an overridden color on an intermediate node", () => {
@@ -97,15 +98,15 @@ describe("getBranchColor", () => {
     const rootId = editor.getRoots()[0]!.id;
     const childId = editor.addChild(rootId, "Child");
     editor.exitEditMode();
-    editor.setNodeColor(childId, "#ff0000");
+    editor.setNodeColorIndex(childId, 5);
     const grandchildId = editor.addChild(childId, "Grandchild");
     editor.exitEditMode();
-    expect(editor.getBranchColor(grandchildId)).toBe("#ff0000");
+    // Grandchild inherits from child's overridden colorIndex
+    expect(editor.getBranchColorIndex(grandchildId)).toBe(5);
   });
 
-  it("auto-assigns a color when loading a file without colors", () => {
+  it("auto-assigns a colorIndex when loading a file without colors", () => {
     const editor2 = new TestEditor();
-    // Load a file without colors to simulate old data
     const fileData = {
       version: 1,
       meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
@@ -120,7 +121,7 @@ describe("getBranchColor", () => {
       assets: [],
     };
     editor2.loadJSON(fileData);
-    expect(editor2.getBranchColor("r1")).toBe(BRANCH_PALETTE[0]);
+    expect(editor2.getBranchColorIndex("r1")).toBe(0);
   });
 });
 
@@ -160,11 +161,11 @@ describe("branch color adoption on reparent", () => {
 
     const childId = editor.addChild("n0", "Child"); // n2
     editor.exitEditMode();
-    // Give child an explicit color
-    editor.setNodeColor(childId, "#ff0000");
+    // Give child an explicit colorIndex
+    editor.setNodeColorIndex(childId, 5);
     const grandchildId = editor.addChild(childId, "Grandchild"); // n3
     editor.exitEditMode();
-    expect(editor.getBranchColor(grandchildId)).toBe("#ff0000");
+    expect(editor.getBranchColorIndex(grandchildId)).toBe(5);
 
     // Reparent child subtree to root2
     editor.select(childId);
@@ -220,17 +221,18 @@ describe("branch color adoption on reparent", () => {
 });
 
 describe("branch color serialization", () => {
-  it("color survives round-trip through toJSON/loadJSON", () => {
+  it("colorIndex survives round-trip through toJSON/loadJSON", () => {
     const editor = new TestEditor();
     editor.addRoot("Root", 0, 0);
     editor.exitEditMode();
     const rootId = editor.getRoots()[0]!.id;
-    const originalColor = editor.getBranchColor(rootId);
+    const originalIndex = editor.getBranchColorIndex(rootId);
+    expect(originalIndex).toBeDefined();
 
     const json = editor.toJSON();
     const editor2 = new TestEditor();
     editor2.loadJSON(json);
 
-    expect(editor2.getBranchColor(rootId)).toBe(originalColor);
+    expect(editor2.getBranchColorIndex(rootId)).toBe(originalIndex);
   });
 });

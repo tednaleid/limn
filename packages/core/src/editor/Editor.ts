@@ -16,7 +16,9 @@ import {
   relayoutSubtree,
   resolveTreeOverlap,
 } from "../layout/layout";
-import { nextBranchColor } from "../theme/palette";
+import { nextBranchColorIndex } from "../theme/palette";
+import { resolveTheme } from "../theme/theme";
+import type { ThemeDefinition } from "../theme/theme";
 import { stripMarkdown, parseMarkdownLines } from "../markdown/inlineMarkdown";
 import {
   type EasyMotionState,
@@ -182,34 +184,54 @@ export class Editor {
     return depth;
   }
 
-  /** Walk up ancestors returning the first style.color found, or undefined. */
-  getBranchColor(id: string): string | undefined {
+  /** Get the active ThemeDefinition based on mode and chosen themes. */
+  getThemeDefinition(): ThemeDefinition {
+    const mode = this.meta.mode === "light" ? "light" : "dark";
+    const key = mode === "light" ? this.meta.lightTheme : this.meta.darkTheme;
+    return resolveTheme(key, mode);
+  }
+
+  /** Get the branch color palette from the active theme. */
+  getBranchPalette(): readonly string[] {
+    return this.getThemeDefinition().branches;
+  }
+
+  /** Walk up ancestors returning the first colorIndex found, or undefined. */
+  getBranchColorIndex(id: string): number | undefined {
     let node = this.store.getNode(id);
     while (true) {
-      if (node.style?.color) return node.style.color;
+      if (node.style?.colorIndex !== undefined) return node.style.colorIndex;
       if (node.parentId === null) return undefined;
       node = this.store.getNode(node.parentId);
     }
   }
 
-  /** Set a node's branch color. */
-  setNodeColor(id: string, color: string): void {
+  /** Walk up ancestors and resolve the branch color hex from the active theme. */
+  getBranchColor(id: string): string | undefined {
+    const idx = this.getBranchColorIndex(id);
+    if (idx === undefined) return undefined;
+    const branches = this.getBranchPalette();
+    return branches[idx % branches.length];
+  }
+
+  /** Set a node's branch colorIndex. */
+  setNodeColorIndex(id: string, colorIndex: number): void {
     const node = this.store.getNode(id);
-    node.style = { ...node.style, color };
+    node.style = { ...node.style, colorIndex };
     this.notify();
   }
 
-  /** Assign palette colors to root nodes that don't have one (e.g., old files). */
+  /** Assign palette colorIndex to root nodes that don't have one (e.g., old files). */
   private assignMissingRootColors(): void {
     const roots = this.store.getRoots();
-    const existingColors = roots
-      .map((r) => r.style?.color)
-      .filter((c): c is string => c !== undefined);
+    const existingIndices = roots
+      .map((r) => r.style?.colorIndex)
+      .filter((c): c is number => c !== undefined);
     for (const root of roots) {
-      if (!root.style?.color) {
-        const color = nextBranchColor(existingColors);
-        root.style = { ...root.style, color };
-        existingColors.push(color);
+      if (root.style?.colorIndex === undefined) {
+        const colorIndex = nextBranchColorIndex(existingIndices);
+        root.style = { ...root.style, colorIndex };
+        existingIndices.push(colorIndex);
       }
     }
   }
@@ -613,13 +635,13 @@ export class Editor {
   addRoot(text = "", x = 0, y = 0): string {
     this.pushUndo("add-root");
     const id = this.store.addRoot(text, x, y);
-    // Auto-assign a branch color from the palette
-    const existingColors = this.store.getRoots()
+    // Auto-assign a branch colorIndex from the palette
+    const existingIndices = this.store.getRoots()
       .filter((r) => r.id !== id)
-      .map((r) => r.style?.color)
-      .filter((c): c is string => c !== undefined);
+      .map((r) => r.style?.colorIndex)
+      .filter((c): c is number => c !== undefined);
     const node = this.store.getNode(id);
-    node.style = { ...node.style, color: nextBranchColor(existingColors) };
+    node.style = { ...node.style, colorIndex: nextBranchColorIndex(existingIndices) };
     this.remeasureNode(id);
     this.selectedId = id;
     this.editing = true;
@@ -669,13 +691,13 @@ export class Editor {
     if (node.parentId === null) return; // Already a root
     this.pushUndo("detach-to-root");
     this.store.detachToRoot(nodeId);
-    // Auto-assign a branch color like new roots get
-    const existingColors = this.store.getRoots()
+    // Auto-assign a branch colorIndex like new roots get
+    const existingIndices = this.store.getRoots()
       .filter((r) => r.id !== nodeId)
-      .map((r) => r.style?.color)
-      .filter((c): c is string => c !== undefined);
+      .map((r) => r.style?.colorIndex)
+      .filter((c): c is number => c !== undefined);
     const detached = this.store.getNode(nodeId);
-    detached.style = { ...detached.style, color: nextBranchColor(existingColors) };
+    detached.style = { ...detached.style, colorIndex: nextBranchColorIndex(existingIndices) };
     this.resolveOverlapForNode(nodeId);
     this.notify();
   }
@@ -1417,13 +1439,13 @@ export class Editor {
     }
   }
 
-  /** Clear style.color from a node and all its descendants so they
+  /** Clear style.colorIndex from a node and all its descendants so they
    *  inherit the branch color of their new parent after reparenting. */
   private clearSubtreeColors(nodeId: string): void {
     const node = this.store.getNode(nodeId);
-    if (node.style?.color) {
+    if (node.style?.colorIndex !== undefined) {
       const rest = { ...node.style };
-      delete rest.color;
+      delete rest.colorIndex;
       node.style = Object.keys(rest).length > 0 ? rest : undefined;
     }
     for (const childId of node.children) {

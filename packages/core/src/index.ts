@@ -51,7 +51,18 @@ export {
 } from "./layout/layout";
 
 export { Editor, stubTextMeasurer, ROOT_FONT_SIZE } from "./editor/Editor";
-export { BRANCH_PALETTE, nextBranchColor } from "./theme/palette";
+export { BRANCH_PALETTE, nextBranchColorIndex } from "./theme/palette";
+export type { ThemeDefinition, ThemeKey } from "./theme/theme";
+export {
+  THEME_REGISTRY,
+  DEFAULT_LIGHT_THEME,
+  DEFAULT_DARK_THEME,
+  BRANCH_COUNT,
+  resolveTheme,
+  getThemesByMode,
+} from "./theme/theme";
+export type { DerivedThemeVars } from "./theme/derive";
+export { deriveThemeVars } from "./theme/derive";
 export { dispatch } from "./keybindings/dispatch";
 export type { Modifiers } from "./keybindings/dispatch";
 export { TestEditor } from "./test-editor/TestEditor";

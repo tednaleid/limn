@@ -4,7 +4,7 @@
 export interface NodeStyle {
   fontSize?: number;
   fontWeight?: number;
-  color?: string;
+  colorIndex?: number;
 }
 
 export interface ImageRef {

@@ -82,7 +82,7 @@ describe("file round-trip", () => {
   });
 
   it("preserves node styles", async () => {
-    const style = { fontSize: 18, fontWeight: 700, color: "#ff0000" };
+    const style = { fontSize: 18, fontWeight: 700, colorIndex: 2 };
     const input = makeFile({
       roots: [
         {
@@ -282,7 +282,7 @@ describe("file round-trip", () => {
           y: 0,
           width: 140,
           height: 32,
-          style: { fontSize: 18, fontWeight: 700, color: "#1a1a2e" },
+          style: { fontSize: 18, fontWeight: 700, colorIndex: 0 },
           children: [
             {
               id: "r1c1",

@@ -734,7 +734,7 @@ describe("Editor", () => {
       // n1 is a child, may not have a branch color
       editor.pressKey("Tab", { shift: true });
       const detached = editor.getNode("n1");
-      expect(detached.style?.color).toBeTruthy();
+      expect(detached.style?.colorIndex).toBeDefined();
     });
 
     test("detachToRoot preserves children", () => {
