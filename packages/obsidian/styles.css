@@ -5,6 +5,21 @@
   height: 100%;
   overflow: hidden;
   position: relative;
+
+  /* Map Limn CSS variables to Obsidian's theme variables */
+  --canvas-bg: var(--background-primary);
+  --text-color: var(--text-normal);
+  --text-muted: var(--text-muted);
+  --selection-bg: hsla(var(--interactive-accent-hsl), 0.15);
+  --selection-border: var(--interactive-accent);
+  --editor-bg: var(--background-primary);
+  --editor-shadow: var(--interactive-accent);
+  --collapse-bg: var(--background-modifier-border);
+  --collapse-border: var(--background-modifier-border);
+  --collapse-text: var(--text-muted);
+  --edge-default: var(--background-modifier-border);
+  --reparent-bg: rgba(245, 158, 11, 0.15);
+  --reparent-border: #f59e0b;
 }
 
 /* Hide the off-screen text measurement element */
@@ -23,5 +38,24 @@
   word-spacing: normal !important;
   text-transform: none !important;
   text-indent: 0 !important;
+}
+
+/* Reset Obsidian button styles for toolbar and menu controls */
+.limn-view button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: normal;
+  margin: 0;
+  padding: 0;
+  box-shadow: none !important;
+}
+
+.limn-view button:hover {
+  background: var(--selection-bg) !important;
+  color: var(--text-color) !important;
+}
+
+.limn-view button[role="menuitem"]:hover {
+  background: var(--selection-bg) !important;
 }
 

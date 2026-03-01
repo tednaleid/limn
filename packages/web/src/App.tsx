@@ -289,7 +289,7 @@ export function App() {
     <PersistenceContext.Provider value={provider}>
       <EditorContext.Provider value={editor}>
         <AssetUrlContext.Provider value={assetUrls}>
-          <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
+          <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
             <MindMapCanvas />
             <HamburgerMenu />
             <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />

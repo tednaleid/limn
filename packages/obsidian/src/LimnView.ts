@@ -13,6 +13,10 @@ import { EditorContext } from "@limn/web/hooks/useEditor";
 import { PersistenceContext } from "@limn/web/hooks/usePersistence";
 import { AssetUrlContext } from "@limn/web/hooks/useAssetUrls";
 import { MindMapCanvas } from "@limn/web/components/MindMapCanvas";
+import { ToolbarOverlay } from "@limn/web/components/ToolbarOverlay";
+import { HamburgerMenu } from "@limn/web/components/HamburgerMenu";
+import type { MenuItemDef } from "@limn/web/components/HamburgerMenu";
+import { exportSvg } from "@limn/web/export/svg";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 
 export const VIEW_TYPE_LIMN = "limn-view";
@@ -25,10 +29,18 @@ const DEFAULT_MAP: MindMapFileFormat = {
   assets: [],
 };
 
+const obsidianMenuItems: MenuItemDef[] = [
+  { label: "Export SVG", onClick: () => exportSvg() },
+];
+
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
 function LimnViewRoot({ editor }: { editor: Editor }) {
   useKeyboardHandler(editor);
-  return createElement(MindMapCanvas);
+  return createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
+    createElement(MindMapCanvas),
+    createElement(ToolbarOverlay),
+    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: false }),
+  );
 }
 
 export class LimnView extends TextFileView {

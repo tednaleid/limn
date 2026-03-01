@@ -25,7 +25,7 @@ export function ToolbarOverlay() {
   const handleRedo = () => { if (canRedo) editor.redo(); };
 
   return (
-    <div style={{ position: "fixed", bottom: 12, left: 12, zIndex: 1000, display: "flex", gap: 8 }}>
+    <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 1000, display: "flex", gap: 8 }}>
       {/* Zoom controls */}
       <div style={groupStyle}>
         <ToolbarButton onClick={handleZoomOut} label="Zoom out">

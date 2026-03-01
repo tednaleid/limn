@@ -15,7 +15,14 @@ function normalizeTheme(theme: string): string {
   return theme === "default" ? "system" : theme;
 }
 
-export function HamburgerMenu() {
+export type MenuItemDef = { label: string; shortcut?: string; onClick: () => void } | null;
+
+export interface HamburgerMenuProps {
+  items?: MenuItemDef[];
+  showTheme?: boolean;
+}
+
+export function HamburgerMenu({ items, showTheme = true }: HamburgerMenuProps) {
   const editor = useEditor();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,7 +66,7 @@ export function HamburgerMenu() {
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
 
   return (
-    <div ref={menuRef} style={{ position: "fixed", top: 12, left: 12, zIndex: 1000 }}>
+    <div ref={menuRef} style={{ position: "absolute", top: 12, left: 12, zIndex: 1000 }}>
       <button
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen(!open)}
@@ -103,14 +110,26 @@ export function HamburgerMenu() {
             color: "var(--text-color)",
           }}
         >
-          <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} />
-          <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} />
-          <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} />
-          <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
-          <MenuDivider />
-          <MenuItem label="New" onClick={handleClear} />
-          <MenuDivider />
-          <ThemeRow currentTheme={currentTheme} onSelect={handleTheme} />
+          {items ? (
+            items.map((item, i) =>
+              item === null ? <MenuDivider key={`d${i}`} /> : <MenuItem key={item.label} {...item} />
+            )
+          ) : (
+            <>
+              <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} />
+              <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} />
+              <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} />
+              <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
+              <MenuDivider />
+              <MenuItem label="New" onClick={handleClear} />
+            </>
+          )}
+          {showTheme && (
+            <>
+              <MenuDivider />
+              <ThemeRow currentTheme={currentTheme} onSelect={handleTheme} />
+            </>
+          )}
         </div>
       )}
     </div>
