@@ -1,8 +1,8 @@
 // ABOUTME: SVG export using XMLSerializer on the rendered SVG element.
 // ABOUTME: Triggers a download of the serialized SVG file.
 
-import { getCurrentDerivedVars } from "../theme/themes";
-import type { DerivedThemeVars } from "../theme/themes";
+import { THEME_CSS_VARS } from "@limn/core";
+import type { DerivedThemeVars } from "@limn/core";
 
 /** Build a CSS style block that defines all theme variables on the svg element. */
 export function buildThemeStyleBlock(vars: DerivedThemeVars): string {
@@ -12,10 +12,20 @@ export function buildThemeStyleBlock(vars: DerivedThemeVars): string {
   return `svg {\n${lines}\n}`;
 }
 
+/** Read the current theme CSS variables from a DOM element's computed style. */
+function readComputedThemeVars(el: Element): DerivedThemeVars {
+  const style = getComputedStyle(el);
+  const vars: Record<string, string> = {};
+  for (const name of THEME_CSS_VARS) {
+    vars[name] = style.getPropertyValue(name).trim();
+  }
+  return vars as unknown as DerivedThemeVars;
+}
+
 /** Clone an SVG element and inject theme CSS variables into a <defs><style> block. */
 function serializeWithTheme(svgEl: Element): string {
   const clone = svgEl.cloneNode(true) as Element;
-  const vars = getCurrentDerivedVars();
+  const vars = readComputedThemeVars(svgEl);
   const css = buildThemeStyleBlock(vars);
 
   const ns = "http://www.w3.org/2000/svg";

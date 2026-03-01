@@ -62,7 +62,7 @@ export {
   getThemesByMode,
 } from "./theme/theme";
 export type { DerivedThemeVars } from "./theme/derive";
-export { deriveThemeVars } from "./theme/derive";
+export { deriveThemeVars, THEME_CSS_VARS } from "./theme/derive";
 export { dispatch } from "./keybindings/dispatch";
 export type { Modifiers } from "./keybindings/dispatch";
 export { TestEditor } from "./test-editor/TestEditor";

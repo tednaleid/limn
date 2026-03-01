@@ -3,7 +3,10 @@
 
 import { TextFileView, type WorkspaceLeaf } from "obsidian";
 import type LimnPlugin from "./main";
-import { Editor, migrateToLatest, AutoSaveController } from "@limn/core";
+import {
+  Editor, migrateToLatest, AutoSaveController,
+  resolveTheme, deriveThemeVars, THEME_CSS_VARS,
+} from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 import { ObsidianPersistenceProvider } from "./ObsidianPersistenceProvider";
 import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
@@ -16,6 +19,7 @@ import { MindMapCanvas } from "@limn/web/components/MindMapCanvas";
 import { ToolbarOverlay } from "@limn/web/components/ToolbarOverlay";
 import { HamburgerMenu } from "@limn/web/components/HamburgerMenu";
 import type { MenuItemDef } from "@limn/web/components/HamburgerMenu";
+import { resolveActiveThemeKey } from "@limn/web/theme/themes";
 import { exportSvg } from "@limn/web/export/svg";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 
@@ -39,7 +43,7 @@ function LimnViewRoot({ editor }: { editor: Editor }) {
   return createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
     createElement(MindMapCanvas),
     createElement(ToolbarOverlay),
-    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: false }),
+    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true }),
   );
 }
 
@@ -73,6 +77,38 @@ export class LimnView extends TextFileView {
     this.autoSave = new AutoSaveController(
       this.editor, this.provider, { mode: "interval", delayMs: 5000 },
     );
+
+    // Apply or clear inline theme CSS when user changes theme via the picker
+    this.editor.onThemeChange(() => {
+      this.applyThemeToContainer();
+    });
+  }
+
+  /**
+   * Apply or clear inline theme CSS on the .limn-view container.
+   * In "system" mode, remove inline properties so Obsidian's stylesheet takes over.
+   * In "light" or "dark" mode, resolve the theme and set CSS vars as inline styles.
+   */
+  private applyThemeToContainer(): void {
+    const el = this.contentEl;
+    const mode = this.editor.getTheme();
+    if (mode === "system") {
+      // Clear inline overrides, let Obsidian's CSS mapping take over
+      for (const name of THEME_CSS_VARS) {
+        el.style.removeProperty(name);
+      }
+      return;
+    }
+    // Resolve the active theme and apply derived CSS vars as inline styles
+    const themeKey = resolveActiveThemeKey(
+      mode, this.editor.getLightTheme(), this.editor.getDarkTheme(),
+    );
+    const effective = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
+    const theme = resolveTheme(themeKey, effective as "light" | "dark");
+    const vars = deriveThemeVars(theme);
+    for (const [key, value] of Object.entries(vars)) {
+      el.style.setProperty(key, value);
+    }
   }
 
   async onClose(): Promise<void> {
@@ -90,6 +126,7 @@ export class LimnView extends TextFileView {
     const migrated = migrateToLatest(parsed);
     this.editor.loadJSON(migrated);
     this.editor.remeasureAllNodes();
+    this.applyThemeToContainer();
     if (!this.reactRoot) {
       this.mountReact();
     }

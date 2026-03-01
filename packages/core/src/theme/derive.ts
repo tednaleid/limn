@@ -20,6 +20,23 @@ export interface DerivedThemeVars {
   "--edge-default": string;
 }
 
+/** The CSS custom property names set by deriveThemeVars. */
+export const THEME_CSS_VARS: readonly (keyof DerivedThemeVars)[] = [
+  "--canvas-bg",
+  "--text-color",
+  "--text-muted",
+  "--selection-bg",
+  "--selection-border",
+  "--reparent-bg",
+  "--reparent-border",
+  "--editor-bg",
+  "--editor-shadow",
+  "--collapse-bg",
+  "--collapse-border",
+  "--collapse-text",
+  "--edge-default",
+] as const;
+
 /** Derive 13 CSS custom properties from a theme definition. */
 export function deriveThemeVars(theme: ThemeDefinition): DerivedThemeVars {
   const { mode, background: bg, foreground: fg, branches } = theme;

@@ -14,7 +14,8 @@
     "./components/ToolbarOverlay": "./src/components/ToolbarOverlay.tsx",
     "./components/HamburgerMenu": "./src/components/HamburgerMenu.tsx",
     "./components/ShortcutsDialog": "./src/components/ShortcutsDialog.tsx",
-    "./export/svg": "./src/export/svg.ts"
+    "./export/svg": "./src/export/svg.ts",
+    "./theme/themes": "./src/theme/themes.ts"
   },
   "scripts": {
     "dev": "vite",
