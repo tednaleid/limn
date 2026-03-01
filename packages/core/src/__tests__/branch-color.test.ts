@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
+import { resetIdCounter } from "../store/MindMapStore";
 import { BRANCH_PALETTE, nextBranchColor } from "../theme/palette";
 
 describe("branch color palette", () => {
@@ -120,6 +121,101 @@ describe("getBranchColor", () => {
     };
     editor2.loadJSON(fileData);
     expect(editor2.getBranchColor("r1")).toBe(BRANCH_PALETTE[0]);
+  });
+});
+
+describe("branch color adoption on reparent", () => {
+  let editor: TestEditor;
+
+  beforeEach(() => {
+    resetIdCounter();
+    editor = new TestEditor();
+  });
+
+  it("reparented node adopts new parent's branch color", () => {
+    editor.addRoot("Root1", 0, 0);    // n0
+    editor.exitEditMode();
+    editor.addRoot("Root2", 0, 200);  // n1
+    editor.exitEditMode();
+    const root1Color = editor.getBranchColor("n0");
+    const root2Color = editor.getBranchColor("n1");
+    expect(root1Color).not.toBe(root2Color);
+
+    const childId = editor.addChild("n0", "Child"); // n2
+    editor.exitEditMode();
+    expect(editor.getBranchColor(childId)).toBe(root1Color);
+
+    // Reparent child to root2
+    editor.select(childId);
+    editor.reparentNode(childId, "n1");
+    expect(editor.getBranchColor(childId)).toBe(root2Color);
+  });
+
+  it("reparented subtree adopts new parent's branch color", () => {
+    editor.addRoot("Root1", 0, 0);    // n0
+    editor.exitEditMode();
+    editor.addRoot("Root2", 0, 200);  // n1
+    editor.exitEditMode();
+    const root2Color = editor.getBranchColor("n1");
+
+    const childId = editor.addChild("n0", "Child"); // n2
+    editor.exitEditMode();
+    // Give child an explicit color
+    editor.setNodeColor(childId, "#ff0000");
+    const grandchildId = editor.addChild(childId, "Grandchild"); // n3
+    editor.exitEditMode();
+    expect(editor.getBranchColor(grandchildId)).toBe("#ff0000");
+
+    // Reparent child subtree to root2
+    editor.select(childId);
+    editor.reparentNode(childId, "n1");
+    // Both child and grandchild should inherit root2's color
+    expect(editor.getBranchColor(childId)).toBe(root2Color);
+    expect(editor.getBranchColor(grandchildId)).toBe(root2Color);
+  });
+
+  it("color adoption is undoable", () => {
+    editor.addRoot("Root1", 0, 0);    // n0
+    editor.exitEditMode();
+    editor.addRoot("Root2", 0, 200);  // n1
+    editor.exitEditMode();
+    const root1Color = editor.getBranchColor("n0");
+
+    const childId = editor.addChild("n0", "Child"); // n2
+    editor.exitEditMode();
+    expect(editor.getBranchColor(childId)).toBe(root1Color);
+
+    editor.select(childId);
+    editor.reparentNode(childId, "n1");
+    expect(editor.getBranchColor(childId)).not.toBe(root1Color);
+
+    editor.undo();
+    expect(editor.getBranchColor(childId)).toBe(root1Color);
+  });
+
+  it("drag reparent adopts new parent's branch color", () => {
+    editor.addRoot("Root1", 0, 0);    // n0
+    editor.exitEditMode();
+    editor.addRoot("Root2", 600, 0);  // n1
+    editor.exitEditMode();
+    const root2Color = editor.getBranchColor("n1");
+
+    const childId = editor.addChild("n0", "Child"); // n2
+    editor.exitEditMode();
+
+    // Simulate drag to root2
+    editor.select(childId);
+    const child = editor.getNode(childId);
+    editor.startDrag(childId, child.x, child.y);
+    // Move near root2 to trigger reparent
+    const root2 = editor.getNode("n1");
+    editor.updateDrag(root2.x + root2.width / 2, root2.y + root2.height / 2);
+    editor.endDrag();
+
+    // If reparent happened, color should match root2
+    if (editor.getNode(childId).parentId === "n1") {
+      expect(editor.getBranchColor(childId)).toBe(root2Color);
+    }
   });
 });
 

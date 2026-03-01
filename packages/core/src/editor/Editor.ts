@@ -530,6 +530,7 @@ export class Editor {
     }
 
     this.store.moveNode(nodeId, newParentId);
+    this.clearSubtreeColors(nodeId);
     positionNewChild(this.store, nodeId);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
@@ -748,6 +749,7 @@ export class Editor {
           ? this.store.getNode(targetParentId).children.length // Last child
           : 0; // First child
         this.store.moveNode(nodeId, targetParentId, insertIndex);
+        this.clearSubtreeColors(nodeId);
         positionNewChild(this.store, nodeId);
         reflowSubtree(this.store, nodeId);
         relayoutFromNode(this.store, nodeId);
@@ -814,6 +816,7 @@ export class Editor {
       positionNewChild(this.store, nodeId, directionHint);
     }
 
+    this.clearSubtreeColors(nodeId);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
     if (oldParentId) {
@@ -854,6 +857,7 @@ export class Editor {
 
     this.pushUndo("move-node");
     this.store.moveNode(nodeId, grandparentId, parentIdx + 1);
+    this.clearSubtreeColors(nodeId);
     positionNewChild(this.store, nodeId);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
@@ -875,6 +879,7 @@ export class Editor {
 
     this.pushUndo("move-node");
     this.store.moveNode(nodeId, prevSiblingId);
+    this.clearSubtreeColors(nodeId);
     positionNewChild(this.store, nodeId);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
@@ -979,6 +984,7 @@ export class Editor {
       const oldX = this.store.getNode(nodeId).x;
       const oldY = this.store.getNode(nodeId).y;
       this.store.moveNode(nodeId, this.drag.reparentTargetId);
+      this.clearSubtreeColors(nodeId);
       positionNewChild(this.store, nodeId);
       const newNode = this.store.getNode(nodeId);
       const dx = newNode.x - oldX;
@@ -1310,6 +1316,20 @@ export class Editor {
     if (best) {
       this.selectedId = best;
       this.notify();
+    }
+  }
+
+  /** Clear style.color from a node and all its descendants so they
+   *  inherit the branch color of their new parent after reparenting. */
+  private clearSubtreeColors(nodeId: string): void {
+    const node = this.store.getNode(nodeId);
+    if (node.style?.color) {
+      const rest = { ...node.style };
+      delete rest.color;
+      node.style = Object.keys(rest).length > 0 ? rest : undefined;
+    }
+    for (const childId of node.children) {
+      this.clearSubtreeColors(childId);
     }
   }
 
