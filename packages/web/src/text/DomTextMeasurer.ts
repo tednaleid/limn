@@ -78,9 +78,13 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
       el.style.whiteSpace = "pre";
       el.style.width = "";
       el.innerHTML = markdownToHtml(text);
-      // Buffer accounts for SVG text rendering wider than DOM measurement
-      const width = Math.max(MIN_WIDTH, Math.ceil(el.offsetWidth) + 4);
-      const height = Math.max(32, Math.ceil(el.offsetHeight));
+      // getBoundingClientRect gives sub-pixel precision; offsetWidth rounds
+      // to an integer which can cause the textarea to be fractionally too
+      // narrow, wrapping text that should fit on one line.
+      // The +4 buffer accounts for SVG text rendering wider than DOM measurement.
+      const rect = el.getBoundingClientRect();
+      const width = Math.max(MIN_WIDTH, Math.ceil(rect.width) + 4);
+      const height = Math.max(32, Math.ceil(rect.height));
       return { width, height };
     },
 

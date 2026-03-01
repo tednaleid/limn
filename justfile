@@ -40,8 +40,8 @@ serve:
 build:
     bun run build
 
-# Run tests, lint, and type-check (CI check)
-check: coverage lint typecheck
+# Run tests, lint, type-check, and build Obsidian plugin (CI check)
+check: coverage lint typecheck obsidian-build
 
 # Install pre-commit hook that runs `just check`
 install-hooks:
