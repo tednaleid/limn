@@ -471,9 +471,66 @@ export class Editor {
 
   handleEasyMotionKey(key: string): void {
     if (!this.easyMotion.active) return;
+    const mode = this.easyMotion.mode;
     const result = easyMotionHandleKey(this.easyMotion, key);
     this.easyMotion = result.state;
-    if (result.selectedNodeId) this.select(result.selectedNodeId);
+    if (result.selectedNodeId) {
+      if (mode === "reparent" && this.selectedId) {
+        this.reparentNode(this.selectedId, result.selectedNodeId);
+      } else {
+        this.select(result.selectedNodeId);
+      }
+    }
+    this.notify();
+  }
+
+  getEasyMotionMode(): string {
+    return this.easyMotion.mode;
+  }
+
+  enterEasyMotionReparent(): void {
+    if (!this.selectedId) return;
+
+    const selectedNode = this.store.getNode(this.selectedId);
+    const refX = selectedNode.x + selectedNode.width / 2;
+    const refY = selectedNode.y + selectedNode.height / 2;
+    const selectedId = this.selectedId;
+
+    // Filter to valid reparent targets: exclude self, descendants, and current parent
+    const candidates = this.store.getVisibleNodes().filter((n) => {
+      if (n.id === selectedId) return false;
+      if (this.store.isDescendant(n.id, selectedId)) return false;
+      if (n.id === selectedNode.parentId) return false;
+      return true;
+    });
+
+    const newState = enterEasyMotion(candidates, null, refX, refY, "reparent");
+    if (!newState.active) return;
+    this.easyMotion = newState;
+    this.notify();
+  }
+
+  reparentNode(nodeId: string, newParentId: string): void {
+    const node = this.store.getNode(nodeId);
+    const oldParentId = node.parentId;
+
+    this.pushUndo("reparent");
+
+    // Uncollapse target so the reparented node is visible
+    const target = this.store.getNode(newParentId);
+    if (target.collapsed) {
+      target.collapsed = false;
+    }
+
+    this.store.moveNode(nodeId, newParentId);
+    positionNewChild(this.store, nodeId);
+    reflowSubtree(this.store, nodeId);
+    relayoutFromNode(this.store, nodeId);
+
+    if (oldParentId) {
+      relayoutFromNode(this.store, oldParentId);
+    }
+
     this.notify();
   }
 

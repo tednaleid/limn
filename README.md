@@ -89,6 +89,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Alt+Up/Down or Alt+k/j | Reorder among siblings |
 | Alt+Left/Right or Alt+h/l | Indent / Outdent |
 | Shift+Tab | Detach node to root |
+| Alt+`;` | Reparent to target (EasyMotion labels appear, type to attach) |
 | Escape | Deselect |
 
 **Edit mode:**

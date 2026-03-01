@@ -225,6 +225,15 @@ const bindings: KeyBinding[] = [
       editor.enterEasyMotionMode();
     },
   },
+  // EasyMotion reparent: attach selected node to a target
+  {
+    key: ";",
+    modifiers: { alt: true },
+    mode: "nav",
+    action: (editor) => {
+      editor.enterEasyMotionReparent();
+    },
+  },
   // Vim-style hjkl navigation (mirrors arrow keys)
   {
     key: "h",

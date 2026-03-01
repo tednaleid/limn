@@ -3,9 +3,12 @@
 
 import type { MindMapNode } from "../model/types";
 
+export type EasyMotionMode = "jump" | "reparent";
+
 /** Consolidated EasyMotion state. */
 export interface EasyMotionState {
   active: boolean;
+  mode: EasyMotionMode;
   byLabel: Map<string, string>; // label -> nodeId
   byNode: Map<string, string>; // nodeId -> label
   buffer: string;
@@ -15,6 +18,7 @@ export interface EasyMotionState {
 export function initialEasyMotionState(): EasyMotionState {
   return {
     active: false,
+    mode: "jump",
     byLabel: new Map(),
     byNode: new Map(),
     buffer: "",
@@ -68,6 +72,7 @@ export function enterEasyMotion(
   selectedId: string | null,
   refX: number,
   refY: number,
+  mode: EasyMotionMode = "jump",
 ): EasyMotionState {
   // Filter out the selected node
   const candidates = selectedId
@@ -99,7 +104,7 @@ export function enterEasyMotion(
     }
   }
 
-  return { active: true, byLabel, byNode, buffer: "", prefixes };
+  return { active: true, mode, byLabel, byNode, buffer: "", prefixes };
 }
 
 /** Process a key press in easymotion mode.
