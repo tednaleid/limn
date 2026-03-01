@@ -62,6 +62,9 @@ export {
 } from "./markdown/inlineMarkdown";
 export type { TextStyle, StyledSegment } from "./markdown/inlineMarkdown";
 
+export { SHORTCUT_GROUPS } from "./keybindings/shortcutHelp";
+export type { ShortcutEntry, ShortcutGroup } from "./keybindings/shortcutHelp";
+
 export type { PersistenceProvider } from "./persistence/types";
 export { AutoSaveController } from "./persistence/AutoSaveController";
 export type { AutoSaveOptions } from "./persistence/AutoSaveController";
