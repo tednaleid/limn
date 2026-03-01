@@ -4,7 +4,7 @@
 export interface ShortcutEntry {
   keys: string[];        // each element = one kbd box, e.g. ["Cmd", "Z"]
   description: string;
-  altKeys?: string[];    // vim alternates shown in parens, e.g. ["h/j/k/l"]
+  altKeys?: string[];    // alternate keys shown as "or" in keys column, e.g. ["h"]
 }
 
 export interface ShortcutGroup {
@@ -18,7 +18,10 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: "Navigation",
     type: "keyboard",
     entries: [
-      { keys: ["Arrows"], description: "Navigate between nodes", altKeys: ["h/j/k/l"] },
+      { keys: ["\u2190"], description: "Navigate left", altKeys: ["h"] },
+      { keys: ["\u2192"], description: "Navigate right", altKeys: ["l"] },
+      { keys: ["\u2191"], description: "Navigate up", altKeys: ["k"] },
+      { keys: ["\u2193"], description: "Navigate down", altKeys: ["j"] },
       { keys: ["Tab"], description: "Create child node" },
       { keys: ["Enter"], description: "Edit selected node (or create root)" },
       { keys: ["Shift", "Enter"], description: "Create sibling node" },
@@ -26,8 +29,10 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Backspace"], description: "Delete node" },
       { keys: ["Space"], description: "Toggle collapse" },
       { keys: [";"], description: "EasyMotion jump" },
-      { keys: ["Alt", "Up/Down"], description: "Reorder among siblings", altKeys: ["Alt+k/j"] },
-      { keys: ["Alt", "Left/Right"], description: "Indent / Outdent", altKeys: ["Alt+h/l"] },
+      { keys: ["Alt", "\u2191"], description: "Reorder up", altKeys: ["k"] },
+      { keys: ["Alt", "\u2193"], description: "Reorder down", altKeys: ["j"] },
+      { keys: ["Alt", "\u2190"], description: "Outdent", altKeys: ["h"] },
+      { keys: ["Alt", "\u2192"], description: "Indent", altKeys: ["l"] },
       { keys: ["Shift", "Tab"], description: "Detach node to root" },
       { keys: ["Escape"], description: "Deselect" },
     ],
@@ -56,7 +61,10 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Cmd", "-"], description: "Zoom out" },
       { keys: ["Cmd", "0"], description: "Zoom to fit" },
       { keys: ["Cmd", "1"], description: "Zoom to selected node" },
-      { keys: ["Shift", "Arrows"], description: "Pan canvas", altKeys: ["Shift+h/j/k/l"] },
+      { keys: ["Shift", "\u2190"], description: "Pan left", altKeys: ["h"] },
+      { keys: ["Shift", "\u2192"], description: "Pan right", altKeys: ["l"] },
+      { keys: ["Shift", "\u2191"], description: "Pan up", altKeys: ["k"] },
+      { keys: ["Shift", "\u2193"], description: "Pan down", altKeys: ["j"] },
     ],
   },
   {

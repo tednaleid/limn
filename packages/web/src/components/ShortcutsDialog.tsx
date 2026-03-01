@@ -139,23 +139,28 @@ function ShortcutRow({ entry, isMouse }: { entry: ShortcutEntry; isMouse: boolea
             {entry.keys.join(" + ")}
           </span>
         ) : (
-          entry.keys.map((key, i) => (
-            <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              {i > 0 && (
-                <span style={{ color: "var(--text-muted)", fontSize: 11 }}>+</span>
-              )}
-              <KbdBadge>{key}</KbdBadge>
-            </span>
-          ))
+          <>
+            {entry.keys.map((key, i) => (
+              <span key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {i > 0 && (
+                  <span style={{ color: "var(--text-muted)", fontSize: 11 }}>+</span>
+                )}
+                <KbdBadge>{key}</KbdBadge>
+              </span>
+            ))}
+            {entry.altKeys && (
+              <>
+                <span style={{ color: "var(--text-muted)", fontSize: 11 }}>or</span>
+                {entry.altKeys.map((key, i) => (
+                  <KbdBadge key={i}>{key}</KbdBadge>
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
       <div style={{ flex: 1 }}>
         {entry.description}
-        {entry.altKeys && (
-          <span style={{ color: "var(--text-muted)", marginLeft: 6, fontSize: 12 }}>
-            ({entry.altKeys.join(", ")})
-          </span>
-        )}
       </div>
     </div>
   );
