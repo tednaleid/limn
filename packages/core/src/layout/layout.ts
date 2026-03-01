@@ -273,9 +273,13 @@ export function reflowSubtree(store: MindMapStore, nodeId: string): void {
   const children = store.getChildren(nodeId);
   if (children.length === 0) return;
 
-  const dir = branchDirection(store, nodeId);
+  // For root nodes, each child keeps its own side; for non-roots, all
+  // children share the parent's branch direction.
+  const isRoot = node.parentId === null;
+  const parentDir = isRoot ? 0 : branchDirection(store, nodeId);
 
   for (const child of children) {
+    const dir = isRoot ? branchDirection(store, child.id) : parentDir;
     const expectedX = node.x + H_OFFSET * dir;
     if (Math.abs(child.x - expectedX) > 0.001) {
       store.setNodePosition(child.id, expectedX, child.y);

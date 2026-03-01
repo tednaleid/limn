@@ -242,6 +242,68 @@ describe("reflowChildren (r key)", () => {
     expect(midpoint).toBeCloseTo(root.y, 0);
   });
 
+  test("r on root preserves left-side children on the left", () => {
+    const editor = new TestEditor();
+    const map: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", theme: "default" },
+      camera: { x: 0, y: 0, zoom: 1 },
+      roots: [
+        {
+          id: "root",
+          text: "Root",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: NODE_HEIGHT,
+          children: [
+            {
+              id: "left1",
+              text: "Left 1",
+              x: -H_OFFSET,
+              y: -26,
+              width: 100,
+              height: NODE_HEIGHT,
+              children: [],
+            },
+            {
+              id: "right1",
+              text: "Right 1",
+              x: H_OFFSET,
+              y: -26,
+              width: 100,
+              height: NODE_HEIGHT,
+              children: [],
+            },
+            {
+              id: "right2",
+              text: "Right 2",
+              x: H_OFFSET,
+              y: 26,
+              width: 100,
+              height: NODE_HEIGHT,
+              children: [],
+            },
+          ],
+        },
+      ],
+      assets: [],
+    };
+    editor.loadJSON(map);
+
+    // Displace left child further left (wrong x, but still on left side)
+    editor.setNodePosition("left1", -H_OFFSET - 50, 200);
+
+    editor.select("root");
+    editor.pressKey("r");
+
+    // Left child should stay on the left side
+    expect(editor.getNode("left1").x).toBe(-H_OFFSET);
+    // Right children should stay on the right side
+    expect(editor.getNode("right1").x).toBe(H_OFFSET);
+    expect(editor.getNode("right2").x).toBe(H_OFFSET);
+  });
+
   test("reflow pushes other root trees out of the way", () => {
     const editor = new TestEditor();
     // Two roots: one with children, one nearby that could overlap
