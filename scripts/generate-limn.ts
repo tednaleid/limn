@@ -66,6 +66,28 @@ interface GenNode {
 
 // --- Argument parsing ---
 
+const USAGE = `\
+Usage: generate-limn.ts [options]
+
+Generate .limn mind map files with configurable tree shape.
+
+Size (one required, mutually exclusive):
+  --nodes N        Total number of nodes to generate
+  --depth D        Depth of a full tree (all parents get max children)
+
+Options:
+  --children C     Max children per node (default: 3)
+  --max-chars N    Max characters per node text (default: 12)
+  -o, --output F   Output file path (default: stdout)
+  -h, --help       Show this help message
+
+Upper limit: ${MAX_NODES} nodes.
+
+Examples:
+  generate-limn.ts --nodes 7 --children 2        # small binary tree
+  generate-limn.ts --depth 3 --children 3         # full ternary tree (40 nodes)
+  generate-limn.ts --nodes 1024 -o /tmp/big.limn  # write to file`;
+
 function parseArgs(): {
   totalNodes: number;
   maxChildren: number;
@@ -82,6 +104,10 @@ function parseArgs(): {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
+      case "-h":
+      case "--help":
+        console.log(USAGE);
+        process.exit(0);
       case "--nodes":
         nodes = parseInt(args[++i]!, 10);
         break;
@@ -99,7 +125,8 @@ function parseArgs(): {
         output = args[++i]!;
         break;
       default:
-        console.error(`Unknown argument: ${arg}`);
+        console.error(`Unknown argument: ${arg}\n`);
+        console.error(USAGE);
         process.exit(1);
     }
   }
