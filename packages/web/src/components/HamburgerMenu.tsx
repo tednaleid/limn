@@ -6,6 +6,7 @@ import { useEditor } from "../hooks/useEditor";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { THEME_REGISTRY, getThemesByMode } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
+import { resolveSystemMode } from "../theme/themes";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -81,8 +82,22 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
     close();
   };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
-  const handleLightTheme = (key: ThemeKey) => { editor.setLightTheme(key); };
-  const handleDarkTheme = (key: ThemeKey) => { editor.setDarkTheme(key); };
+  const handleLightTheme = (key: ThemeKey) => {
+    editor.setLightTheme(key);
+    // If the active mode is dark, switch to light so the user sees the theme they picked
+    const effectiveMode = currentTheme === "system" ? resolveSystemMode() : currentTheme;
+    if (effectiveMode !== "light") {
+      editor.setTheme("light");
+    }
+  };
+  const handleDarkTheme = (key: ThemeKey) => {
+    editor.setDarkTheme(key);
+    // If the active mode is light, switch to dark so the user sees the theme they picked
+    const effectiveMode = currentTheme === "system" ? resolveSystemMode() : currentTheme;
+    if (effectiveMode !== "dark") {
+      editor.setTheme("dark");
+    }
+  };
 
   return (
     <>
