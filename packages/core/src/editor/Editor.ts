@@ -894,10 +894,12 @@ export class Editor {
     if (direction === "up" || direction === "down") {
       const insertIndex = direction === "up" ? target.children.length : 0;
       this.store.moveNode(nodeId, target.id, insertIndex);
+      this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId);
     } else {
       const directionHint = direction === "right" ? -1 : 1;
       this.store.moveNode(nodeId, target.id);
+      this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId, directionHint);
     }
 
@@ -1075,6 +1077,7 @@ export class Editor {
       const oldY = this.store.getNode(nodeId).y;
       this.store.moveNode(nodeId, this.drag.reparentTargetId);
       this.clearSubtreeColors(nodeId);
+      this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId);
       const newNode = this.store.getNode(nodeId);
       const dx = newNode.x - oldX;

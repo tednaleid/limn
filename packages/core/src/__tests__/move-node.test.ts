@@ -277,6 +277,28 @@ describe("moveNode structural moves", () => {
       editor.undo();
       expect(editor.getNode("n0").parentId).toBeNull();
     });
+
+    test("spatial reparent remeasures root becoming child", () => {
+      editor = new TestEditor();
+      editor.addRoot("root1", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      const rootDims = { width: editor.getNode("n0").width, height: editor.getNode("n0").height };
+
+      editor.addRoot("root2", 0, 200);
+      editor.select("n1");
+      editor.exitEditMode();
+
+      // Reparent root1 down onto root2 via spatial reparent
+      editor.select("n0");
+      editor.pressKey("ArrowDown", { alt: true });
+      expect(editor.getNode("n0").parentId).toBe("n1");
+
+      const childDims = { width: editor.getNode("n0").width, height: editor.getNode("n0").height };
+      // Child font size (14) is smaller than root (18), so dimensions should shrink
+      expect(childDims.width).toBeLessThan(rootDims.width);
+      expect(childDims.height).toBeLessThan(rootDims.height);
+    });
   });
 
   describe("undo/redo", () => {
