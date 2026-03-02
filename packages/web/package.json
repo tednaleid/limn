@@ -15,7 +15,8 @@
     "./components/HamburgerMenu": "./src/components/HamburgerMenu.tsx",
     "./components/ShortcutsDialog": "./src/components/ShortcutsDialog.tsx",
     "./export/svg": "./src/export/svg.ts",
-    "./theme/themes": "./src/theme/themes.ts"
+    "./theme/themes": "./src/theme/themes.ts",
+    "./components/KeystrokeOverlay": "./src/components/KeystrokeOverlay.tsx"
   },
   "scripts": {
     "dev": "vite",

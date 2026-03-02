@@ -11,7 +11,7 @@ import type { MindMapFileFormat } from "@limn/core";
 import { ObsidianPersistenceProvider } from "./ObsidianPersistenceProvider";
 import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
 import { createRoot, type Root } from "react-dom/client";
-import { createElement } from "react";
+import { createElement, useState, useEffect } from "react";
 import { EditorContext } from "@limn/web/hooks/useEditor";
 import { PersistenceContext } from "@limn/web/hooks/usePersistence";
 import { AssetUrlContext } from "@limn/web/hooks/useAssetUrls";
@@ -21,6 +21,7 @@ import { HamburgerMenu } from "@limn/web/components/HamburgerMenu";
 import type { MenuItemDef } from "@limn/web/components/HamburgerMenu";
 import { resolveActiveThemeKey } from "@limn/web/theme/themes";
 import { exportSvg } from "@limn/web/export/svg";
+import { KeystrokeOverlay } from "@limn/web/components/KeystrokeOverlay";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 
 export const VIEW_TYPE_LIMN = "limn-view";
@@ -40,10 +41,19 @@ const obsidianMenuItems: MenuItemDef[] = [
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
 function LimnViewRoot({ editor }: { editor: Editor }) {
   useKeyboardHandler(editor);
+
+  const [showKeystrokeOverlay, setShowKeystrokeOverlay] = useState(false);
+  useEffect(() => {
+    const toggle = () => setShowKeystrokeOverlay((v) => !v);
+    window.addEventListener("limn:toggle-keystroke-overlay", toggle);
+    return () => window.removeEventListener("limn:toggle-keystroke-overlay", toggle);
+  }, []);
+
   return createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
     createElement(MindMapCanvas),
     createElement(ToolbarOverlay),
-    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian" }),
+    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
+    createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay }),
   );
 }
 
