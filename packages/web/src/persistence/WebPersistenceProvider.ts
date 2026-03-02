@@ -17,6 +17,7 @@ interface StoredDocument {
 export class WebPersistenceProvider implements PersistenceProvider {
   private channel: BroadcastChannel | null = null;
   private revision = 0;
+  private readonly tabId = crypto.randomUUID();
 
   constructor(private docId: string) {}
 
@@ -31,7 +32,7 @@ export class WebPersistenceProvider implements PersistenceProvider {
     await set(IDB_REVISION_PREFIX + this.docId, this.revision);
 
     try {
-      this.channel?.postMessage({ docId: this.docId, revision: this.revision });
+      this.channel?.postMessage({ docId: this.docId, revision: this.revision, tabId: this.tabId });
     } catch {
       // Channel may be closed
     }
@@ -63,6 +64,7 @@ export class WebPersistenceProvider implements PersistenceProvider {
       this.channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       this.channel.onmessage = async (event) => {
         const msg = event.data;
+        if (msg.tabId === this.tabId) return;
         if (msg.docId === this.docId && msg.revision > this.revision) {
           this.revision = msg.revision;
           const data = await this.load();
