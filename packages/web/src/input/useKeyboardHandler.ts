@@ -65,6 +65,18 @@ export function useKeyboardHandler(editor: Editor): void {
         return;
       }
 
+      // m key toggles hamburger menu (nav mode, no modifiers)
+      if (
+        !handled &&
+        e.key === "m" &&
+        !editor.isEditing() &&
+        !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey
+      ) {
+        window.dispatchEvent(new Event("limn:toggle-menu"));
+        e.preventDefault();
+        return;
+      }
+
       if (handled || ALWAYS_PREVENT.has(e.key) || (e.metaKey && META_PREVENT.has(e.key))) {
         e.preventDefault();
         e.stopPropagation();

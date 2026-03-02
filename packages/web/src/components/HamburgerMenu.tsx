@@ -34,20 +34,53 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   const menuRef = useRef<HTMLDivElement>(null);
   const currentTheme = normalizeTheme(editor.getTheme());
 
+  const [focusIndex, setFocusIndex] = useState(0);
+
   const close = useCallback(() => setOpen(false), []);
 
-  // Close on Escape (capture phase, before canvas handler)
+  // Listen for 'm' key toggle from useKeyboardHandler
+  useEffect(() => {
+    const handleToggleMenu = () => setOpen((prev) => !prev);
+    window.addEventListener("limn:toggle-menu", handleToggleMenu);
+    return () => window.removeEventListener("limn:toggle-menu", handleToggleMenu);
+  }, []);
+
+  // Reset focusIndex when menu opens
+  useEffect(() => {
+    if (open) setFocusIndex(0);
+  }, [open]);
+
+  // Keyboard navigation (capture phase, before canvas handler)
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        close();
+      switch (e.key) {
+        case "Escape":
+          e.stopPropagation();
+          close();
+          break;
+        case "j":
+        case "ArrowDown":
+          e.stopPropagation();
+          e.preventDefault();
+          setFocusIndex((prev) => (prev + 1) % actionableItemCount);
+          break;
+        case "k":
+        case "ArrowUp":
+          e.stopPropagation();
+          e.preventDefault();
+          setFocusIndex((prev) => (prev - 1 + actionableItemCount) % actionableItemCount);
+          break;
+        case "Enter":
+          e.stopPropagation();
+          e.preventDefault();
+          activateItemAtIndex(focusIndex);
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [open, close]);
+  }, [open, close, focusIndex]);
 
   // Close on outside click
   useEffect(() => {
@@ -86,6 +119,29 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
     close();
   };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
+  // Build a flat list of actionable menu items for keyboard navigation.
+  // This must match the order they appear in the rendered menu.
+  const actionableItems: { label: string; onClick: () => void }[] = items
+    ? items.filter((item): item is NonNullable<MenuItemDef> => item !== null)
+    : [
+        { label: "Open", onClick: handleOpen },
+        { label: "Save", onClick: handleSave },
+        { label: "Save As", onClick: handleSaveAs },
+        { label: "Export SVG", onClick: handleExport },
+        { label: "Copy Share Link", onClick: handleShare },
+        { label: "New", onClick: handleClear },
+      ];
+  // Always append the fixed items at the bottom
+  actionableItems.push(
+    { label: "Keyboard Shortcuts", onClick: handleShortcuts },
+    { label: "Keystroke Overlay", onClick: handleKeystrokeOverlay },
+  );
+  const actionableItemCount = actionableItems.length;
+  const activateItemAtIndex = (index: number) => {
+    const item = actionableItems[index];
+    if (item) item.onClick();
+  };
+
   const handleLightTheme = (key: ThemeKey) => {
     editor.setLightTheme(key);
     // If the active mode is dark, switch to light so the user sees the theme they picked
@@ -150,26 +206,32 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
           }}
         >
           {items ? (
-            items.map((item, i) =>
-              item === null ? <MenuDivider key={`d${i}`} /> : <MenuItem key={item.label} {...item} />
-            )
+            (() => {
+              let idx = 0;
+              return items.map((item, i) =>
+                item === null
+                  ? <MenuDivider key={`d${i}`} />
+                  : <MenuItem key={item.label} {...item} active={focusIndex === idx++} />
+              );
+            })()
           ) : (
             <>
-              <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} />
-              <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} />
-              <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} />
-              <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
-              <MenuItem label="Copy Share Link" onClick={handleShare} />
+              <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} active={focusIndex === 0} />
+              <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} active={focusIndex === 1} />
+              <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} active={focusIndex === 2} />
+              <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} active={focusIndex === 3} />
+              <MenuItem label="Copy Share Link" onClick={handleShare} active={focusIndex === 4} />
               <MenuDivider />
-              <MenuItem label="New" onClick={handleClear} />
+              <MenuItem label="New" onClick={handleClear} active={focusIndex === 5} />
             </>
           )}
           <MenuDivider />
-          <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} />
+          <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} active={focusIndex === actionableItemCount - 2} />
           <MenuItem
             label={keystrokeOverlay ? "\u2713 Keystroke Overlay" : "Keystroke Overlay"}
             shortcut="Ctrl+Shift+K"
             onClick={handleKeystrokeOverlay}
+            active={focusIndex === actionableItemCount - 1}
           />
           {showTheme && (
             <>
@@ -191,10 +253,11 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   );
 }
 
-function MenuItem({ label, shortcut, onClick }: {
+function MenuItem({ label, shortcut, onClick, active }: {
   label: string;
   shortcut?: string;
   onClick: () => void;
+  active?: boolean;
 }) {
   return (
     <button
@@ -207,7 +270,7 @@ function MenuItem({ label, shortcut, onClick }: {
         width: "100%",
         padding: "6px 12px",
         border: "none",
-        background: "transparent",
+        background: active ? "var(--selection-bg)" : "transparent",
         cursor: "pointer",
         fontSize: 14,
         color: "var(--text-color)",
