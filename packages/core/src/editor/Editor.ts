@@ -134,6 +134,9 @@ export class Editor {
   private redoStack: HistoryEntry[] = [];
   private lastUndoLabel: string | null = null;
 
+  // Cross-tab sync: true only during applyExternalUpdate's notify()
+  private _isExternalUpdate = false;
+
   // Change notification for reactive UI (useSyncExternalStore)
   private version = 0;
   private listeners: Set<() => void> = new Set();
@@ -244,6 +247,11 @@ export class Editor {
 
   isEditing(): boolean {
     return this.editing;
+  }
+
+  /** True only during the notify() call inside applyExternalUpdate(). */
+  get isExternalUpdate(): boolean {
+    return this._isExternalUpdate;
   }
 
   get nodeCount(): number {
@@ -1171,18 +1179,22 @@ export class Editor {
 
   // --- Serialization ---
 
-  loadJSON(data: MindMapFileFormat): void {
-    this.store = deserialize(data);
-    this.store.setAssets((data.assets ?? []).map((a) => ({ ...a })));
-    // Fill in missing meta fields for backward compatibility with old data
+  /** Parse meta fields with backward compatibility for old data formats. */
+  private parseMeta(data: MindMapFileFormat): MindMapMeta {
     const meta = data.meta as Record<string, unknown>;
-    this.meta = {
+    return {
       id: (meta.id as string) ?? "default",
       version: data.version,
       mode: (meta.mode as string) ?? (meta.theme as string) ?? "system",
       lightTheme: (meta.lightTheme as string) ?? DEFAULT_LIGHT_THEME,
       darkTheme: (meta.darkTheme as string) ?? DEFAULT_DARK_THEME,
     };
+  }
+
+  loadJSON(data: MindMapFileFormat): void {
+    this.store = deserialize(data);
+    this.store.setAssets((data.assets ?? []).map((a) => ({ ...a })));
+    this.meta = this.parseMeta(data);
     this.camera = data.camera ?? { x: 0, y: 0, zoom: 1 };
     this.selectedId = null;
     this.editing = false;
@@ -1192,6 +1204,30 @@ export class Editor {
     // Auto-assign branch colors to roots that lack them (old files)
     this.assignMissingRootColors();
     this.notify();
+  }
+
+  /**
+   * Apply an external update (from another tab) preserving local session state.
+   * Replaces document data but keeps selection (if node still exists), camera,
+   * and sets isExternalUpdate so auto-save can skip.
+   */
+  applyExternalUpdate(data: MindMapFileFormat): void {
+    this.store = deserialize(data);
+    this.store.setAssets((data.assets ?? []).map((a) => ({ ...a })));
+    this.meta = this.parseMeta(data);
+    // Preserve camera -- don't let another tab move our viewport
+    // Preserve selection if the node still exists in the new data
+    if (this.selectedId !== null && !this.store.hasNode(this.selectedId)) {
+      this.selectedId = null;
+      this.editing = false;
+    }
+    this.undoStack = [];
+    this.redoStack = [];
+    this.lastUndoLabel = null;
+    this.assignMissingRootColors();
+    this._isExternalUpdate = true;
+    this.notify();
+    this._isExternalUpdate = false;
   }
 
   /**

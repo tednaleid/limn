@@ -1169,4 +1169,86 @@ describe("Editor", () => {
       expect(urls).toEqual([]);
     });
   });
+
+  describe("applyExternalUpdate", () => {
+    const updatedMap: MindMapFileFormat = {
+      version: 1,
+      meta: { id: "test", mode: "dark", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+      camera: { x: 500, y: 500, zoom: 2 },
+      roots: [
+        {
+          id: "n0",
+          text: "Root Updated",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 32,
+          children: [
+            { id: "n1", text: "Child 1", x: 250, y: -30, width: 100, height: 32, children: [] },
+          ],
+        },
+      ],
+      assets: [],
+    };
+
+    test("preserves selection when node still exists", () => {
+      editor.select("n1");
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.getSelectedId()).toBe("n1");
+    });
+
+    test("clears selection when selected node is gone", () => {
+      editor.select("n2"); // n2 is in sampleMap but not in updatedMap
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.getSelectedId()).toBeNull();
+    });
+
+    test("preserves editing state when node still exists", () => {
+      editor.select("n1");
+      editor.enterEditMode();
+      expect(editor.isEditing()).toBe(true);
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.isEditing()).toBe(true);
+      expect(editor.getSelectedId()).toBe("n1");
+    });
+
+    test("clears editing state when selected node is gone", () => {
+      editor.select("n2");
+      editor.enterEditMode();
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.isEditing()).toBe(false);
+      expect(editor.getSelectedId()).toBeNull();
+    });
+
+    test("preserves camera position", () => {
+      editor.setCamera(100, 200, 1.5);
+      editor.applyExternalUpdate(updatedMap);
+      const cam = editor.getCamera();
+      expect(cam.x).toBe(100);
+      expect(cam.y).toBe(200);
+      expect(cam.zoom).toBe(1.5);
+    });
+
+    test("clears undo/redo stacks", () => {
+      editor.setText("n0", "change 1");
+      editor.setText("n0", "change 2");
+      expect(editor.canUndo()).toBe(true);
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.canUndo()).toBe(false);
+      expect(editor.canRedo()).toBe(false);
+    });
+
+    test("updates document data", () => {
+      editor.applyExternalUpdate(updatedMap);
+      expect(editor.getNode("n0").text).toBe("Root Updated");
+    });
+
+    test("isExternalUpdate is true during notify, false after", () => {
+      const values: boolean[] = [];
+      editor.subscribe(() => values.push(editor.isExternalUpdate));
+      editor.applyExternalUpdate(updatedMap);
+      expect(values).toEqual([true]);
+      expect(editor.isExternalUpdate).toBe(false);
+    });
+  });
 });
