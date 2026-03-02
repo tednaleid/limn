@@ -9,6 +9,16 @@ const FADE_DELAY_MS = 20;
 /** Duration of the CSS opacity fade (ms). Must match the transition in KeystrokeOverlay. */
 const FADE_DURATION_MS = 800;
 
+/** Returns true if the e.code value is a modifier key (Meta, Shift, Control, Alt). */
+function isModifierCode(code: string): boolean {
+  return (
+    code.startsWith("Meta") ||
+    code.startsWith("Shift") ||
+    code.startsWith("Control") ||
+    code.startsWith("Alt")
+  );
+}
+
 /** The Ctrl+Shift+K toggle combo -- skip displaying it in the overlay. */
 function isToggleCombo(held: Set<string>): boolean {
   return held.size === 3 && held.has("Control") && held.has("Shift") && held.has("K");
@@ -107,6 +117,16 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
 
     function handleKeyUp(e: KeyboardEvent) {
       heldRef.current.delete(e.code);
+
+      // macOS swallows keyup events for non-modifier keys while Cmd is held.
+      // When Meta is released, flush any non-modifier keys that got stuck.
+      if (e.code.startsWith("Meta")) {
+        for (const code of heldRef.current.keys()) {
+          if (!isModifierCode(code)) {
+            heldRef.current.delete(code);
+          }
+        }
+      }
 
       const newStable = formatKeystrokeParts(new Set(heldRef.current.values()));
       const oldStable = stableRef.current;
