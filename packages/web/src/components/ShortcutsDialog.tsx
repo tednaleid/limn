@@ -1,7 +1,7 @@
 // ABOUTME: Keyboard shortcuts help dialog component.
 // ABOUTME: Shows all shortcuts grouped by category with kbd-style key badges.
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { SHORTCUT_GROUPS } from "@limn/core";
 import type { ShortcutEntry, ShortcutGroup } from "@limn/core";
 
@@ -9,16 +9,49 @@ export interface ShortcutsDialogProps {
   onClose: () => void;
 }
 
+const SCROLL_AMOUNT = 60;
+
 export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
   const handleClose = useCallback(() => onClose(), [onClose]);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Escape closes (capture phase, before canvas handler)
+  // Focus the scrollable body on mount so screen readers and scroll work
+  useEffect(() => {
+    bodyRef.current?.focus();
+  }, []);
+
+  // Escape closes; j/k, arrows, space scroll (capture phase, before canvas handler)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         handleClose();
+        return;
       }
+
+      const body = bodyRef.current;
+      if (!body) return;
+
+      let delta = 0;
+      switch (e.key) {
+        case "j":
+        case "ArrowDown":
+          delta = SCROLL_AMOUNT;
+          break;
+        case "k":
+        case "ArrowUp":
+          delta = -SCROLL_AMOUNT;
+          break;
+        case " ":
+          delta = e.shiftKey ? -body.clientHeight * 0.8 : body.clientHeight * 0.8;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      body.scrollBy({ top: delta });
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
@@ -86,7 +119,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
         </div>
 
         {/* Body */}
-        <div style={{ overflow: "auto", padding: "12px 20px 20px" }}>
+        <div ref={bodyRef} tabIndex={-1} style={{ overflow: "auto", padding: "12px 20px 20px", outline: "none" }}>
           {SHORTCUT_GROUPS.map((group) => (
             <ShortcutSection key={group.title} group={group} />
           ))}
