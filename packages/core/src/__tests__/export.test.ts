@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
-import { compressToUrl, decompressFromUrl } from "../export/url";
+import { compressToUrl, decompressFromUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "../export/url";
 import type { MindMapFileFormat } from "../serialization/schema";
 
 function makeFile(overrides: Partial<MindMapFileFormat> = {}): MindMapFileFormat {
@@ -64,6 +64,48 @@ describe("URL sharing", () => {
   it("returns null for empty string", () => {
     const result = decompressFromUrl("");
     expect(result).toBeNull();
+  });
+});
+
+describe("prepareForShare", () => {
+  it("strips assets from shared data", () => {
+    const data = makeFile({
+      assets: [
+        { id: "a1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 },
+      ],
+    });
+    const shared = prepareForShare(data);
+    expect(shared.assets).toEqual([]);
+  });
+
+  it("preserves roots, camera, and meta", () => {
+    const data = makeFile({
+      roots: [
+        { id: "r1", text: "Root", x: 0, y: 0, width: 100, height: 32, children: [] },
+      ],
+      camera: { x: 10, y: 20, zoom: 1.5 },
+    });
+    const shared = prepareForShare(data);
+    expect(shared.roots).toEqual(data.roots);
+    expect(shared.camera).toEqual(data.camera);
+    expect(shared.meta).toEqual(data.meta);
+    expect(shared.version).toBe(data.version);
+  });
+
+  it("does not mutate the original data", () => {
+    const data = makeFile({
+      assets: [
+        { id: "a1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 },
+      ],
+    });
+    prepareForShare(data);
+    expect(data.assets).toHaveLength(1);
+  });
+});
+
+describe("MAX_SHARE_URL_LENGTH", () => {
+  it("is 32000", () => {
+    expect(MAX_SHARE_URL_LENGTH).toBe(32_000);
   });
 });
 

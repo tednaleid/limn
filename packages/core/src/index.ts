@@ -31,7 +31,7 @@ export type {
 export { CURRENT_FORMAT_VERSION } from "./serialization/schema";
 export { migrateToLatest } from "./serialization/migration";
 
-export { compressToUrl, decompressFromUrl } from "./export/url";
+export { compressToUrl, decompressFromUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "./export/url";
 
 export {
   subtreeHeight,

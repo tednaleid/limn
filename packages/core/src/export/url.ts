@@ -4,6 +4,17 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
 import type { MindMapFileFormat } from "../serialization/schema";
 
+/** Safe maximum URL length across browsers (Chrome caps at ~32K). */
+export const MAX_SHARE_URL_LENGTH = 32_000;
+
+/**
+ * Prepare a mind map for sharing via URL.
+ * Returns a shallow clone with assets stripped (image blobs are sidecar files).
+ */
+export function prepareForShare(data: MindMapFileFormat): MindMapFileFormat {
+  return { ...data, assets: [] };
+}
+
 /**
  * Compress a mind map to a URL-safe string.
  * Uses lz-string's EncodedURIComponent mode (no +, /, = characters).
