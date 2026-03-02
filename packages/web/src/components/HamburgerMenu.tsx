@@ -75,6 +75,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   const handleSave = () => { editor.requestSave(); close(); };
   const handleSaveAs = () => { editor.requestSaveAs(); close(); };
   const handleExport = () => { editor.requestExport(); close(); };
+  const handleShare = () => { editor.requestShare(); close(); };
   const handleClear = () => {
     window.location.hash = "local-doc=" + crypto.randomUUID();
     window.location.reload();
@@ -158,6 +159,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
               <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} />
               <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} />
               <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} />
+              <MenuItem label="Copy Share Link" onClick={handleShare} />
               <MenuDivider />
               <MenuItem label="New" onClick={handleClear} />
             </>

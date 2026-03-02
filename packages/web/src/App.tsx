@@ -2,7 +2,7 @@
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { Editor, AutoSaveController } from "@limn/core";
+import { Editor, AutoSaveController, compressToUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 import { EditorContext } from "./hooks/useEditor";
 import { PersistenceContext } from "./hooks/usePersistence";
@@ -299,6 +299,22 @@ export function App({ docId, initialData }: AppProps) {
     });
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
+    });
+    editor.onShare(async () => {
+      const data = prepareForShare(editor.toJSON());
+      const compressed = compressToUrl(data);
+      const shareUrl = window.location.origin + window.location.pathname + "#data=" + compressed;
+      if (shareUrl.length > MAX_SHARE_URL_LENGTH) {
+        setFlash({ message: "Map too large to share as URL", isError: true });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        const hasImages = editor.getAssets().length > 0;
+        setFlash({ message: hasImages ? "Share link copied (without images)" : "Share link copied" });
+      } catch {
+        setFlash({ message: "Failed to copy link", isError: true });
+      }
     });
   }, [editor, provider]);
 
