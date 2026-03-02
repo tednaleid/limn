@@ -384,6 +384,24 @@ describe("MindMapStore", () => {
     });
   });
 
+  describe("hasNode", () => {
+    test("returns true for existing node", () => {
+      const id = store.addRoot("Root");
+      expect(store.hasNode(id)).toBe(true);
+    });
+
+    test("returns false for non-existent node", () => {
+      expect(store.hasNode("nonexistent")).toBe(false);
+    });
+
+    test("returns false after node is deleted", () => {
+      const rootId = store.addRoot("Root");
+      const childId = store.addChild(rootId, "Child");
+      store.deleteNode(childId);
+      expect(store.hasNode(childId)).toBe(false);
+    });
+  });
+
   describe("assets", () => {
     const asset: Asset = {
       id: "a1",

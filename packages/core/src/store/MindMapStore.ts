@@ -32,6 +32,10 @@ export class MindMapStore {
     return node;
   }
 
+  hasNode(id: string): boolean {
+    return this.nodes.has(id);
+  }
+
   getRoots(): MindMapNode[] {
     return this.rootIds.map((id) => this.getNode(id));
   }
