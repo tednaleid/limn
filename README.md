@@ -62,6 +62,18 @@ bun run build      # production build
 - IndexedDB auto-save with cross-tab sync
 - Sidecar asset storage for images (`file.limn` + `file.assets/`)
 
+## Storage
+
+All data is stored locally in the browser using IndexedDB. Nothing is sent to a server.
+
+- Each document gets a unique ID shown in the URL hash (`#local-doc=<uuid>`)
+- Opening the bare URL (no hash) reopens the last-edited document
+- Opening a `#data=...` URL decompresses the inline document, assigns it a fresh UUID, and saves it locally
+- The "New" menu item creates a new document with its own UUID
+- Two tabs with the same `#local-doc=<uuid>` URL will stay in sync via BroadcastChannel
+- Clearing browser data (IndexedDB) deletes all locally stored documents
+- Use `Cmd+S` / `Cmd+O` to save/open `.limn` files for durable storage outside the browser
+
 ## File format
 
 `.limn` files are ZIP bundles containing `data.json` and an `assets/` directory for images. The current format version is 1.
