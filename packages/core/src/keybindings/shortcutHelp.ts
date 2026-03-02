@@ -98,6 +98,8 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Shift", "Alt", "\u2191"], description: "Pan up (fine)", altKeys: ["k"] },
       { keys: ["Shift", "Alt", "\u2193"], description: "Pan down (fine)", altKeys: ["j"] },
       { keys: ["Ctrl", "Shift", "K"], description: "Toggle keystroke overlay" },
+      { keys: ["m"], description: "Open menu" },
+      { keys: ["?"], description: "Keyboard shortcuts" },
     ],
   },
   {
