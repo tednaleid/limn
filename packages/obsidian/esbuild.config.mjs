@@ -2,12 +2,17 @@
 // ABOUTME: Externalizes obsidian API, bundles React (isolated instance).
 
 import esbuild from "esbuild";
-import { copyFileSync, mkdirSync } from "fs";
+import { execSync } from "child_process";
+import { copyFileSync, mkdirSync, readFileSync } from "fs";
 
 const dev = process.argv.includes("--dev");
 const watch = process.argv.includes("--watch");
 
 mkdirSync("dist", { recursive: true });
+
+const gitSha = execSync("git rev-parse --short HEAD").toString().trim();
+const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
+const version = pkg.version ?? "dev";
 
 const ctx = await esbuild[watch ? "context" : "build"]({
   entryPoints: ["src/main.ts"],
@@ -20,6 +25,10 @@ const ctx = await esbuild[watch ? "context" : "build"]({
   jsx: "automatic",
   sourcemap: dev ? "inline" : false,
   minify: !dev,
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __GIT_SHA__: JSON.stringify(gitSha),
+  },
   logLevel: "info",
 });
 

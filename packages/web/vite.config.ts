@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
+import { execSync } from "child_process";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+
+const gitSha = execSync("git rev-parse --short HEAD").toString().trim();
+const version = process.env.npm_package_version ?? "dev";
 
 export default defineConfig({
   base: "/limn/",
@@ -34,6 +38,10 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __GIT_SHA__: JSON.stringify(gitSha),
+  },
   build: {
     outDir: "dist",
   },

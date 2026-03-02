@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor } from "../hooks/useEditor";
 import { ShortcutsDialog } from "./ShortcutsDialog";
+import { AboutDialog } from "./AboutDialog";
 import { THEME_REGISTRY, getThemesByMode } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
 import { resolveSystemMode } from "../theme/themes";
@@ -31,6 +32,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   const editor = useEditor();
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentTheme = normalizeTheme(editor.getTheme());
 
@@ -118,6 +120,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
     window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
     close();
   };
+  const handleAbout = () => { setShowAbout(true); close(); };
   const handleTheme = (theme: string) => { editor.setTheme(theme); };
   // Build a flat list of actionable menu items for keyboard navigation.
   // This must match the order they appear in the rendered menu.
@@ -135,6 +138,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   actionableItems.push(
     { label: "Keyboard Shortcuts", onClick: handleShortcuts },
     { label: "Keystroke Overlay", onClick: handleKeystrokeOverlay },
+    { label: "About", onClick: handleAbout },
   );
   const actionableItemCount = actionableItems.length;
   const activateItemAtIndex = (index: number) => {
@@ -227,13 +231,14 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
             </>
           )}
           <MenuDivider />
-          <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} active={focusIndex === actionableItemCount - 2} />
+          <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} active={focusIndex === actionableItemCount - 3} />
           <MenuItem
             label={keystrokeOverlay ? "\u2713 Keystroke Overlay" : "Keystroke Overlay"}
             shortcut="Ctrl+Shift+K"
             onClick={handleKeystrokeOverlay}
-            active={focusIndex === actionableItemCount - 1}
+            active={focusIndex === actionableItemCount - 2}
           />
+          <MenuItem label="About" onClick={handleAbout} active={focusIndex === actionableItemCount - 1} />
           {showTheme && (
             <>
               <MenuDivider />
@@ -250,6 +255,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
       )}
     </div>
     {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+    {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
     </>
   );
 }
