@@ -28,7 +28,7 @@ export function ToolbarOverlay() {
     <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 1000, display: "flex", gap: 8 }}>
       {/* Zoom controls */}
       <div style={groupStyle}>
-        <ToolbarButton onClick={handleZoomOut} label="Zoom out">
+        <ToolbarButton onClick={handleZoomOut} label="Zoom out" tooltip="Zoom out (Cmd+\u2212)">
           <MinusIcon />
         </ToolbarButton>
         <button
@@ -43,21 +43,21 @@ export function ToolbarOverlay() {
             color: "var(--text-muted)",
             minWidth: 42,
           }}
-          title="Reset zoom to 100%"
+          title="Reset zoom (Cmd+0)"
         >
           {zoomPercent}%
         </button>
-        <ToolbarButton onClick={handleZoomIn} label="Zoom in">
+        <ToolbarButton onClick={handleZoomIn} label="Zoom in" tooltip="Zoom in (Cmd+=)">
           <PlusIcon />
         </ToolbarButton>
       </div>
 
       {/* Undo/redo controls */}
       <div style={groupStyle}>
-        <ToolbarButton onClick={handleUndo} label="Undo" disabled={!canUndo}>
+        <ToolbarButton onClick={handleUndo} label="Undo" tooltip="Undo (Cmd+Z)" disabled={!canUndo}>
           <UndoIcon />
         </ToolbarButton>
-        <ToolbarButton onClick={handleRedo} label="Redo" disabled={!canRedo}>
+        <ToolbarButton onClick={handleRedo} label="Redo" tooltip="Redo (Cmd+Shift+Z)" disabled={!canRedo}>
           <RedoIcon />
         </ToolbarButton>
       </div>
@@ -87,9 +87,10 @@ const buttonBaseStyle: React.CSSProperties = {
   color: "var(--text-muted)",
 };
 
-function ToolbarButton({ onClick, label, disabled, children }: {
+function ToolbarButton({ onClick, label, tooltip, disabled, children }: {
   onClick: () => void;
   label: string;
+  tooltip?: string;
   disabled?: boolean;
   children: React.ReactNode;
 }) {
@@ -99,7 +100,7 @@ function ToolbarButton({ onClick, label, disabled, children }: {
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       disabled={disabled}
-      title={label}
+      title={tooltip ?? label}
       aria-label={label}
       style={{
         ...buttonBaseStyle,

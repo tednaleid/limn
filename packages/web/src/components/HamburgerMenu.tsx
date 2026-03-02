@@ -177,6 +177,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
           justifyContent: "center",
           color: "var(--text-muted)",
         }}
+        title="Menu (m)"
         aria-label="Menu"
         aria-expanded={open}
         aria-haspopup="menu"
