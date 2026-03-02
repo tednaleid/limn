@@ -10,6 +10,8 @@ A keyboard-first, offline-capable mind map progressive web app built with TypeSc
 
 **Try it:** [tednaleid.github.io/limn](https://tednaleid.github.io/limn/)
 
+<video src="https://github.com/user-attachments/assets/a909e45e-f35a-42d7-a943-c5e88f1b71cc" controls width="100%"></video>
+
 ## Quick start
 
 ```bash
