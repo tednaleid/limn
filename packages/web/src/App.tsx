@@ -235,7 +235,7 @@ export function App() {
     if (!loaded) return;
     const autoSave = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
     const unsubExternal = provider.onExternalChange((data) => {
-      editor.loadJSON(data);
+      editor.applyExternalUpdate(data);
       editor.remeasureAllNodes();
     });
     return () => {
