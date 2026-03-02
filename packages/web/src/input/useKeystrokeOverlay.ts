@@ -35,7 +35,10 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
   const [stableParts, setStableParts] = useState<string[]>([]);
   const [transientParts, setTransientParts] = useState<string[]>([]);
   const [transientOpacity, setTransientOpacity] = useState(0);
-  const heldRef = useRef<Set<string>>(new Set());
+  // Track held keys by e.code (physical key, stable across modifier changes)
+  // mapped to display key name. Using e.code prevents keys getting stuck when
+  // e.key differs between keydown/keyup due to modifier state changes.
+  const heldRef = useRef<Map<string, string>>(new Map());
   const stableRef = useRef<string[]>([]);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,9 +85,10 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
         key = e.code.slice(3).toLowerCase();
       }
 
-      heldRef.current.add(key);
+      heldRef.current.set(e.code, key);
 
-      if (isToggleCombo(heldRef.current)) {
+      const heldKeys = new Set(heldRef.current.values());
+      if (isToggleCombo(heldKeys)) {
         stableRef.current = [];
         setStableParts([]);
         setTransientParts([]);
@@ -94,7 +98,7 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
       }
 
       cancelTimers();
-      const parts = formatKeystrokeParts(heldRef.current);
+      const parts = formatKeystrokeParts(heldKeys);
       stableRef.current = parts;
       setStableParts(parts);
       setTransientParts([]);
@@ -102,16 +106,9 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
     }
 
     function handleKeyUp(e: KeyboardEvent) {
-      let key = e.key;
-      if (e.altKey && e.code.startsWith("Key")) {
-        key = e.code.slice(3).toLowerCase();
-      }
+      heldRef.current.delete(e.code);
 
-      heldRef.current.delete(key);
-      // Also remove the raw e.key in case it was added under a different normalization
-      heldRef.current.delete(e.key);
-
-      const newStable = formatKeystrokeParts(heldRef.current);
+      const newStable = formatKeystrokeParts(new Set(heldRef.current.values()));
       const oldStable = stableRef.current;
       const fading = oldStable.filter((p) => !newStable.includes(p));
 
