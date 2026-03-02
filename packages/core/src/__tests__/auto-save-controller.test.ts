@@ -174,6 +174,77 @@ describe("AutoSaveController", () => {
     });
   });
 
+  describe("external update suppression", () => {
+    test("debounce mode skips save during external update", () => {
+      const provider = createMockProvider();
+      const ctrl = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
+
+      // Apply an external update (simulates cross-tab sync)
+      editor.applyExternalUpdate({
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          { id: "r", text: "External Change", x: 0, y: 0, width: 100, height: 32, children: [] },
+        ],
+        assets: [],
+      });
+
+      // Advance past debounce -- should NOT save because the change was external
+      vi.advanceTimersByTime(500);
+      expect(provider.saves).toHaveLength(0);
+
+      ctrl.dispose();
+    });
+
+    test("interval mode skips save during external update", () => {
+      const provider = createMockProvider();
+      const ctrl = new AutoSaveController(editor, provider, { mode: "interval", delayMs: 1000 });
+
+      editor.applyExternalUpdate({
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          { id: "r", text: "External Change", x: 0, y: 0, width: 100, height: 32, children: [] },
+        ],
+        assets: [],
+      });
+
+      vi.advanceTimersByTime(1000);
+      expect(provider.saves).toHaveLength(0);
+
+      ctrl.dispose();
+    });
+
+    test("still saves local changes after external update", () => {
+      const provider = createMockProvider();
+      const ctrl = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
+
+      // External update
+      editor.applyExternalUpdate({
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [
+          { id: "r", text: "External", x: 0, y: 0, width: 100, height: 32, children: [] },
+        ],
+        assets: [],
+      });
+
+      vi.advanceTimersByTime(500);
+      expect(provider.saves).toHaveLength(0);
+
+      // Local change should still save
+      editor.setText("r", "Local Edit");
+      vi.advanceTimersByTime(500);
+      expect(provider.saves).toHaveLength(1);
+      expect(provider.saves[0].roots[0].text).toBe("Local Edit");
+
+      ctrl.dispose();
+    });
+  });
+
   describe("dispose", () => {
     test("stops debounce saves", () => {
       const provider = createMockProvider();

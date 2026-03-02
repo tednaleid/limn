@@ -32,6 +32,7 @@ export class AutoSaveController {
 
   private onChangeDebounce(): void {
     if (this.disposed) return;
+    if (this.editor.isExternalUpdate) return;
     if (this.timer !== null) {
       clearTimeout(this.timer);
     }
@@ -42,6 +43,7 @@ export class AutoSaveController {
   }
 
   private onChangeInterval(): void {
+    if (this.editor.isExternalUpdate) return;
     this.dirty = true;
   }
 
