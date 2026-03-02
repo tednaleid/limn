@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor } from "../hooks/useEditor";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { AboutDialog } from "./AboutDialog";
+import type { AboutVariant } from "./AboutDialog";
 import { THEME_REGISTRY, getThemesByMode } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
 import { resolveSystemMode } from "../theme/themes";
@@ -26,9 +27,10 @@ export interface HamburgerMenuProps {
   items?: MenuItemDef[];
   showTheme?: boolean;
   keystrokeOverlay?: boolean;
+  aboutVariant?: AboutVariant;
 }
 
-export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: HamburgerMenuProps) {
+export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay, aboutVariant }: HamburgerMenuProps) {
   const editor = useEditor();
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -255,7 +257,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
       )}
     </div>
     {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
-    {showAbout && <AboutDialog onClose={() => setShowAbout(false)} />}
+    {showAbout && <AboutDialog onClose={() => setShowAbout(false)} variant={aboutVariant} />}
     </>
   );
 }

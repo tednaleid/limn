@@ -3,13 +3,16 @@
 
 import { useEffect, useCallback, useRef } from "react";
 
+export type AboutVariant = "web" | "obsidian";
+
 export interface AboutDialogProps {
   onClose: () => void;
+  variant?: AboutVariant;
 }
 
 const SCROLL_AMOUNT = 60;
 
-export function AboutDialog({ onClose }: AboutDialogProps) {
+export function AboutDialog({ onClose, variant = "web" }: AboutDialogProps) {
   const handleClose = useCallback(() => onClose(), [onClose]);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -123,13 +126,25 @@ export function AboutDialog({ onClose }: AboutDialogProps) {
             limn /lim/ verb — to outline in clear sharp detail
           </div>
           <div style={{ fontSize: 14, marginBottom: 16 }}>
-            A keyboard-first mind map that runs entirely in your browser.
+            {variant === "obsidian"
+              ? "A keyboard-first mind map plugin for Obsidian."
+              : "A keyboard-first mind map that runs entirely in your browser."}
           </div>
           <ul style={{ fontSize: 14, margin: "0 0 16px 0", paddingLeft: 20, lineHeight: 1.6 }}>
-            <li>All data stays on your device (IndexedDB). Nothing is sent to a server.</li>
-            <li>Works offline as an installable progressive web app.</li>
-            <li>Save and open .limn files for portable, durable storage.</li>
-            <li>Also available as an Obsidian plugin.</li>
+            {variant === "obsidian" ? (
+              <>
+                <li>Data is stored as .limn files in your Obsidian vault.</li>
+                <li>Nothing is sent to a server.</li>
+                <li>Also available as a standalone web app.</li>
+              </>
+            ) : (
+              <>
+                <li>All data stays on your device (IndexedDB). Nothing is sent to a server.</li>
+                <li>Works offline as an installable progressive web app.</li>
+                <li>Save and open .limn files for portable, durable storage.</li>
+                <li>Also available as an Obsidian plugin.</li>
+              </>
+            )}
           </ul>
           <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
             Source:{" "}

@@ -43,7 +43,7 @@ function LimnViewRoot({ editor }: { editor: Editor }) {
   return createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
     createElement(MindMapCanvas),
     createElement(ToolbarOverlay),
-    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true }),
+    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian" }),
   );
 }
 
