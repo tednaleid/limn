@@ -1,33 +1,38 @@
-// ABOUTME: Displays the current filename and a brief "Saved" indicator after saves.
+// ABOUTME: Displays the current filename and a brief flash message (e.g. "Saved") after actions.
 // ABOUTME: Positioned at the top center of the viewport.
 
 import { useEffect, useState } from "react";
 
-interface FileStatusBarProps {
-  filename: string | null;
-  saveFlash: boolean;
-  onSaveFlashDone: () => void;
+export interface FlashMessage {
+  message: string;
+  isError?: boolean;
 }
 
-export function FileStatusBar({ filename, saveFlash, onSaveFlashDone }: FileStatusBarProps) {
-  const [showSaved, setShowSaved] = useState(false);
+interface FileStatusBarProps {
+  filename: string | null;
+  flash: FlashMessage | null;
+  onFlashDone: () => void;
+}
+
+export function FileStatusBar({ filename, flash, onFlashDone }: FileStatusBarProps) {
+  const [visible, setVisible] = useState<FlashMessage | null>(null);
 
   useEffect(() => {
-    if (!saveFlash) return;
-    setShowSaved(true);
+    if (!flash) return;
+    setVisible(flash);
     const timer = setTimeout(() => {
-      setShowSaved(false);
-      onSaveFlashDone();
+      setVisible(null);
+      onFlashDone();
     }, 2000);
     return () => clearTimeout(timer);
-  }, [saveFlash, onSaveFlashDone]);
+  }, [flash, onFlashDone]);
 
-  if (!filename && !showSaved) return null;
+  if (!filename && !visible) return null;
 
   return (
     <div style={containerStyle}>
       {filename && <span style={filenameStyle}>{filename}</span>}
-      {showSaved && <span style={savedStyle}>Saved</span>}
+      {visible && <span style={visible.isError ? errorStyle : savedStyle}>{visible.message}</span>}
     </div>
   );
 }
@@ -59,6 +64,12 @@ const filenameStyle: React.CSSProperties = {
 
 const savedStyle: React.CSSProperties = {
   color: "var(--selection-border)",
+  fontSize: 12,
+  fontWeight: 500,
+};
+
+const errorStyle: React.CSSProperties = {
+  color: "#e53e3e",
   fontSize: 12,
   fontWeight: 500,
 };

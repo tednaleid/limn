@@ -241,9 +241,9 @@ export function App({ docId, initialData }: AppProps) {
     };
   }, [editor, provider, loaded]);
 
-  // File status: current filename and transient "Saved" indicator
+  // File status: current filename and transient flash message
   const [filename, setFilename] = useState<string | null>(null);
-  const [saveFlash, setSaveFlash] = useState(false);
+  const [flash, setFlash] = useState<{ message: string; isError?: boolean } | null>(null);
 
   // Wire Cmd+S, Cmd+O, Shift+Cmd+E to file/export actions
   useEffect(() => {
@@ -251,7 +251,7 @@ export function App({ docId, initialData }: AppProps) {
       try {
         const name = await saveToFile(editor, provider);
         setFilename(name);
-        setSaveFlash(true);
+        setFlash({ message: "Saved" });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           // User cancelled the file picker -- not an error
@@ -264,7 +264,7 @@ export function App({ docId, initialData }: AppProps) {
       try {
         const name = await saveAsToFile(editor, provider);
         setFilename(name);
-        setSaveFlash(true);
+        setFlash({ message: "Saved" });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Save As failed:", err);
@@ -307,7 +307,7 @@ export function App({ docId, initialData }: AppProps) {
     setFilename(getCurrentFilename());
   }, [loaded]);
 
-  const clearSaveFlash = useCallback(() => setSaveFlash(false), []);
+  const clearFlash = useCallback(() => setFlash(null), []);
 
   useKeyboardHandler(editor);
 
@@ -400,7 +400,7 @@ export function App({ docId, initialData }: AppProps) {
           <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
             <MindMapCanvas />
             <HamburgerMenu keystrokeOverlay={showKeystrokeOverlay} />
-            <FileStatusBar filename={filename} saveFlash={saveFlash} onSaveFlashDone={clearSaveFlash} />
+            <FileStatusBar filename={filename} flash={flash} onFlashDone={clearFlash} />
             <ToolbarOverlay />
             <KeystrokeOverlay enabled={showKeystrokeOverlay} />
             <UpdateBanner />
