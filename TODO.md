@@ -5,6 +5,10 @@
     - can we possibly use terminal style names as inspiration (or maybe even import them? what would this look like? so I could say solarized light or solarized dark and it'd use the background color from that theme and the 16 main colors from its pallette for different mindnode and text colors)
     - are there any existing resources that I could look at to mine for some solid, known options for light and dark?
 
+# Bugs
+
+- Cross-tab sync causes selection flicker: when two tabs (or a regular + incognito window) are open to the same document, auto-save in one tab triggers `onExternalChange` / `loadJSON` in the other, which wipes selection state. This creates a feedback loop where clicking a node selects it briefly then deselects. Need to either suppress reload when the incoming data matches current state, or preserve selection across `loadJSON` calls.
+
 # Other Possible TODOs
 
 - hamburger menu additions

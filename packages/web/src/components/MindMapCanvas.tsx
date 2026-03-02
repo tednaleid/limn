@@ -298,6 +298,10 @@ export function MindMapCanvas() {
             // Cmd+Click on non-link: select normally
             editor.select(nodeId);
           }
+        } else if (pointerDownTarget.current?.closest("[data-collapse-badge]")) {
+          // Click on collapse badge: select and toggle collapse
+          editor.select(nodeId);
+          editor.toggleCollapse(nodeId);
         } else {
           // Was a click (no drag threshold exceeded): select
           if (editor.isEditing()) {

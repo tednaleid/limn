@@ -85,7 +85,7 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
       )}
       {/* Collapse indicator: small circle with child count, styled to match parent */}
       {node.collapsed && node.children.length > 0 && (
-        <g transform={`translate(${node.width + 8}, ${node.height / 2})`}>
+        <g transform={`translate(${node.width + 8}, ${node.height / 2})`} data-collapse-badge style={{ cursor: "pointer" }}>
           <circle r={8} style={{ fill: branchColor ?? "var(--collapse-bg)" }} opacity={0.18} />
           <text
             textAnchor="middle"
