@@ -128,6 +128,7 @@ export class Editor {
   private themeChangeCallback: ((theme: string) => void) | null = null;
   private clearCallback: (() => void) | null = null;
   private openLinkCallback: ((url: string) => void) | null = null;
+  private shareCallback: (() => void) | null = null;
 
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
@@ -417,6 +418,16 @@ export class Editor {
   /** Request an export operation (called by dispatch on Shift+Cmd+E). */
   requestExport(): void {
     this.exportCallback?.();
+  }
+
+  /** Register a callback for share requests. */
+  onShare(cb: () => void): void {
+    this.shareCallback = cb;
+  }
+
+  /** Request a share operation. */
+  requestShare(): void {
+    this.shareCallback?.();
   }
 
   /** Register a callback for theme changes. */

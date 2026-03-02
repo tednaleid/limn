@@ -123,3 +123,18 @@ describe("export dispatch", () => {
     expect(() => editor.pressKey("e", { meta: true, shift: true })).not.toThrow();
   });
 });
+
+describe("share callback", () => {
+  it("requestShare() calls registered callback", () => {
+    const editor = new TestEditor();
+    const shareFn = vi.fn();
+    editor.onShare(shareFn);
+    editor.requestShare();
+    expect(shareFn).toHaveBeenCalledOnce();
+  });
+
+  it("requestShare() without callback is a no-op", () => {
+    const editor = new TestEditor();
+    expect(() => editor.requestShare()).not.toThrow();
+  });
+});
