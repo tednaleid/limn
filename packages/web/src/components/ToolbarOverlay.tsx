@@ -28,7 +28,7 @@ export function ToolbarOverlay() {
     <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 1000, display: "flex", gap: 8 }}>
       {/* Zoom controls */}
       <div style={groupStyle}>
-        <ToolbarButton onClick={handleZoomOut} label="Zoom out" tooltip="Zoom out (Cmd+\u2212)">
+        <ToolbarButton onClick={handleZoomOut} label="Zoom out" tooltip="Zoom out (Cmd+-)">
           <MinusIcon />
         </ToolbarButton>
         <button
