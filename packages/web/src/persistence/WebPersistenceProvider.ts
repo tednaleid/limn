@@ -30,6 +30,7 @@ export class WebPersistenceProvider implements PersistenceProvider {
     this.revision++;
     await set(IDB_PREFIX + this.docId, { data, savedAt: Date.now() } satisfies StoredDocument);
     await set(IDB_REVISION_PREFIX + this.docId, this.revision);
+    await set("limn:recent", this.docId);
 
     try {
       this.channel?.postMessage({ docId: this.docId, revision: this.revision, tabId: this.tabId });

@@ -17,7 +17,6 @@ import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
 import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
 import { exportSvg } from "./export/svg";
-import { decompressFromUrl } from "@limn/core";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
 
@@ -177,25 +176,23 @@ const DEMO_MAP: MindMapFileFormat = {
   assets: [],
 };
 
-const DOC_ID = "demo";
+interface AppProps {
+  docId: string;
+  initialData?: MindMapFileFormat;
+}
 
-export function App() {
+export function App({ docId, initialData }: AppProps) {
   const editor = useMemo(() => new Editor(domTextMeasurer), []);
-  const provider = useMemo(() => new WebPersistenceProvider(DOC_ID), []);
+  const provider = useMemo(() => new WebPersistenceProvider(docId), [docId]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from URL hash, provider (IndexedDB), or fall back to demo map
+  // Load from initialData (shared URL), provider (IndexedDB), or fall back to demo map
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith("#data=")) {
-      const compressed = hash.slice(6);
-      const data = decompressFromUrl(compressed);
-      if (data) {
-        editor.loadJSON(data);
-        editor.remeasureAllNodes();
-        setLoaded(true);
-        return;
-      }
+    if (initialData) {
+      editor.loadJSON(initialData);
+      editor.remeasureAllNodes();
+      setLoaded(true);
+      return;
     }
 
     provider.load().then(async (saved) => {
@@ -211,7 +208,7 @@ export function App() {
       }
       setLoaded(true);
     });
-  }, [editor, provider]);
+  }, [editor, provider, initialData]);
 
   // Apply theme from document metadata and listen for system preference changes
   useEffect(() => {

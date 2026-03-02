@@ -75,7 +75,10 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay }: Ham
   const handleSave = () => { editor.requestSave(); close(); };
   const handleSaveAs = () => { editor.requestSaveAs(); close(); };
   const handleExport = () => { editor.requestExport(); close(); };
-  const handleClear = () => { editor.clear(); close(); };
+  const handleClear = () => {
+    window.location.hash = "local-doc=" + crypto.randomUUID();
+    window.location.reload();
+  };
   const handleShortcuts = () => { setShowShortcuts(true); close(); };
   const handleKeystrokeOverlay = () => {
     window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));

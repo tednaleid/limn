@@ -1,16 +1,27 @@
 // ABOUTME: Entry point for the Limn web application.
-// ABOUTME: Mounts the React app into the DOM.
+// ABOUTME: Resolves document routing before mounting the React app.
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { resolveDocId } from "./persistence/docRouting";
 import "./index.css";
 
-const root = document.getElementById("root");
-if (!root) throw new Error("Root element not found");
+async function mount() {
+  const root = document.getElementById("root");
+  if (!root) throw new Error("Root element not found");
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+  const route = await resolveDocId(window.location.hash);
+
+  if (route.replaceHash) {
+    history.replaceState(null, "", route.replaceHash);
+  }
+
+  createRoot(root).render(
+    <StrictMode>
+      <App docId={route.docId} initialData={route.initialData} />
+    </StrictMode>,
+  );
+}
+
+mount();
