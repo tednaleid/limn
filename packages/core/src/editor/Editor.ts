@@ -597,6 +597,7 @@ export class Editor {
 
     this.store.moveNode(nodeId, newParentId);
     this.clearSubtreeColors(nodeId);
+    this.remeasureNode(nodeId);
     positionNewChild(this.store, nodeId);
     reflowSubtree(this.store, nodeId);
     relayoutSubtree(this.store, nodeId);
@@ -710,6 +711,7 @@ export class Editor {
     if (node.parentId === null) return; // Already a root
     this.pushUndo("detach-to-root");
     this.store.detachToRoot(nodeId);
+    this.remeasureNode(nodeId);
     // Auto-assign a branch colorIndex like new roots get
     const existingIndices = this.store.getRoots()
       .filter((r) => r.id !== nodeId)

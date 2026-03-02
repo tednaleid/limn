@@ -756,6 +756,36 @@ describe("Editor", () => {
       editor.undo();
       expect(editor.getNode("n1").parentId).toBe(parentBefore);
     });
+
+    test("detachToRoot remeasures the node with root font size", () => {
+      editor.select("n1");
+      // Force a real measurement so we compare measured-vs-measured, not fixture values
+      editor.setText("n1", "Child 1");
+      const childDims = { width: editor.getNode("n1").width, height: editor.getNode("n1").height };
+
+      editor.pressKey("Tab", { shift: true });
+      const rootDims = { width: editor.getNode("n1").width, height: editor.getNode("n1").height };
+
+      // Root font size (18) is larger than child (14), so dimensions should grow
+      expect(rootDims.width).toBeGreaterThan(childDims.width);
+      expect(rootDims.height).toBeGreaterThan(childDims.height);
+    });
+
+    test("reparentNode remeasures the node with child font size", () => {
+      // Create a second root
+      editor.addRoot("Second", 500, 0);
+      const secondId = editor.getSelectedId()!;
+      editor.exitEditMode();
+      const rootDims = { width: editor.getNode(secondId).width, height: editor.getNode(secondId).height };
+
+      // Reparent the second root under n0
+      editor.reparentNode(secondId, "n0");
+      const childDims = { width: editor.getNode(secondId).width, height: editor.getNode(secondId).height };
+
+      // Child font size (14) is smaller than root (18), so dimensions should shrink
+      expect(childDims.width).toBeLessThan(rootDims.width);
+      expect(childDims.height).toBeLessThan(rootDims.height);
+    });
   });
 
   describe("vim-style hjkl navigation", () => {
