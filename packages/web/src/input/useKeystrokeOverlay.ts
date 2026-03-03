@@ -40,8 +40,11 @@ export interface KeystrokeOverlayState {
  * When a non-modifier key is released while modifiers are still held,
  * only the non-modifier portion fades -- modifiers stay visible.
  * When all keys are released, everything fades.
+ *
+ * @param isActive Optional callback that returns false when the view is not
+ *   the active leaf. When provided and returning false, key events are ignored.
  */
-export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
+export function useKeystrokeOverlay(enabled: boolean, isActive?: () => boolean): KeystrokeOverlayState {
   const [stableParts, setStableParts] = useState<string[]>([]);
   const [transientParts, setTransientParts] = useState<string[]>([]);
   const [transientOpacity, setTransientOpacity] = useState(0);
@@ -88,6 +91,7 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.repeat) return;
+      if (isActive && !isActive()) return;
 
       let key = e.key;
       // macOS Alt normalization: Alt+letter produces unicode chars, use base letter
@@ -116,6 +120,7 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
     }
 
     function handleKeyUp(e: KeyboardEvent) {
+      if (isActive && !isActive()) return;
       heldRef.current.delete(e.code);
 
       // macOS swallows keyup events for non-modifier keys while Cmd is held.
@@ -159,7 +164,7 @@ export function useKeystrokeOverlay(enabled: boolean): KeystrokeOverlayState {
       window.removeEventListener("blur", handleBlur);
       cancelTimers();
     };
-  }, [enabled, cancelTimers, startFade]);
+  }, [enabled, isActive, cancelTimers, startFade]);
 
   return { stableParts, transientParts, transientOpacity };
 }

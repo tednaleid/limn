@@ -14,16 +14,24 @@ const META_PREVENT = new Set(["=", "-", "0", "1", "s", "o"]);
 /**
  * Hook that attaches a global keydown listener and routes events
  * through the core dispatch function.
+ *
+ * @param isActive Optional callback that returns false when the view is not
+ *   the active leaf (e.g. in Obsidian when another tab has focus). When
+ *   provided and returning false, all keyboard handling is skipped.
  */
-export function useKeyboardHandler(editor: Editor): void {
+export function useKeyboardHandler(editor: Editor, isActive?: () => boolean): void {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // Skip all handling when the view is not the active leaf
+      if (isActive && !isActive()) return;
+
       // Don't intercept if a non-canvas input element has focus
-      // (e.g., a dialog text field, but NOT our edit textarea)
+      // (e.g., a dialog text field, contenteditable editor, but NOT our edit textarea)
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !target.dataset.limnEdit)
+        (target.tagName === "TEXTAREA" && !target.dataset.limnEdit) ||
+        target.isContentEditable
       ) {
         return;
       }
@@ -85,5 +93,5 @@ export function useKeyboardHandler(editor: Editor): void {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editor]);
+  }, [editor, isActive]);
 }

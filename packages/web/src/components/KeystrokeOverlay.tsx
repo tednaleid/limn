@@ -38,8 +38,8 @@ function BadgeGroup({ parts, showLeadingPlus }: { parts: string[]; showLeadingPl
   );
 }
 
-export function KeystrokeOverlay({ enabled }: { enabled: boolean }) {
-  const { stableParts, transientParts, transientOpacity } = useKeystrokeOverlay(enabled);
+export function KeystrokeOverlay({ enabled, isActive }: { enabled: boolean; isActive?: () => boolean }) {
+  const { stableParts, transientParts, transientOpacity } = useKeystrokeOverlay(enabled, isActive);
 
   if (stableParts.length === 0 && transientParts.length === 0) return null;
 

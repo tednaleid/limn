@@ -11,7 +11,7 @@ import type { MindMapFileFormat } from "@limn/core";
 import { ObsidianPersistenceProvider } from "./ObsidianPersistenceProvider";
 import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
 import { createRoot, type Root } from "react-dom/client";
-import { createElement, useState, useEffect } from "react";
+import { createElement, useState, useEffect, useCallback } from "react";
 import { EditorContext } from "@limn/web/hooks/useEditor";
 import { PersistenceContext } from "@limn/web/hooks/usePersistence";
 import { AssetUrlContext } from "@limn/web/hooks/useAssetUrls";
@@ -39,8 +39,15 @@ const obsidianMenuItems: MenuItemDef[] = [
 ];
 
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
-function LimnViewRoot({ editor }: { editor: Editor }) {
-  useKeyboardHandler(editor);
+function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HTMLElement }) {
+  // Only handle keyboard events when this view is the active Obsidian leaf.
+  // Obsidian adds .mod-active to the workspace-leaf containing the focused tab.
+  const isActive = useCallback(
+    () => containerEl.closest(".workspace-leaf.mod-active") !== null,
+    [containerEl],
+  );
+
+  useKeyboardHandler(editor, isActive);
 
   const [showKeystrokeOverlay, setShowKeystrokeOverlay] = useState(false);
   useEffect(() => {
@@ -53,7 +60,7 @@ function LimnViewRoot({ editor }: { editor: Editor }) {
     createElement(MindMapCanvas),
     createElement(ToolbarOverlay),
     createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
-    createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay }),
+    createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay, isActive }),
   );
 }
 
@@ -165,7 +172,7 @@ export class LimnView extends TextFileView {
       createElement(PersistenceContext.Provider, { value: this.provider },
         createElement(EditorContext.Provider, { value: this.editor },
           createElement(AssetUrlContext.Provider, { value: new Map() },
-            createElement(LimnViewRoot, { editor: this.editor }),
+            createElement(LimnViewRoot, { editor: this.editor, containerEl: this.contentEl }),
           ),
         ),
       ),
