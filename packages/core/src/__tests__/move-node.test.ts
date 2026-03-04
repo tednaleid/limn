@@ -751,6 +751,31 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n2").parentId).toBe("n0");
     });
 
+    test("indent on right-side child skips interleaved left-side siblings", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: right-side child
+      editor.addChild("n0", "right1");
+      editor.exitEditMode();
+      // n2: left-side child (interleaved)
+      editor.addChild("n0", "left1");
+      editor.exitEditMode();
+      editor.setNodePosition("n2", -250, 0);
+      // n3: right-side child
+      editor.addChild("n0", "right2");
+      editor.exitEditMode();
+
+      // Children: [n1(right), n2(left), n3(right)]
+      // n3 presses opt-right (indent): should indent into n1 (same-side), not n2
+      editor.select("n3");
+      editor.pressKey("ArrowRight", { alt: true });
+      expect(editor.getNode("n3").parentId).toBe("n1");
+      // n3 should be on the right side of n1 (same direction as before)
+      expect(editor.getNode("n3").x).toBeGreaterThan(editor.getNode("n1").x);
+    });
+
     test("indent on left-side child skips right-side previous sibling", () => {
       editor = new TestEditor();
       editor.addRoot("root", 0, 0);

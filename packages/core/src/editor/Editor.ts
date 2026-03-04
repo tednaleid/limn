@@ -895,10 +895,22 @@ export class Editor {
     } else {
       // Away from parent: indent into same-side previous sibling
       const parent = this.store.getNode(node.parentId);
-      const idx = parent.children.indexOf(nodeId);
-      const prevSibId = idx > 0 ? parent.children[idx - 1] : undefined;
-      if (prevSibId && branchDirection(this.store, prevSibId) === dir) {
-        this.indentNode(nodeId);
+      const children = parent.children;
+      const idx = children.indexOf(nodeId);
+      let targetId: string | undefined;
+      if (parent.parentId === null) {
+        // Root parent: search backward for nearest same-side sibling
+        for (let i = idx - 1; i >= 0; i--) {
+          if (branchDirection(this.store, children[i] as string) === dir) {
+            targetId = children[i]; break;
+          }
+        }
+      } else {
+        // Non-root parent: use immediate previous sibling
+        targetId = idx > 0 ? children[idx - 1] : undefined;
+      }
+      if (targetId) {
+        this.indentNode(nodeId, targetId);
       } else {
         this.spatialReparentHorizontal(nodeId, direction);
       }
@@ -983,26 +995,22 @@ export class Editor {
     this.notify();
   }
 
-  private indentNode(nodeId: string): void {
+  private indentNode(nodeId: string, targetId: string): void {
     const node = this.store.getNode(nodeId);
     if (node.parentId === null) return;
 
     const parent = this.store.getNode(node.parentId);
-    const idx = parent.children.indexOf(nodeId);
-    if (idx <= 0) return; // No previous sibling to indent into
-
-    const prevSiblingId = parent.children[idx - 1];
-    if (prevSiblingId === undefined) return;
+    const dir = branchDirection(this.store, nodeId);
 
     this.pushUndo("move-node");
-    this.store.moveNode(nodeId, prevSiblingId);
+    this.store.moveNode(nodeId, targetId);
     this.clearSubtreeColors(nodeId);
-    positionNewChild(this.store, nodeId);
+    positionNewChild(this.store, nodeId, dir);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
     // Re-layout old parent too
     relayoutFromNode(this.store, parent.id);
-    this.ensureNodesVisible([nodeId, prevSiblingId]);
+    this.ensureNodesVisible([nodeId, targetId]);
     this.notify();
   }
 
