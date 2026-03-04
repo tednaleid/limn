@@ -70,13 +70,13 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
             height={node.image.height}
             preserveAspectRatio="xMidYMid meet"
           />
-          {/* Image resize handle: dot in upper-right corner */}
+          {/* Image resize handle: dot in lower-right corner */}
           <circle
             data-image-resize-handle
             cx={PADDING_X + node.image.width}
-            cy={textHeight}
+            cy={textHeight + node.image.height}
             r={5}
-            style={{ fill: "var(--selection-border)", cursor: "nesw-resize" }}
+            style={{ fill: branchColor ?? "var(--selection-border)", cursor: "nwse-resize" }}
             stroke="#ffffff"
             strokeWidth={1.5}
             className="image-resize-dot"
