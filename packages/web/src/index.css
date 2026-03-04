@@ -54,6 +54,9 @@ body,
   background: var(--selection-bg);
 }
 
+/* Inline code styling for text measurement and rendering */
+.limn-code { font-family: monospace; }
+
 /* Toolbar button hover state */
 .toolbar-btn:hover:not(:disabled) {
   background: var(--selection-bg);

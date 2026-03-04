@@ -39,10 +39,16 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
   const fontSize = style?.fontSize ?? FONT_SIZE;
   const lineHeight = Math.round(fontSize * (LINE_HEIGHT / FONT_SIZE));
   const paddingY = Math.round(fontSize * (PADDING_Y / FONT_SIZE));
-  el.style.fontSize = `${fontSize}px`;
-  el.style.fontWeight = `${style?.fontWeight ?? 400}`;
-  el.style.lineHeight = `${lineHeight}px`;
-  el.style.padding = `${paddingY}px ${PADDING_X}px`;
+  el.style.cssText = [
+    "position:absolute",
+    "visibility:hidden",
+    "box-sizing:border-box",
+    `font-size:${fontSize}px`,
+    `font-weight:${style?.fontWeight ?? 400}`,
+    `font-family:${FONT_FAMILY}`,
+    `line-height:${lineHeight}px`,
+    `padding:${paddingY}px ${PADDING_X}px`,
+  ].join(";");
 }
 
 /** Populate an element with styled DOM nodes from markdown text. */
@@ -63,7 +69,7 @@ function populateWithMarkdown(el: HTMLDivElement, text: string): void {
       let node: Node = document.createTextNode(seg.text);
       if (seg.style.code) {
         const code = document.createElement("code");
-        code.style.fontFamily = "monospace";
+        code.className = "limn-code";
         code.appendChild(node);
         node = code;
       }
@@ -80,8 +86,7 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     measure(text: string, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.whiteSpace = "pre";
-      el.style.width = "";
+      el.style.cssText += ";white-space:pre;width:auto";
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
@@ -100,9 +105,7 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.whiteSpace = "pre-wrap";
-      el.style.wordBreak = "break-word";
-      el.style.width = `${maxWidth}px`;
+      el.style.cssText += `;white-space:pre-wrap;word-break:break-word;width:${maxWidth}px`;
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {

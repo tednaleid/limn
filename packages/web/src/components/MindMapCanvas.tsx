@@ -44,8 +44,6 @@ export function MindMapCanvas() {
   // Link hover tooltip state
   const [linkTooltip, setLinkTooltip] = useState<{ x: number; y: number; url: string } | null>(null);
   const linkTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
-
   const camera = editor.getCamera();
   const allVisibleNodes = editor.getVisibleNodes();
   const selectedId = editor.getSelectedId();
@@ -570,7 +568,7 @@ export function MindMapCanvas() {
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
-          {isMac ? "Cmd" : "Ctrl"}+click to follow link
+          Ctrl/Cmd+click to follow link
         </div>
       )}
     </div>
