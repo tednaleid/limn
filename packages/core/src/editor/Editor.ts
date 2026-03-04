@@ -925,7 +925,7 @@ export class Editor {
     const currentDir = branchDirection(this.store, nodeId);
 
     this.pushUndo("move-node");
-    const newX = childXFromParent(parent.x, parent.width, -currentDir);
+    const newX = childXFromParent(parent.x, parent.width, -currentDir, node.width);
     this.store.setNodePosition(nodeId, newX, node.y);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);

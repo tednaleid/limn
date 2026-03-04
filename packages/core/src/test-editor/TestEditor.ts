@@ -34,6 +34,11 @@ export class TestEditor extends Editor {
     return this;
   }
 
+  setNodeWidth(nodeId: string, width: number): this {
+    this.store.setNodeWidth(nodeId, width);
+    return this;
+  }
+
   // --- Assertions ---
 
   expectSelected(nodeId: string): this {

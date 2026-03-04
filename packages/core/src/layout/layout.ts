@@ -12,11 +12,16 @@ const CHILD_GAP = H_OFFSET - 100; // 150px gap between parent edge and child
  * For right-side branches, position past the parent's right edge.
  * For left-side branches, position at a fixed offset left of parent.
  */
-export function childXFromParent(parentX: number, parentWidth: number, direction: number): number {
+export function childXFromParent(
+  parentX: number,
+  parentWidth: number,
+  direction: number,
+  childWidth: number,
+): number {
   if (direction >= 0) {
     return parentX + parentWidth + CHILD_GAP;
   }
-  return parentX - H_OFFSET;
+  return parentX - CHILD_GAP - childWidth;
 }
 
 /**
@@ -76,7 +81,7 @@ export function positionNewChild(store: MindMapStore, childId: string, direction
   }
 
   // Horizontal: offset from parent edge in branch direction
-  const x = childXFromParent(parent.x, parent.width, direction);
+  const x = childXFromParent(parent.x, parent.width, direction, child.width);
   store.setNodePosition(childId, x, parent.y);
 
   // Now re-center all siblings vertically
@@ -293,7 +298,7 @@ export function reflowSubtree(store: MindMapStore, nodeId: string): void {
 
   for (const child of children) {
     const dir = isRoot ? branchDirection(store, child.id) : parentDir;
-    const expectedX = childXFromParent(node.x, node.width, dir);
+    const expectedX = childXFromParent(node.x, node.width, dir, child.width);
     if (Math.abs(child.x - expectedX) > 0.001) {
       store.setNodePosition(child.id, expectedX, child.y);
     }

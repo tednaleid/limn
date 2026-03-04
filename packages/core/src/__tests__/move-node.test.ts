@@ -485,6 +485,27 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n1").x).toBe(xBefore);
     });
 
+    test("flip wide child to left side avoids overlap with root", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "wide child");
+      editor.exitEditMode();
+      // Make the child wide (simulating an image node)
+      editor.setNodeWidth("n1", 400);
+
+      // Child starts on right side
+      expect(editor.getNode("n1").x).toBeGreaterThan(0);
+      editor.select("n1");
+      editor.pressKey("ArrowLeft", { alt: true });
+
+      // After flip, child's right edge should not overlap root
+      const child = editor.getNode("n1");
+      const root = editor.getNode("n0");
+      expect(child.x + child.width).toBeLessThanOrEqual(root.x);
+    });
+
     test("existing outdent unchanged for non-root parents", () => {
       createTwoParentTree();
       editor.select("n3");

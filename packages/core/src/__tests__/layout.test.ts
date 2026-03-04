@@ -597,18 +597,21 @@ describe("Layout engine", () => {
 
     test("childXFromParent: right-side with wide parent clears parent", () => {
       // width=400, direction=1 => parentX + 400 + 150 = 550
-      expect(childXFromParent(0, 400, 1)).toBe(550);
+      expect(childXFromParent(0, 400, 1, 100)).toBe(550);
     });
 
     test("childXFromParent: right-side with default parent matches H_OFFSET", () => {
       // width=100, direction=1 => 0 + 100 + 150 = 250 = H_OFFSET
-      expect(childXFromParent(0, 100, 1)).toBe(H_OFFSET);
+      expect(childXFromParent(0, 100, 1, 100)).toBe(H_OFFSET);
     });
 
-    test("childXFromParent: left-side is unaffected by parent width", () => {
-      // direction=-1 => parentX - 250 regardless of width
-      expect(childXFromParent(0, 100, -1)).toBe(-H_OFFSET);
-      expect(childXFromParent(0, 400, -1)).toBe(-H_OFFSET);
+    test("childXFromParent: left-side accounts for child width", () => {
+      // direction=-1, childWidth=100 => parentX - 150 - 100 = -250
+      expect(childXFromParent(0, 100, -1, 100)).toBe(-H_OFFSET);
+      // parent width does not affect left-side positioning
+      expect(childXFromParent(0, 400, -1, 100)).toBe(-H_OFFSET);
+      // wide child pushes further left to avoid overlap
+      expect(childXFromParent(0, 100, -1, 400)).toBe(-550);
     });
   });
 });
