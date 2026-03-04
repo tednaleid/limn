@@ -105,14 +105,6 @@ Produces three files in `packages/obsidian/dist/`:
 
 ### GitHub release
 
-Create a tag matching `obsidian-v*` and push. The GitHub Actions workflow at
-`.github/workflows/obsidian-release.yml` builds and attaches the three files to a
-GitHub release.
-
-### Beta testing with BRAT
-
-Before community plugin listing, testers can install via the
-[BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin:
-1. Install BRAT from Obsidian community plugins
-2. Add the repo URL in BRAT settings
-3. BRAT downloads the latest release assets automatically
+Run `just bump` (patch bump) or `just bump X.Y.Z` (explicit version). This updates
+all version files, commits, tags, and pushes. The GitHub Actions workflow at
+`.github/workflows/release.yml` builds and attaches the three files to a GitHub release.

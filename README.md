@@ -162,8 +162,19 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 
 ## Obsidian plugin
 
-Limn is available as an Obsidian plugin. See [OBSIDIAN-PLUGIN.md](OBSIDIAN-PLUGIN.md)
-for development setup, building, and distribution.
+Limn is available as an Obsidian plugin that opens `.limn` files as interactive mind map views.
+
+### Install via BRAT
+
+1. Install the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from Obsidian community plugins
+2. In BRAT settings, click "Add Beta plugin" and enter: `tednaleid/limn`
+3. Enable "Limn" in Settings -> Community plugins
+
+BRAT will install the latest release and keep it updated automatically.
+
+### Development
+
+See [OBSIDIAN-PLUGIN.md](OBSIDIAN-PLUGIN.md) for local development setup, building, and architecture details.
 
 ## Inline markdown
 
