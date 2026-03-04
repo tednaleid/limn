@@ -117,6 +117,7 @@ export class LimnView extends TextFileView {
   }
 
   async onOpen(): Promise<void> {
+    await super.onOpen();
     this.contentEl.addClass("limn-view");
     const measurer = createDomTextMeasurer(this.contentEl);
     this.editor = new Editor(measurer);
@@ -163,6 +164,7 @@ export class LimnView extends TextFileView {
   }
 
   async onClose(): Promise<void> {
+    await super.onClose();
     this.autoSave?.dispose();
     this.provider?.dispose();
     this.reactRoot?.unmount();
