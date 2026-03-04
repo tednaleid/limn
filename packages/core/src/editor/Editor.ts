@@ -54,6 +54,9 @@ import {
 
 export const ROOT_FONT_SIZE = 18;
 
+/** Horizontal padding applied to images within a node (matches PADDING_X in NodeView). */
+const IMAGE_PADDING_X = 10;
+
 /** Fraction of viewport width/height used as scroll margin when auto-scrolling to keep a node visible. */
 export const VIEWPORT_SCROLL_MARGIN = 0.15;
 
@@ -1161,7 +1164,9 @@ export class Editor {
   endImageResize(): void {
     if (!this.imageResize.active) return;
     if (!this.imageResize.changed) this.undoStack.pop();
+    const nodeId = this.imageResize.nodeId;
     this.imageResize = initialImageResizeState();
+    if (nodeId) this.remeasureNode(nodeId);
     this.notify();
   }
 
@@ -1528,8 +1533,12 @@ export class Editor {
       node.width = width;
       node.height = height;
     }
-    // Include image height in node dimensions
+    // Include image dimensions in node size
     if (node.image) {
+      const minImageWidth = node.image.width + 2 * IMAGE_PADDING_X;
+      if (node.width < minImageWidth) {
+        node.width = minImageWidth;
+      }
       node.height += node.image.height;
     }
   }

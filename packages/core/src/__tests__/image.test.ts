@@ -46,6 +46,33 @@ describe("image support", () => {
     expect(heightAfter).toBe(heightBefore + 300);
   });
 
+  it("should expand node width to fit image when image is wider than text", () => {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.exitEditMode();
+
+    const textWidth = editor.getNode("n0").width;
+    const asset = makeAsset("a1");
+    // Image at 400px wide needs 400 + 2*10 padding = 420, much wider than text
+    editor.setNodeImage("n0", asset, 400, 300);
+
+    expect(editor.getNode("n0").width).toBe(400 + 20); // image width + 2 * IMAGE_PADDING_X
+    expect(editor.getNode("n0").width).toBeGreaterThan(textWidth);
+  });
+
+  it("should keep text width when text is wider than image", () => {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.exitEditMode();
+
+    const textWidth = editor.getNode("n0").width;
+    const asset = makeAsset("a1");
+    // Image at 20px wide needs 20 + 20 padding = 40, narrower than text width
+    editor.setNodeImage("n0", asset, 20, 15);
+
+    expect(editor.getNode("n0").width).toBe(textWidth);
+  });
+
   it("should remove image height when image is removed", () => {
     const editor = new TestEditor();
     editor.addRoot("root", 0, 0);
@@ -249,5 +276,42 @@ describe("image resize", () => {
     // Undo should revert the real resize
     editor.undo();
     expect(editor.getNode("n0").image!.width).toBe(originalWidth);
+  });
+
+  it("should update node width after image resize", () => {
+    const editor = createNodeWithImage();
+    // Original image: 400x300, node width should be 400+20=420
+    expect(editor.getNode("n0").width).toBe(420);
+
+    editor.startImageResize("n0");
+    editor.updateImageResize(200);
+    editor.endImageResize();
+
+    // After resize to 200px wide, node width should be 200+20=220
+    expect(editor.getNode("n0").width).toBe(220);
+  });
+});
+
+describe("image width with constrained nodes", () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
+  it("should expand width-constrained node to fit image", () => {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.exitEditMode();
+
+    // Set a narrow constrained width via width resize
+    editor.startWidthResize("n0");
+    editor.updateWidthResize(80);
+    editor.endWidthResize();
+    expect(editor.getNode("n0").width).toBe(80);
+
+    // Add image wider than 80 - 20 padding = needs 400+20=420
+    const asset = makeAsset("a1");
+    editor.setNodeImage("n0", asset, 400, 300);
+
+    expect(editor.getNode("n0").width).toBe(420);
   });
 });
