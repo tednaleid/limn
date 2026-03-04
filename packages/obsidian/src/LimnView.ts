@@ -14,7 +14,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { createElement, useState, useEffect, useCallback } from "react";
 import { EditorContext } from "@limn/web/hooks/useEditor";
 import { PersistenceContext } from "@limn/web/hooks/usePersistence";
-import { AssetUrlContext } from "@limn/web/hooks/useAssetUrls";
+import { AssetUrlContext, type AssetUrlMap } from "@limn/web/hooks/useAssetUrls";
+import { usePersistence } from "@limn/web/hooks/usePersistence";
 import { MindMapCanvas } from "@limn/web/components/MindMapCanvas";
 import { ToolbarOverlay } from "@limn/web/components/ToolbarOverlay";
 import { HamburgerMenu } from "@limn/web/components/HamburgerMenu";
@@ -56,11 +57,40 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
     return () => window.removeEventListener("limn:toggle-keystroke-overlay", toggle);
   }, []);
 
-  return createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
-    createElement(MindMapCanvas),
-    createElement(ToolbarOverlay),
-    createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
-    createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay, isActive }),
+  // Asset URL management: load existing assets and listen for new drops
+  const provider = usePersistence();
+  const [assetUrls, setAssetUrls] = useState<AssetUrlMap>(new Map());
+
+  useEffect(() => {
+    const assets = editor.getAssets();
+    if (assets.length > 0) {
+      provider.loadAssetUrls(assets.map((a) => a.id)).then((urls) => {
+        if (urls.size > 0) setAssetUrls(urls);
+      });
+    }
+  }, [editor, provider]);
+
+  const handleAssetAdded = useCallback((e: Event) => {
+    const { assetId, blobUrl } = (e as CustomEvent).detail;
+    setAssetUrls((prev) => {
+      const next = new Map(prev);
+      next.set(assetId, blobUrl);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("limn:asset-added", handleAssetAdded);
+    return () => window.removeEventListener("limn:asset-added", handleAssetAdded);
+  }, [handleAssetAdded]);
+
+  return createElement(AssetUrlContext.Provider, { value: assetUrls },
+    createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
+      createElement(MindMapCanvas),
+      createElement(ToolbarOverlay),
+      createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
+      createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay, isActive }),
+    ),
   );
 }
 
@@ -171,9 +201,7 @@ export class LimnView extends TextFileView {
     this.reactRoot.render(
       createElement(PersistenceContext.Provider, { value: this.provider },
         createElement(EditorContext.Provider, { value: this.editor },
-          createElement(AssetUrlContext.Provider, { value: new Map() },
-            createElement(LimnViewRoot, { editor: this.editor, containerEl: this.contentEl }),
-          ),
+          createElement(LimnViewRoot, { editor: this.editor, containerEl: this.contentEl }),
         ),
       ),
     );
