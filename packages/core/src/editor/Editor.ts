@@ -1171,6 +1171,7 @@ export class Editor {
       node.widthConstrained = false;
       this.remeasureNode(nodeId);
       reflowSubtree(this.store, nodeId);
+      relayoutSubtree(this.store, nodeId);
       relayoutFromNode(this.store, nodeId);
     }
     this.notify();
