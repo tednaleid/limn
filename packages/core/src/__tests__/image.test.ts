@@ -290,6 +290,46 @@ describe("image resize", () => {
     // After resize to 200px wide, node width should be 200+20=220
     expect(editor.getNode("n0").width).toBe(220);
   });
+
+  it("should clear width constraint when image is resized", () => {
+    const editor = new TestEditor();
+    editor.addRoot("root", 0, 0);
+    editor.exitEditMode();
+
+    // Drag node wider, then add image
+    editor.startWidthResize("n0");
+    editor.updateWidthResize(500);
+    editor.endWidthResize();
+    expect(editor.getNode("n0").widthConstrained).toBe(true);
+
+    editor.setNodeImage("n0", makeAsset("a1"), 400, 300);
+    expect(editor.getNode("n0").width).toBe(500); // constrained width still wider
+
+    // Resize image smaller — node should shrink to follow image, not stay at 500
+    editor.startImageResize("n0");
+    editor.updateImageResize(200);
+    editor.endImageResize();
+
+    expect(editor.getNode("n0").widthConstrained).toBe(false);
+    expect(editor.getNode("n0").width).toBe(220); // 200 + 2*10
+  });
+
+  it("should relayout children after image resize", () => {
+    const editor = createNodeWithImage();
+    // Add a child
+    const childId = editor.addChild("n0", "child");
+    editor.exitEditMode();
+
+    const childXBefore = editor.getNode(childId).x;
+
+    // Resize image significantly smaller
+    editor.startImageResize("n0");
+    editor.updateImageResize(100);
+    editor.endImageResize();
+
+    // Child x should have changed because parent width changed
+    expect(editor.getNode(childId).x).not.toBe(childXBefore);
+  });
 });
 
 describe("image width with constrained nodes", () => {

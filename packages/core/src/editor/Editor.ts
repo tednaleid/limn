@@ -1166,7 +1166,13 @@ export class Editor {
     if (!this.imageResize.changed) this.undoStack.pop();
     const nodeId = this.imageResize.nodeId;
     this.imageResize = initialImageResizeState();
-    if (nodeId) this.remeasureNode(nodeId);
+    if (nodeId) {
+      const node = this.store.getNode(nodeId);
+      node.widthConstrained = false;
+      this.remeasureNode(nodeId);
+      reflowSubtree(this.store, nodeId);
+      relayoutFromNode(this.store, nodeId);
+    }
     this.notify();
   }
 
