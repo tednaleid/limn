@@ -1539,7 +1539,7 @@ export class Editor {
       if (node.width < minImageWidth) {
         node.width = minImageWidth;
       }
-      node.height += node.image.height;
+      node.height += node.image.height + IMAGE_PADDING_X;
     }
   }
 

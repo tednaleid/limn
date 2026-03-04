@@ -43,7 +43,7 @@ describe("image support", () => {
     editor.setNodeImage("n0", asset, 400, 300);
 
     const heightAfter = editor.getNode("n0").height;
-    expect(heightAfter).toBe(heightBefore + 300);
+    expect(heightAfter).toBe(heightBefore + 300 + 10); // image height + bottom padding
   });
 
   it("should expand node width to fit image when image is wider than text", () => {
