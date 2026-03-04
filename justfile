@@ -71,6 +71,18 @@ obsidian-install vault_path:
 obsidian-test:
     bun run test -- --run 'packages/obsidian/'
 
+# Build release assets for GitHub Release (main.js, manifest.json, styles.css)
+release: obsidian-build
+    mkdir -p release
+    cp packages/obsidian/dist/main.js release/
+    cp packages/obsidian/dist/manifest.json release/
+    cp packages/obsidian/dist/styles.css release/
+    @echo "Release assets copied to release/"
+
+# Bump version across all packages, commit, tag, and push
+bump version="":
+    bun run scripts/bump-version.ts {{version}}
+
 # Clean and reinstall node_modules (fixes esbuild EPIPE errors after bun add)
 clean-install:
     rm -rf node_modules packages/core/node_modules packages/web/node_modules

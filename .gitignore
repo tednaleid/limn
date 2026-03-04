@@ -8,4 +8,5 @@ dist/
 .playwright-mcp
 *.png
 coverage/
+release/
 obsidian_vault

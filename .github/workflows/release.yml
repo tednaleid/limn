@@ -1,0 +1,36 @@
+name: Release Obsidian Plugin
+
+on:
+  push:
+    tags:
+      - "[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: extractions/setup-just@v2
+
+      - name: Install dependencies
+        run: just install
+
+      - name: Run checks
+        run: just check
+
+      - name: Build release assets
+        run: just release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/main.js
+            release/manifest.json
+            release/styles.css
