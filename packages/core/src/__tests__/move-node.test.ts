@@ -405,6 +405,29 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n1").parentId).toBe(parentBefore);
     });
 
+    test("overflow skips uncle on opposite side of root", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: right-side branch
+      editor.addChild("n0", "right_branch");
+      editor.exitEditMode();
+      editor.addChild("n1", "child_r");
+      editor.exitEditMode();
+      // n3: left-side branch (after n1 in children array)
+      editor.addChild("n0", "left_branch");
+      editor.exitEditMode();
+      editor.setNodePosition("n3", -250, 0);
+
+      // child_r (n2) is last child of right_branch (n1).
+      // Uncle in children array is left_branch (n3) -- wrong side.
+      editor.select("n2");
+      editor.pressKey("ArrowDown", { alt: true });
+      // Should NOT overflow into left_branch (opposite side)
+      expect(editor.getNode("n2").parentId).not.toBe("n3");
+    });
+
     test("spatial reparent (vertical) is undoable", () => {
       editor = new TestEditor();
       editor.addRoot("root1", 0, 0);
@@ -677,6 +700,35 @@ describe("moveNode structural moves", () => {
     });
   });
 
+  describe("mixed-side vertical reorder on root", () => {
+    test("opt-up skips interleaved opposite-side node", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: left-side child
+      editor.addChild("n0", "left1");
+      editor.exitEditMode();
+      editor.setNodePosition("n1", -250, -26);
+      // n2: right-side child (interleaved between two left-side nodes)
+      editor.addChild("n0", "right1");
+      editor.exitEditMode();
+      editor.setNodePosition("n2", 250, 0);
+      // n3: left-side child
+      editor.addChild("n0", "left2");
+      editor.exitEditMode();
+      editor.setNodePosition("n3", -250, 26);
+
+      // Children array: [n1(left), n2(right), n3(left)]
+      // left2 (n3) presses opt-up: should swap with left1 (n1), skipping right1 (n2)
+      editor.select("n3");
+      editor.pressKey("ArrowUp", { alt: true });
+      const children = editor.getNode("n0").children;
+      expect(children.indexOf("n3")).toBeLessThan(children.indexOf("n1"));
+      expect(editor.getNode("n3").parentId).toBe("n0");
+    });
+  });
+
   describe("left-side branch direction awareness", () => {
     test("outdent uses Option+Right on left-side branch", () => {
       // Create a node on the left side of root
@@ -696,6 +748,26 @@ describe("moveNode structural moves", () => {
       // On left-side branch, outdent = Option+Right (away from root)
       editor.select("n2");
       editor.pressKey("ArrowRight", { alt: true });
+      expect(editor.getNode("n2").parentId).toBe("n0");
+    });
+
+    test("indent on left-side child skips right-side previous sibling", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: right-side child
+      editor.addChild("n0", "right_child");
+      editor.exitEditMode();
+      // n2: left-side child (placed after n1 in children array)
+      editor.addChild("n0", "left_child");
+      editor.exitEditMode();
+      editor.setNodePosition("n2", -250, 0);
+
+      // n2 is on the left side, previous sibling n1 is on the right side
+      editor.select("n2");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // Should NOT indent into n1 (wrong side) -- should remain under root
       expect(editor.getNode("n2").parentId).toBe("n0");
     });
 

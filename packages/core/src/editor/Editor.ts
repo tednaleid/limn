@@ -812,13 +812,35 @@ export class Editor {
     if (node.parentId === null) return;
 
     const parent = this.store.getNode(node.parentId);
-    const idx = parent.children.indexOf(nodeId);
+    const children = parent.children;
+    const idx = children.indexOf(nodeId);
 
-    const atBoundary = direction === "up" ? idx === 0 : idx === parent.children.length - 1;
+    // Find swap target: same-side sibling for root parents, adjacent for non-root
+    let swapIdx = -1;
+    if (parent.parentId === null) {
+      const dir = branchDirection(this.store, nodeId);
+      if (direction === "up") {
+        for (let i = idx - 1; i >= 0; i--) {
+          if (branchDirection(this.store, children[i] as string) === dir) { swapIdx = i; break; }
+        }
+      } else {
+        for (let i = idx + 1; i < children.length; i++) {
+          if (branchDirection(this.store, children[i] as string) === dir) { swapIdx = i; break; }
+        }
+      }
+    } else {
+      const candidate = direction === "up" ? idx - 1 : idx + 1;
+      if (candidate >= 0 && candidate < children.length) swapIdx = candidate;
+    }
 
-    if (!atBoundary) {
-      // Simple reorder within siblings
-      this.reorderNode(nodeId, direction);
+    if (swapIdx >= 0) {
+      this.pushUndo("reorder-node");
+      const targetId = children[swapIdx] as string;
+      children[swapIdx] = nodeId;
+      children[idx] = targetId;
+      relayoutFromNode(this.store, nodeId);
+      this.ensureNodeVisible(nodeId);
+      this.notify();
       return;
     }
 
@@ -830,7 +852,8 @@ export class Editor {
 
       const targetIdx = direction === "up" ? parentIdx - 1 : parentIdx + 1;
       const targetParentId = grandparent.children[targetIdx];
-      if (targetParentId !== undefined) {
+      if (targetParentId !== undefined
+          && branchDirection(this.store, targetParentId) === branchDirection(this.store, parent.id)) {
         this.pushUndo("move-node");
         const insertIndex = direction === "up"
           ? this.store.getNode(targetParentId).children.length // Last child
@@ -870,13 +893,13 @@ export class Editor {
         this.outdentNode(nodeId);
       }
     } else {
-      // Away from parent
+      // Away from parent: indent into same-side previous sibling
       const parent = this.store.getNode(node.parentId);
       const idx = parent.children.indexOf(nodeId);
-      if (idx > 0) {
+      const prevSibId = idx > 0 ? parent.children[idx - 1] : undefined;
+      if (prevSibId && branchDirection(this.store, prevSibId) === dir) {
         this.indentNode(nodeId);
       } else {
-        // No previous sibling: spatial reparent
         this.spatialReparentHorizontal(nodeId, direction);
       }
     }
