@@ -796,6 +796,58 @@ describe("moveNode structural moves", () => {
       expect(editor.getNode("n2").parentId).toBe("n0");
     });
 
+    test("outdent right-side grandchild to root preserves right side", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: left-side child
+      editor.addChild("n0", "left1");
+      editor.exitEditMode();
+      editor.setNodePosition("n1", -250, 0);
+      // n2: right-side child (must set position explicitly since n1 is left)
+      editor.addChild("n0", "right1");
+      editor.exitEditMode();
+      editor.setNodePosition("n2", 250, 0);
+      // n3: child of right1 (also on right side)
+      editor.addChild("n2", "grandchild");
+      editor.exitEditMode();
+
+      // n3 is right-side grandchild. Outdent with opt-left.
+      expect(editor.getNode("n3").x).toBeGreaterThan(editor.getNode("n2").x);
+      editor.select("n3");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // n3 should now be child of root, still on the right side
+      expect(editor.getNode("n3").parentId).toBe("n0");
+      expect(editor.getNode("n3").x).toBeGreaterThan(editor.getNode("n0").x);
+    });
+
+    test("outdent left-side grandchild to root preserves left side", () => {
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      // n1: left-side child
+      editor.addChild("n0", "left1");
+      editor.exitEditMode();
+      editor.setNodePosition("n1", -250, 0);
+      // n2: right-side child
+      editor.addChild("n0", "right1");
+      editor.exitEditMode();
+      editor.setNodePosition("n2", 250, 0);
+      // n3: child of left1 (also on left side)
+      editor.addChild("n1", "grandchild");
+      editor.exitEditMode();
+
+      // n3 is left-side grandchild. Outdent with opt-right.
+      expect(editor.getNode("n3").x).toBeLessThan(editor.getNode("n1").x);
+      editor.select("n3");
+      editor.pressKey("ArrowRight", { alt: true });
+      // n3 should now be child of root, still on the left side
+      expect(editor.getNode("n3").parentId).toBe("n0");
+      expect(editor.getNode("n3").x).toBeLessThan(editor.getNode("n0").x);
+    });
+
     test("indent uses Option+Left on left-side branch", () => {
       editor = new TestEditor();
       editor.addRoot("root", 0, 0);

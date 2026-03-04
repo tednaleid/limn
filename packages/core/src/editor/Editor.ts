@@ -982,11 +982,12 @@ export class Editor {
 
     const grandparent = this.store.getNode(grandparentId);
     const parentIdx = grandparent.children.indexOf(parent.id);
+    const dir = branchDirection(this.store, nodeId);
 
     this.pushUndo("move-node");
     this.store.moveNode(nodeId, grandparentId, parentIdx + 1);
     this.clearSubtreeColors(nodeId);
-    positionNewChild(this.store, nodeId);
+    positionNewChild(this.store, nodeId, dir);
     reflowSubtree(this.store, nodeId);
     relayoutFromNode(this.store, nodeId);
     // Re-layout old parent too
