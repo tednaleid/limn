@@ -14,15 +14,18 @@
     },
     "packages/core": {
       "name": "@limn/core",
-      "version": "0.0.1",
+      "version": "0.9.1",
       "dependencies": {
         "lz-string": "^1.5.0",
         "zod": "^4.3.6",
       },
+      "devDependencies": {
+        "vitest": "^4.0.18",
+      },
     },
     "packages/obsidian": {
       "name": "@limn/obsidian",
-      "version": "0.0.1",
+      "version": "0.9.1",
       "dependencies": {
         "@limn/core": "workspace:*",
         "@limn/web": "workspace:*",
@@ -38,7 +41,7 @@
     },
     "packages/web": {
       "name": "@limn/web",
-      "version": "0.0.1",
+      "version": "0.9.1",
       "dependencies": {
         "@limn/core": "workspace:*",
         "browser-fs-access": "^0.38.0",

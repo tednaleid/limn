@@ -7,14 +7,15 @@ import type { LimnView } from "./LimnView";
 export class ObsidianPersistenceProvider implements PersistenceProvider {
   constructor(private view: LimnView) {}
 
-  async load(): Promise<MindMapFileFormat | null> {
+  load(): Promise<MindMapFileFormat | null> {
     // TextFileView handles loading via setViewData -- return null
-    return null;
+    return Promise.resolve(null);
   }
 
-  async save(_data: MindMapFileFormat): Promise<void> {
+  save(_data: MindMapFileFormat): Promise<void> {
     // Trigger TextFileView's save mechanism
     this.view.requestSave();
+    return Promise.resolve();
   }
 
   async saveAsset(assetId: string, blob: Blob): Promise<void> {

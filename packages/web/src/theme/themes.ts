@@ -35,8 +35,8 @@ export function applyThemeByKey(themeKey: ThemeKey): void {
   const el = document.documentElement;
   el.setAttribute("data-theme", themeKey);
 
-  const effective = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
-  const theme = resolveTheme(themeKey, effective as "light" | "dark");
+  const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
+  const theme = resolveTheme(themeKey, effective);
   const vars = deriveThemeVars(theme);
   for (const [key, value] of Object.entries(vars)) {
     el.style.setProperty(key, value);

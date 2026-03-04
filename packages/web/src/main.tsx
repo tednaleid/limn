@@ -24,4 +24,4 @@ async function mount() {
   );
 }
 
-mount();
+void mount();

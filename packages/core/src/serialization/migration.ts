@@ -11,8 +11,7 @@ export { CURRENT_FORMAT_VERSION };
  * Each migrates from version N to version N+1.
  * Index 0 = migrate from v1 to v2, etc.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const migrations: Array<(data: any) => any> = [
+const migrations: Array<(data: Record<string, unknown>) => Record<string, unknown>> = [
   // No migrations yet (we're at version 1)
 ];
 
@@ -33,8 +32,7 @@ export function migrateToLatest(data: MindMapFileFormat): MindMapFileFormat {
   }
 
   // Run migrations sequentially from the file's version to current
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let migrated: any = { ...data, version };
+  let migrated: Record<string, unknown> = { ...data, version };
   for (let v = version; v < CURRENT_FORMAT_VERSION; v++) {
     const migrate = migrations[v - 1];
     if (!migrate) throw new Error(`Missing migration for version ${v}`);
@@ -46,9 +44,9 @@ export function migrateToLatest(data: MindMapFileFormat): MindMapFileFormat {
   const result = mindMapFileSchema.safeParse(migrated);
   if (!result.success) {
     throw new Error(
-      `Post-migration validation failed (v${version} -> v${CURRENT_FORMAT_VERSION}): ${result.error}`,
+      `Post-migration validation failed (v${version} -> v${CURRENT_FORMAT_VERSION}): ${result.error.message}`,
     );
   }
 
-  return migrated as MindMapFileFormat;
+  return migrated as unknown as MindMapFileFormat;
 }

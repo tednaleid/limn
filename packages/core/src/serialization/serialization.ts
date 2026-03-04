@@ -89,7 +89,7 @@ export function validateFileFormat(data: unknown): {
   if (result.success) {
     return { success: true };
   }
-  return { success: false, error: String(result.error) };
+  return { success: false, error: result.error.message };
 }
 
 /**

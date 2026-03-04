@@ -181,8 +181,10 @@ export function resolveTheme(key: ThemeKey, mode: "light" | "dark"): ThemeDefini
   const theme = THEME_REGISTRY[key];
   if (theme) return theme;
   const fallback = mode === "light" ? DEFAULT_LIGHT_THEME : DEFAULT_DARK_THEME;
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback keys are always in the registry
-  return THEME_REGISTRY[fallback]!;
+  // Fallback keys are compile-time constants guaranteed to be in the registry
+  const fallbackTheme = THEME_REGISTRY[fallback];
+  if (!fallbackTheme) throw new Error(`Missing default theme: ${fallback}`);
+  return fallbackTheme;
 }
 
 /** Get all theme keys grouped by mode. */

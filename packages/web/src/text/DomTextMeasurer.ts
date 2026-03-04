@@ -20,14 +20,17 @@ function getMeasureElement(): HTMLDivElement {
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "limn-measure";
-  el.style.position = "absolute";
-  el.style.visibility = "hidden";
-  el.style.whiteSpace = "pre";
-  el.style.fontSize = `${FONT_SIZE}px`;
-  el.style.fontFamily = FONT_FAMILY;
-  el.style.lineHeight = `${LINE_HEIGHT}px`;
-  el.style.padding = `${PADDING_Y}px ${PADDING_X}px`;
-  el.style.boxSizing = "border-box";
+  // Inject default styles directly so the element works regardless of stylesheet context
+  el.style.cssText = [
+    "position:absolute",
+    "visibility:hidden",
+    "white-space:pre",
+    `font-size:${FONT_SIZE}px`,
+    `font-family:${FONT_FAMILY}`,
+    `line-height:${LINE_HEIGHT}px`,
+    `padding:${PADDING_Y}px ${PADDING_X}px`,
+    "box-sizing:border-box",
+  ].join(";");
   container.appendChild(el);
   return el;
 }
@@ -42,30 +45,34 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
   el.style.padding = `${paddingY}px ${PADDING_X}px`;
 }
 
-/** Escape HTML special characters for safe innerHTML use. */
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/** Convert raw markdown text to HTML for accurate measurement of styled text. */
-function markdownToHtml(text: string): string {
-  if (!text) return "\u00A0";
-  const parsed = parseMarkdownLines(text);
-  return parsed
-    .map((segments) => {
-      if (segments.length === 0) return "\u00A0";
-      return segments
-        .map((seg) => {
-          let html = escapeHtml(seg.text);
-          if (seg.style.code) html = `<code style="font-family:monospace">${html}</code>`;
-          if (seg.style.bold) html = `<b>${html}</b>`;
-          if (seg.style.italic) html = `<i>${html}</i>`;
-          if (seg.style.strikethrough) html = `<s>${html}</s>`;
-          return html;
-        })
-        .join("");
-    })
-    .join("\n");
+/** Populate an element with styled DOM nodes from markdown text. */
+function populateWithMarkdown(el: HTMLDivElement, text: string): void {
+  el.textContent = "";
+  if (!text) {
+    el.appendChild(document.createTextNode("\u00A0"));
+    return;
+  }
+  const lines = parseMarkdownLines(text);
+  lines.forEach((segments, i) => {
+    if (i > 0) el.appendChild(document.createTextNode("\n"));
+    if (segments.length === 0) {
+      el.appendChild(document.createTextNode("\u00A0"));
+      return;
+    }
+    for (const seg of segments) {
+      let node: Node = document.createTextNode(seg.text);
+      if (seg.style.code) {
+        const code = document.createElement("code");
+        code.style.fontFamily = "monospace";
+        code.appendChild(node);
+        node = code;
+      }
+      if (seg.style.bold) { const b = document.createElement("b"); b.appendChild(node); node = b; }
+      if (seg.style.italic) { const em = document.createElement("i"); em.appendChild(node); node = em; }
+      if (seg.style.strikethrough) { const s = document.createElement("s"); s.appendChild(node); node = s; }
+      el.appendChild(node);
+    }
+  });
 }
 
 function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
@@ -78,7 +85,7 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
-        el.innerHTML = markdownToHtml(text);
+        populateWithMarkdown(el, text);
       }
       // getBoundingClientRect gives sub-pixel precision; offsetWidth rounds
       // to an integer which can cause the textarea to be fractionally too
@@ -99,7 +106,7 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
-        el.innerHTML = markdownToHtml(text);
+        populateWithMarkdown(el, text);
       }
       const height = Math.max(32, Math.ceil(el.offsetHeight));
       return { width: maxWidth, height };

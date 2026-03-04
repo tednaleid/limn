@@ -64,7 +64,7 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
   useEffect(() => {
     const assets = editor.getAssets();
     if (assets.length > 0) {
-      provider.loadAssetUrls(assets.map((a) => a.id)).then((urls) => {
+      void provider.loadAssetUrls(assets.map((a) => a.id)).then((urls) => {
         if (urls.size > 0) setAssetUrls(urls);
       });
     }
@@ -151,8 +151,8 @@ export class LimnView extends TextFileView {
     const themeKey = resolveActiveThemeKey(
       mode, this.editor.getLightTheme(), this.editor.getDarkTheme(),
     );
-    const effective = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
-    const theme = resolveTheme(themeKey, effective as "light" | "dark");
+    const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
+    const theme = resolveTheme(themeKey, effective);
     const vars = deriveThemeVars(theme);
     for (const [key, value] of Object.entries(vars)) {
       el.style.setProperty(key, value);
@@ -194,9 +194,7 @@ export class LimnView extends TextFileView {
   private mountReact(): void {
     // Mount React into a sub-div so the measurement element (a sibling in
     // contentEl) stays outside React's managed subtree.
-    const container = this.contentEl.createDiv();
-    container.style.width = "100%";
-    container.style.height = "100%";
+    const container = this.contentEl.createDiv({ cls: "limn-react-root" });
     this.reactRoot = createRoot(container);
     this.reactRoot.render(
       createElement(PersistenceContext.Provider, { value: this.provider },

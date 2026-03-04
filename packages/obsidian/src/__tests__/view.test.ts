@@ -93,12 +93,12 @@ describe("Plugin registration", () => {
     const VIEW_TYPE = "limn-view";
     registerView(VIEW_TYPE, expect.any(Function));
     registerExtensions(["limn"], VIEW_TYPE);
-    addCommand(expect.objectContaining({ id: "create-new-limn" }));
+    addCommand(expect.objectContaining({ id: "create-new" }));
 
     expect(registerView).toHaveBeenCalledWith("limn-view", expect.any(Function));
     expect(registerExtensions).toHaveBeenCalledWith(["limn"], "limn-view");
     expect(addCommand).toHaveBeenCalledWith(expect.objectContaining({
-      id: "create-new-limn",
+      id: "create-new",
     }));
   });
 });

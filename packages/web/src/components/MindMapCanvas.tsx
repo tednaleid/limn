@@ -44,7 +44,7 @@ export function MindMapCanvas() {
   // Link hover tooltip state
   const [linkTooltip, setLinkTooltip] = useState<{ x: number; y: number; url: string } | null>(null);
   const linkTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
+  const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
 
   const camera = editor.getCamera();
   const allVisibleNodes = editor.getVisibleNodes();
@@ -165,7 +165,7 @@ export function MindMapCanvas() {
 
       // Check for image resize handle
       if (target.hasAttribute("data-image-resize-handle")) {
-        const nodeGroup = target.closest("[data-node-id]") as SVGElement | null;
+        const nodeGroup = target.closest("[data-node-id]");
         const nodeId = nodeGroup?.getAttribute("data-node-id");
         if (nodeId) {
           isResizingImage.current = true;
@@ -178,7 +178,7 @@ export function MindMapCanvas() {
 
       // Check for resize handle
       if (target.hasAttribute("data-resize-handle")) {
-        const nodeGroup = target.closest("[data-node-id]") as SVGElement | null;
+        const nodeGroup = target.closest("[data-node-id]");
         const nodeId = nodeGroup?.getAttribute("data-node-id");
         if (nodeId) {
           isResizingWidth.current = true;
@@ -196,7 +196,7 @@ export function MindMapCanvas() {
         svgRef.current?.setPointerCapture(e.pointerId);
       } else {
         // Node element: record for potential drag
-        const nodeGroup = target.closest("[data-node-id]") as SVGElement | null;
+        const nodeGroup = target.closest("[data-node-id]");
         if (nodeGroup) {
           pendingNodeId.current = nodeGroup.getAttribute("data-node-id");
           pointerStart.current = { x: e.clientX, y: e.clientY };
@@ -459,7 +459,7 @@ export function MindMapCanvas() {
           }
 
           // Persist blob to IndexedDB and notify App of the blob URL
-          provider.saveAsset(assetId, imageFile);
+          void provider.saveAsset(assetId, imageFile);
           window.dispatchEvent(new CustomEvent("limn:asset-added", {
             detail: { assetId, blobUrl },
           }));

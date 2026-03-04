@@ -12,7 +12,7 @@ const imageRefSchema = z.object({
   height: z.number(),
 });
 
-const nodeStyleSchema = z.object({}).passthrough();
+const nodeStyleSchema = z.looseObject({});
 
 const fileNodeSchema: z.ZodType<MindMapFileNode> = z.object({
   id: z.string(),

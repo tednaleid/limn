@@ -5,14 +5,14 @@ import { Plugin } from "obsidian";
 import { LimnView, VIEW_TYPE_LIMN } from "./LimnView";
 
 export default class LimnPlugin extends Plugin {
-  async onload() {
+  onload(): void {
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
 
     this.addCommand({
-      id: "create-new-limn",
+      id: "create-new",
       name: "Create new mind map",
-      callback: () => this.createNewFile(),
+      callback: () => void this.createNewFile(),
     });
   }
 

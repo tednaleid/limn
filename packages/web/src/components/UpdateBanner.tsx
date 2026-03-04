@@ -32,7 +32,7 @@ export function UpdateBanner() {
     >
       <span>A new version is available.</span>
       <button
-        onClick={() => updateServiceWorker(true)}
+        onClick={() => void updateServiceWorker(true)}
         style={{
           background: "#fff",
           color: "#1e40af",

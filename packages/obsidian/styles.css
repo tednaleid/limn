@@ -25,6 +25,12 @@
   --reparent-border: #f59e0b;
 }
 
+/* React root container fills the view */
+.limn-view .limn-react-root {
+  width: 100%;
+  height: 100%;
+}
+
 /* Hide the off-screen text measurement element */
 .limn-view .limn-measure {
   position: absolute;

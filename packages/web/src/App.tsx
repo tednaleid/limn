@@ -195,7 +195,7 @@ export function App({ docId, initialData }: AppProps) {
       return;
     }
 
-    provider.load().then(async (saved) => {
+    void provider.load().then(async (saved) => {
       editor.loadJSON(saved ?? DEMO_MAP);
       editor.remeasureAllNodes();
       // Restore image blob URLs
@@ -247,45 +247,51 @@ export function App({ docId, initialData }: AppProps) {
 
   // Wire Cmd+S, Cmd+O, Shift+Cmd+E to file/export actions
   useEffect(() => {
-    editor.onSave(async () => {
-      try {
-        const name = await saveToFile(editor, provider);
-        setFilename(name);
-        setFlash({ message: "Saved" });
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          // User cancelled the file picker -- not an error
-          return;
-        }
-        console.error("Save failed:", err);
-      }
-    });
-    editor.onSaveAs(async () => {
-      try {
-        const name = await saveAsToFile(editor, provider);
-        setFilename(name);
-        setFlash({ message: "Saved" });
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("Save As failed:", err);
-      }
-    });
-    editor.onOpen(async () => {
-      try {
-        const name = await openFile(editor, provider);
-        setFilename(name);
-        // Restore asset blob URLs after loading
-        const assets = editor.getAssets();
-        if (assets.length > 0) {
-          const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
-          if (urls.size > 0) {
-            setAssetUrls(urls);
+    editor.onSave(() => {
+      void (async () => {
+        try {
+          const name = await saveToFile(editor, provider);
+          setFilename(name);
+          setFlash({ message: "Saved" });
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            // User cancelled the file picker -- not an error
+            return;
           }
+          console.error("Save failed:", err);
         }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        console.error("Open failed:", err);
-      }
+      })();
+    });
+    editor.onSaveAs(() => {
+      void (async () => {
+        try {
+          const name = await saveAsToFile(editor, provider);
+          setFilename(name);
+          setFlash({ message: "Saved" });
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          console.error("Save As failed:", err);
+        }
+      })();
+    });
+    editor.onOpen(() => {
+      void (async () => {
+        try {
+          const name = await openFile(editor, provider);
+          setFilename(name);
+          // Restore asset blob URLs after loading
+          const assets = editor.getAssets();
+          if (assets.length > 0) {
+            const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
+            if (urls.size > 0) {
+              setAssetUrls(urls);
+            }
+          }
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          console.error("Open failed:", err);
+        }
+      })();
     });
     editor.onExport(() => {
       exportSvg();
@@ -300,21 +306,23 @@ export function App({ docId, initialData }: AppProps) {
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
-    editor.onShare(async () => {
-      const data = prepareForShare(editor.toJSON());
-      const compressed = compressToUrl(data);
-      const shareUrl = window.location.origin + window.location.pathname + "#data=" + compressed;
-      if (shareUrl.length > MAX_SHARE_URL_LENGTH) {
-        setFlash({ message: "Map too large to share as URL", isError: true });
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        const hasImages = editor.getAssets().length > 0;
-        setFlash({ message: hasImages ? "Share link copied (without images)" : "Share link copied" });
-      } catch {
-        setFlash({ message: "Failed to copy link", isError: true });
-      }
+    editor.onShare(() => {
+      void (async () => {
+        const data = prepareForShare(editor.toJSON());
+        const compressed = compressToUrl(data);
+        const shareUrl = window.location.origin + window.location.pathname + "#data=" + compressed;
+        if (shareUrl.length > MAX_SHARE_URL_LENGTH) {
+          setFlash({ message: "Map too large to share as URL", isError: true });
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          const hasImages = editor.getAssets().length > 0;
+          setFlash({ message: hasImages ? "Share link copied (without images)" : "Share link copied" });
+        } catch {
+          setFlash({ message: "Failed to copy link", isError: true });
+        }
+      })();
     });
   }, [editor, provider]);
 
@@ -393,7 +401,7 @@ export function App({ docId, initialData }: AppProps) {
               next.set(assetId, blobUrl);
               return next;
             });
-            provider.saveAsset(assetId, file);
+            void provider.saveAsset(assetId, file);
           };
           img.src = blobUrl;
           break;
