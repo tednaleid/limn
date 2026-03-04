@@ -452,9 +452,10 @@ export function MindMapCanvas() {
             editor.setNodeImage(targetNodeId, asset, displayWidth, displayHeight);
           } else {
             // Drop on canvas: create new root with image
+            // setNodeImage before exitEditMode so the image prevents empty-node deletion
             const rootId = editor.addRoot("", world.x, world.y);
-            editor.exitEditMode();
             editor.setNodeImage(rootId, asset, displayWidth, displayHeight);
+            editor.exitEditMode();
           }
 
           // Persist blob to IndexedDB and notify App of the blob URL
