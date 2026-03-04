@@ -43,7 +43,7 @@ just obsidian-install ~/path/to/your/vault
 ```
 
 This builds the plugin and creates a symlink from
-`<vault>/.obsidian/plugins/obsidian-limn/` to `packages/obsidian/dist/`.
+`<vault>/.obsidian/plugins/limn/` to `packages/obsidian/dist/`.
 
 After symlinking, enable "Limn" in Obsidian Settings -> Community plugins.
 

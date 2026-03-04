@@ -64,7 +64,7 @@ obsidian-dev:
 obsidian-install vault_path:
     just obsidian-build
     mkdir -p "{{vault_path}}/.obsidian/plugins"
-    ln -sfn "$(pwd)/packages/obsidian/dist" "{{vault_path}}/.obsidian/plugins/obsidian-limn"
+    ln -sfn "$(pwd)/packages/obsidian/dist" "{{vault_path}}/.obsidian/plugins/limn"
     @echo "Symlinked. Enable 'Limn' in Obsidian Settings -> Community plugins."
 
 # Run obsidian package tests

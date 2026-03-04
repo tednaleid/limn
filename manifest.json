@@ -1,9 +1,9 @@
 {
-  "id": "obsidian-limn",
+  "id": "limn",
   "name": "Limn",
   "version": "0.9.0",
   "minAppVersion": "1.5.7",
-  "description": "Keyboard-first mind mapping inside Obsidian. Open .limn files as interactive mind map views.",
+  "description": "Keyboard-first mind mapping. Open .limn files as interactive mind map views.",
   "author": "Ted Naleid",
   "isDesktopOnly": false
 }
