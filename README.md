@@ -121,7 +121,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Key | Action |
 |-----|--------|
 | Ctrl+Arrows / Ctrl+hjkl | Nudge node (20px) |
-| Ctrl+Alt+Arrows / Ctrl+Alt+hjkl | Nudge node (1px) |
+| Ctrl+Alt+Left/Right / Ctrl+Alt+h/l | Resize node width or image (20px) |
 | r | Reflow children to computed layout |
 
 **Text Editing:**
@@ -158,7 +158,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Cmd+Click link | Open link in new tab |
 | Drag node | Move node (reparent when dropped on another node) |
 
-**Note:** On macOS, Ctrl+Arrow keys are bound to Mission Control by default (switching desktops). To use Ctrl+Arrow nudge bindings, disable these in System Settings > Keyboard > Keyboard Shortcuts > Mission Control, or use the Ctrl+hjkl equivalents instead.
+**Note:** On macOS, Ctrl+Arrow keys are bound to Mission Control by default (switching desktops). To use Ctrl+Arrow nudge and resize bindings, disable these in System Settings > Keyboard > Keyboard Shortcuts > Mission Control, or use the hjkl equivalents instead.
 
 ## Obsidian plugin
 

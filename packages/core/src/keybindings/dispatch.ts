@@ -254,32 +254,14 @@ const bindings: KeyBinding[] = [
       if (sel) editor.nudgeNode(sel, 20, 0);
     },
   },
-  // Ctrl+Alt+arrows: nudge node (fine, 1px)
-  {
-    key: "ArrowUp",
-    modifiers: { ctrl: true, alt: true },
-    mode: "nav",
-    action: (editor) => {
-      const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 0, -1);
-    },
-  },
-  {
-    key: "ArrowDown",
-    modifiers: { ctrl: true, alt: true },
-    mode: "nav",
-    action: (editor) => {
-      const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 0, 1);
-    },
-  },
+  // Ctrl+Alt+Left/Right: resize node width or image
   {
     key: "ArrowLeft",
     modifiers: { ctrl: true, alt: true },
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, -1, 0);
+      if (sel) editor.resizeNode(sel, -20);
     },
   },
   {
@@ -288,7 +270,7 @@ const bindings: KeyBinding[] = [
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 1, 0);
+      if (sel) editor.resizeNode(sel, 20);
     },
   },
   // Shift+Alt+arrows: fine pan (1% viewport)
@@ -491,32 +473,14 @@ const bindings: KeyBinding[] = [
       if (sel) editor.nudgeNode(sel, 20, 0);
     },
   },
-  // Ctrl+Alt+hjkl: nudge node (fine, 1px)
-  {
-    key: "k",
-    modifiers: { ctrl: true, alt: true },
-    mode: "nav",
-    action: (editor) => {
-      const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 0, -1);
-    },
-  },
-  {
-    key: "j",
-    modifiers: { ctrl: true, alt: true },
-    mode: "nav",
-    action: (editor) => {
-      const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 0, 1);
-    },
-  },
+  // Ctrl+Alt+h/l: resize node width or image
   {
     key: "h",
     modifiers: { ctrl: true, alt: true },
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, -1, 0);
+      if (sel) editor.resizeNode(sel, -20);
     },
   },
   {
@@ -525,7 +489,7 @@ const bindings: KeyBinding[] = [
     mode: "nav",
     action: (editor) => {
       const sel = editor.getSelectedId();
-      if (sel) editor.nudgeNode(sel, 1, 0);
+      if (sel) editor.resizeNode(sel, 20);
     },
   },
   // Shift+Alt+hjkl: fine pan (1% viewport)

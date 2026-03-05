@@ -869,14 +869,6 @@ describe("Editor", () => {
       expect(editor.getNode("n3").y).toBe(childBefore.y);
     });
 
-    test("Ctrl+Alt+Arrow moves node by 1px", () => {
-      editor.select("n1");
-      const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
-      editor.pressKey("ArrowDown", { ctrl: true, alt: true });
-      expect(editor.getNode("n1").x).toBe(before.x);
-      expect(editor.getNode("n1").y).toBe(before.y + 1);
-    });
-
     test("nudge is undoable", () => {
       editor.select("n1");
       const before = { x: editor.getNode("n1").x, y: editor.getNode("n1").y };
@@ -939,6 +931,84 @@ describe("Editor", () => {
       expect(editor.getNode("n1").y).toBe(before.y + 20);
       editor.pressKey("k", { ctrl: true });
       expect(editor.getNode("n1").y).toBe(before.y);
+    });
+  });
+
+  describe("resize node", () => {
+    test("Ctrl+Alt+Right widens node by 20px", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").width;
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before + 20);
+    });
+
+    test("Ctrl+Alt+Left narrows node by 20px", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").width;
+      editor.pressKey("ArrowLeft", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before - 20);
+    });
+
+    test("width is clamped to minimum 60px", () => {
+      editor.select("n1");
+      // Shrink well below minimum
+      for (let i = 0; i < 10; i++) {
+        editor.pressKey("ArrowLeft", { ctrl: true, alt: true });
+      }
+      expect(editor.getNode("n1").width).toBeGreaterThanOrEqual(60);
+    });
+
+    test("image resize maintains aspect ratio", () => {
+      editor.select("n1");
+      const asset = { id: "a1", data: new Uint8Array(), mimeType: "image/png" };
+      editor.setNodeImage("n1", asset, 200, 100);
+      const img = editor.getNode("n1").image!;
+      expect(img.width).toBe(200);
+      expect(img.height).toBe(100);
+
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      const after = editor.getNode("n1").image!;
+      expect(after.width).toBe(220);
+      expect(after.height).toBe(110);
+    });
+
+    test("image min width is 40px", () => {
+      editor.select("n1");
+      const asset = { id: "a1", data: new Uint8Array(), mimeType: "image/png" };
+      editor.setNodeImage("n1", asset, 50, 25);
+      // Shrink below minimum
+      editor.pressKey("ArrowLeft", { ctrl: true, alt: true });
+      const after = editor.getNode("n1").image!;
+      expect(after.width).toBe(40);
+    });
+
+    test("resize is undoable", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").width;
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before + 20);
+      editor.undo();
+      expect(editor.getNode("n1").width).toBe(before);
+    });
+
+    test("consecutive resizes squash into single undo entry", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").width;
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      editor.pressKey("ArrowRight", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before + 60);
+      editor.undo();
+      expect(editor.getNode("n1").width).toBe(before);
+    });
+
+    test("Ctrl+Alt+h/l mirrors Ctrl+Alt+Arrow for resize", () => {
+      editor.select("n1");
+      const before = editor.getNode("n1").width;
+      editor.pressKey("l", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before + 20);
+      editor.pressKey("h", { ctrl: true, alt: true });
+      expect(editor.getNode("n1").width).toBe(before);
     });
   });
 

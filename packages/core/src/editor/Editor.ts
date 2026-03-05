@@ -43,6 +43,7 @@ import {
   initImageResize,
   clampNodeWidth,
   computeImageResize,
+  MIN_IMAGE_WIDTH,
 } from "./resize";
 import {
   type DragState,
@@ -747,6 +748,35 @@ export class Editor {
     moveSubtree(this.store, nodeId, dx, dy);
     this.ensureNodeVisible(nodeId);
     this.notify();
+  }
+
+  resizeNode(nodeId: string, delta: number): void {
+    const node = this.store.getNode(nodeId);
+    const squashLabel = `resize:${nodeId}`;
+
+    if (node.image) {
+      const aspectRatio = node.image.width / node.image.height;
+      const newImgWidth = Math.max(MIN_IMAGE_WIDTH, node.image.width + delta);
+      if (newImgWidth === node.image.width) return;
+      if (this.lastUndoLabel !== squashLabel) {
+        this.pushUndo(squashLabel);
+      }
+      const newImgHeight = Math.round(newImgWidth / aspectRatio);
+      node.image = { ...node.image, width: newImgWidth, height: newImgHeight };
+      this.remeasureNode(nodeId);
+      relayoutFromNode(this.store, nodeId);
+      this.notify();
+    } else {
+      const newWidth = clampNodeWidth(node.width + delta);
+      if (newWidth === node.width) return;
+      if (this.lastUndoLabel !== squashLabel) {
+        this.pushUndo(squashLabel);
+      }
+      this.store.setNodeWidth(nodeId, newWidth);
+      this.remeasureNode(nodeId);
+      relayoutFromNode(this.store, nodeId);
+      this.notify();
+    }
   }
 
   setText(nodeId: string, text: string): void {
