@@ -10,3 +10,5 @@ dist/
 coverage/
 release/
 obsidian_vault
+.llm/*
+!.llm/.gitkeep
