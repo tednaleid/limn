@@ -1,5 +1,5 @@
 // ABOUTME: NSViewRepresentable wrapping WKWebView for the Limn web app.
-// ABOUTME: Loads from bundle resources (release) or localhost:5173 (dev mode).
+// ABOUTME: Handles JS-Swift bridge messages for file operations and persistence.
 
 import SwiftUI
 import WebKit
@@ -27,7 +27,6 @@ struct WebViewBridge: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
-        // No dynamic updates needed for Phase 1
     }
 
     func makeCoordinator() -> Coordinator {
@@ -62,6 +61,9 @@ struct WebViewBridge: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         weak var webView: WKWebView?
 
+        /// Path to the currently open file (nil for unsaved documents).
+        var currentFileURL: URL?
+
         // WKScriptMessageHandler: receives messages from JS
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -71,17 +73,117 @@ struct WebViewBridge: NSViewRepresentable {
                   let type = body["type"] as? String else {
                 return
             }
+            let payload = body["payload"] as? [String: Any]
 
             switch type {
             case "ready":
-                // WebView is ready -- Phase 2 will send file data here
+                // WebView is ready; if we have a file queued, send it
                 break
+
+            case "save":
+                guard let base64 = payload?["data"] as? String else { return }
+                handleSave(base64: base64)
+
+            case "requestOpen":
+                handleRequestOpen()
+
+            case "requestSaveAs":
+                guard let base64 = payload?["data"] as? String else { return }
+                handleRequestSaveAs(base64: base64)
+
             default:
                 print("[Limn] Unknown message type: \(type)")
             }
         }
 
-        // WKNavigationDelegate: log navigation errors
+        // MARK: - Message handlers
+
+        private func handleSave(base64: String) {
+            guard let data = Data(base64Encoded: base64) else {
+                print("[Limn] Save failed: invalid base64")
+                return
+            }
+
+            if let url = currentFileURL {
+                // Save to the current file
+                do {
+                    try FileOperations.writeFile(data, to: url)
+                    sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
+                } catch {
+                    print("[Limn] Save failed: \(error.localizedDescription)")
+                }
+            } else {
+                // No file open yet -- trigger save-as
+                handleRequestSaveAs(base64: base64)
+            }
+        }
+
+        private func handleRequestOpen() {
+            Task { @MainActor in
+                guard let url = await FileOperations.showOpenPanel() else { return }
+                do {
+                    let data = try FileOperations.readFile(at: url)
+                    let base64 = data.base64EncodedString()
+                    currentFileURL = url
+                    NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                    sendToJS(type: "loadFile", payload: [
+                        "data": base64,
+                        "filename": url.lastPathComponent,
+                    ])
+                } catch {
+                    print("[Limn] Open failed: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        private func handleRequestSaveAs(base64: String) {
+            guard let data = Data(base64Encoded: base64) else {
+                print("[Limn] SaveAs failed: invalid base64")
+                return
+            }
+
+            Task { @MainActor in
+                let suggestedName = currentFileURL?.lastPathComponent ?? "Untitled.limn"
+                guard let url = await FileOperations.showSavePanel(suggestedName: suggestedName) else { return }
+                do {
+                    try FileOperations.writeFile(data, to: url)
+                    currentFileURL = url
+                    NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                    sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
+                } catch {
+                    print("[Limn] SaveAs failed: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // MARK: - JS communication
+
+        /// Send a message from Swift to JS via evaluateJavaScript.
+        func sendToJS(type: String, payload: [String: Any] = [:]) {
+            guard let webView = webView else { return }
+
+            // Serialize payload to JSON
+            let payloadJSON: String
+            if payload.isEmpty {
+                payloadJSON = "{}"
+            } else if let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+                      let jsonString = String(data: jsonData, encoding: .utf8) {
+                payloadJSON = jsonString
+            } else {
+                print("[Limn] Failed to serialize payload")
+                return
+            }
+
+            let js = "window.limn?.desktop?.onMessage?.({type:\"\(type)\",payload:\(payloadJSON)})"
+            webView.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("[Limn] JS eval error: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // MARK: - WKNavigationDelegate
+
         func webView(
             _ webView: WKWebView,
             didFail navigation: WKNavigation!,

@@ -15,6 +15,8 @@ import { KeystrokeOverlay } from "./components/KeystrokeOverlay";
 import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
+import { DesktopPersistenceProvider } from "./persistence/desktop-persistence";
+import { isDesktop } from "./persistence/desktop-bridge";
 import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
 import { exportSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
@@ -183,7 +185,11 @@ interface AppProps {
 
 export function App({ docId, initialData }: AppProps) {
   const editor = useMemo(() => new Editor(domTextMeasurer), []);
-  const provider = useMemo(() => new WebPersistenceProvider(docId), [docId]);
+  const desktop = useMemo(() => isDesktop(), []);
+  const provider = useMemo(
+    () => desktop ? new DesktopPersistenceProvider() : new WebPersistenceProvider(docId),
+    [docId, desktop],
+  );
   const [loaded, setLoaded] = useState(false);
 
   // Load from initialData (shared URL), provider (IndexedDB), or fall back to demo map
@@ -247,52 +253,83 @@ export function App({ docId, initialData }: AppProps) {
 
   // Wire Cmd+S, Cmd+O, Shift+Cmd+E to file/export actions
   useEffect(() => {
-    editor.onSave(() => {
-      void (async () => {
-        try {
-          const name = await saveToFile(editor, provider);
-          setFilename(name);
+    if (desktop) {
+      const dp = provider as DesktopPersistenceProvider;
+      editor.onSave(() => {
+        void dp.save(editor.toJSON()).then(() => {
+          setFilename(dp.filename);
           setFlash({ message: "Saved" });
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") {
-            // User cancelled the file picker -- not an error
-            return;
+        });
+      });
+      editor.onSaveAs(() => {
+        void dp.requestSaveAs(editor.toJSON()).then((name) => {
+          if (name) {
+            setFilename(name);
+            setFlash({ message: "Saved" });
           }
-          console.error("Save failed:", err);
-        }
-      })();
-    });
-    editor.onSaveAs(() => {
-      void (async () => {
-        try {
-          const name = await saveAsToFile(editor, provider);
-          setFilename(name);
-          setFlash({ message: "Saved" });
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-          console.error("Save As failed:", err);
-        }
-      })();
-    });
-    editor.onOpen(() => {
-      void (async () => {
-        try {
-          const name = await openFile(editor, provider);
-          setFilename(name);
-          // Restore asset blob URLs after loading
+        });
+      });
+      editor.onOpen(() => {
+        void dp.requestOpen().then(async (result) => {
+          if (!result) return;
+          editor.loadJSON(result.data);
+          editor.remeasureAllNodes();
+          setFilename(result.filename);
           const assets = editor.getAssets();
           if (assets.length > 0) {
-            const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
-            if (urls.size > 0) {
-              setAssetUrls(urls);
-            }
+            const urls = await dp.loadAssetUrls(assets.map((a) => a.id));
+            if (urls.size > 0) setAssetUrls(urls);
           }
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-          console.error("Open failed:", err);
-        }
-      })();
-    });
+        });
+      });
+    } else {
+      editor.onSave(() => {
+        void (async () => {
+          try {
+            const name = await saveToFile(editor, provider);
+            setFilename(name);
+            setFlash({ message: "Saved" });
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              // User cancelled the file picker -- not an error
+              return;
+            }
+            console.error("Save failed:", err);
+          }
+        })();
+      });
+      editor.onSaveAs(() => {
+        void (async () => {
+          try {
+            const name = await saveAsToFile(editor, provider);
+            setFilename(name);
+            setFlash({ message: "Saved" });
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") return;
+            console.error("Save As failed:", err);
+          }
+        })();
+      });
+      editor.onOpen(() => {
+        void (async () => {
+          try {
+            const name = await openFile(editor, provider);
+            setFilename(name);
+            // Restore asset blob URLs after loading
+            const assets = editor.getAssets();
+            if (assets.length > 0) {
+              const urls = await provider.loadAssetUrls(assets.map((a) => a.id));
+              if (urls.size > 0) {
+                setAssetUrls(urls);
+              }
+            }
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") return;
+            console.error("Open failed:", err);
+          }
+        })();
+      });
+    }
     editor.onExport(() => {
       exportSvg();
     });
@@ -300,7 +337,7 @@ export function App({ docId, initialData }: AppProps) {
       applyThemeFromMeta(editor.getTheme(), editor.getLightTheme(), editor.getDarkTheme());
     });
     editor.onClear(() => {
-      clearFileHandle();
+      if (!desktop) clearFileHandle();
       setFilename(null);
     });
     editor.onOpenLink((url) => {
@@ -328,8 +365,12 @@ export function App({ docId, initialData }: AppProps) {
 
   // Initialize filename from any previously set file handle
   useEffect(() => {
-    setFilename(getCurrentFilename());
-  }, [loaded]);
+    if (desktop) {
+      setFilename((provider as DesktopPersistenceProvider).filename);
+    } else {
+      setFilename(getCurrentFilename());
+    }
+  }, [loaded, desktop, provider]);
 
   const clearFlash = useCallback(() => setFlash(null), []);
 
