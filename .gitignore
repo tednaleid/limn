@@ -12,3 +12,9 @@ release/
 obsidian_vault
 .llm/*
 !.llm/.gitkeep
+
+# XcodeGen output (regenerated from project.yml)
+*.xcodeproj/
+# Xcode build artifacts
+packages/desktop/build/
+DerivedData/

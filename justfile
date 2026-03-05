@@ -87,3 +87,37 @@ bump version="":
 clean-install:
     rm -rf node_modules packages/core/node_modules packages/web/node_modules
     bun install
+
+# Build output lives outside the project tree to avoid iCloud/file-provider
+# resource forks that break codesign.
+desktop_build_dir := "/tmp/limn-desktop-build"
+
+# Generate Xcode project from project.yml (run after modifying project.yml)
+desktop-gen:
+    cd packages/desktop && xcodegen generate
+
+# Build the desktop app (Debug)
+desktop-build: desktop-gen
+    cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug build SYMROOT={{desktop_build_dir}}
+
+# Build and run the desktop app in dev mode (loads from Vite dev server)
+desktop-dev: desktop-gen
+    cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug build SYMROOT={{desktop_build_dir}}
+    @echo "Launching Limn in dev mode (loading from localhost:5173)..."
+    @echo "Make sure 'just serve' is running in another terminal."
+    LIMN_DEV_URL="http://localhost:5173/limn/" {{desktop_build_dir}}/Debug/Limn.app/Contents/MacOS/Limn
+
+# Build the desktop app (Release) with bundled web resources
+desktop-release: build desktop-gen
+    mkdir -p packages/desktop/Limn/Resources
+    cp -r packages/web/dist/ packages/desktop/Limn/Resources/web/
+    cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Release build SYMROOT={{desktop_build_dir}}
+    rm -rf packages/desktop/Limn/Resources
+
+# Run desktop unit tests
+desktop-test: desktop-gen
+    cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug test SYMROOT={{desktop_build_dir}}
+
+# Clean desktop build artifacts
+desktop-clean:
+    rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj

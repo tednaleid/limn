@@ -1,0 +1,65 @@
+name: Limn
+options:
+  bundleIdPrefix: com.tednaleid
+  deploymentTarget:
+    macOS: "26.0"
+  xcodeVersion: "26"
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.2"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    PRODUCT_BUNDLE_IDENTIFIER: com.tednaleid.Limn
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+    CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements
+    # Allow WKWebView to load local files from the bundle
+    INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: true
+
+targets:
+  Limn:
+    type: application
+    platform: macOS
+    sources:
+      - path: Limn
+        excludes:
+          - "*.entitlements"
+    resources:
+      - path: Limn/Assets.xcassets
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: true
+        # Hardened Runtime: allow JIT for WKWebView JavaScript execution
+        INFOPLIST_KEY_com.apple.security.cs.allow-jit: true
+    info:
+      path: Limn/Info.plist
+      properties:
+        CFBundleDisplayName: Limn
+        CFBundleName: Limn
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+
+  LimnTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: LimnTests
+    dependencies:
+      - target: Limn
+
+  LimnUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: LimnUITests
+    dependencies:
+      - target: Limn
