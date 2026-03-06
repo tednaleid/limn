@@ -171,6 +171,15 @@ struct WebViewBridge: NSViewRepresentable {
             }
         }
 
+        // MARK: - Menu-triggered actions
+
+        /// Dispatch a synthetic keyboard event into the web view so the existing
+        /// JS keyboard handler processes it. Used by native menu items.
+        func triggerKeyboardShortcut(key: String, meta: Bool = false, shift: Bool = false) {
+            let js = "window.dispatchEvent(new KeyboardEvent('keydown',{key:'\(key)',metaKey:\(meta),shiftKey:\(shift),bubbles:true}))"
+            webView?.evaluateJavaScript(js)
+        }
+
         // MARK: - Window title
 
         /// Update the macOS window title bar to show the current filename.

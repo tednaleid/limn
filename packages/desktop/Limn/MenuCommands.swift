@@ -1,14 +1,61 @@
-// ABOUTME: Native menu bar customization for the Limn desktop app.
-// ABOUTME: Phase 2 provides File menu basics; Phase 4 adds full Edit/View/Help menus.
+// ABOUTME: Native menu bar with File and Edit menus for the Limn desktop app.
+// ABOUTME: Dispatches actions to the focused window's Coordinator via FocusedValue.
 
 import SwiftUI
 
 struct MenuCommands: Commands {
+    @FocusedValue(\.documentCoordinator) var coordinator
+    @Environment(\.openWindow) var openWindow
+
     var body: some Commands {
-        // Replace the default New Window item with our file operations
+        // MARK: - File menu
+
         CommandGroup(replacing: .newItem) {
-            // Phase 4 will add New, Open, Save, Save As, etc.
-            // For now these are handled by the JS-Swift bridge
+            Button("New") {
+                let sentinel = URL(string: "limn:new/\(UUID().uuidString)")!
+                openWindow(value: sentinel)
+            }
+            .keyboardShortcut("n")
+
+            Button("Open...") {
+                Task { @MainActor in
+                    guard let url = await FileOperations.showOpenPanel() else { return }
+                    openWindow(value: url)
+                }
+            }
+            .keyboardShortcut("o")
+        }
+
+        CommandGroup(after: .newItem) {
+            Divider()
+
+            Button("Save") {
+                coordinator?.triggerKeyboardShortcut(key: "s", meta: true)
+            }
+            .keyboardShortcut("s")
+            .disabled(coordinator == nil)
+
+            Button("Save As...") {
+                coordinator?.triggerKeyboardShortcut(key: "s", meta: true, shift: true)
+            }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+            .disabled(coordinator == nil)
+        }
+
+        // MARK: - Edit menu
+
+        CommandGroup(replacing: .undoRedo) {
+            Button("Undo") {
+                coordinator?.triggerKeyboardShortcut(key: "z", meta: true)
+            }
+            .keyboardShortcut("z")
+            .disabled(coordinator == nil)
+
+            Button("Redo") {
+                coordinator?.triggerKeyboardShortcut(key: "z", meta: true, shift: true)
+            }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+            .disabled(coordinator == nil)
         }
     }
 }
