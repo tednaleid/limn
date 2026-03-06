@@ -56,7 +56,16 @@ const g = globalThis as any;
 
 type MessageHandler = (msg: IncomingMessage) => void;
 
-let handler: MessageHandler | null = null;
+// Store the handler on the global object so it survives Vite HMR module reloads.
+// A module-level `let handler` gets reset to null when the module re-executes,
+// but the DesktopPersistenceProvider instance (cached by React useMemo) still
+// expects its callback to be reachable.
+function getHandler(): MessageHandler | null {
+  return g.limn?.desktop?._handler ?? null;
+}
+function setHandler(cb: MessageHandler | null): void {
+  if (g.limn?.desktop) g.limn.desktop._handler = cb;
+}
 
 /** Returns true if running inside the Limn desktop WKWebView shell. */
 export function isDesktop(): boolean {
@@ -70,9 +79,9 @@ export function postToSwift(msg: OutgoingMessage): void {
 
 /** Register a handler for messages from Swift. Only one handler at a time. */
 export function onSwiftMessage(cb: MessageHandler): () => void {
-  handler = cb;
+  setHandler(cb);
   return () => {
-    if (handler === cb) handler = null;
+    if (getHandler() === cb) setHandler(null);
   };
 }
 
@@ -81,7 +90,8 @@ export function onSwiftMessage(cb: MessageHandler): () => void {
  * Installed on window.limn.desktop.onMessage so Swift can invoke it.
  */
 function handleSwiftMessage(msg: IncomingMessage): void {
-  handler?.(msg);
+  const h = getHandler();
+  h?.(msg);
 }
 
 // Install the global callback for Swift -> JS communication

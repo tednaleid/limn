@@ -6,18 +6,40 @@ import { postToSwift, onSwiftMessage } from "./desktop-bridge";
 import type { IncomingMessage } from "./desktop-bridge";
 import { buildLimnZip, parseLimnFile } from "./file";
 
+// Pending request state is stored on the global object so it survives
+// React StrictMode double-invoking useMemo (which creates two instances,
+// but the global handler ends up pointing to the second while React keeps
+// the first). By sharing pending state globally, both instances resolve
+// correctly.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any;
+
+interface PendingLoad {
+  resolve: (result: { data: MindMapFileFormat; filename: string } | null) => void;
+}
+interface PendingSave {
+  resolve: (filename: string | null) => void;
+}
+
+function getPendingLoad(): PendingLoad | null {
+  return g.limn?.desktop?._pendingLoad ?? null;
+}
+function setPendingLoad(p: PendingLoad | null): void {
+  if (g.limn?.desktop) g.limn.desktop._pendingLoad = p;
+}
+function getPendingSave(): PendingSave | null {
+  return g.limn?.desktop?._pendingSave ?? null;
+}
+function setPendingSave(p: PendingSave | null): void {
+  if (g.limn?.desktop) g.limn.desktop._pendingSave = p;
+}
+
 export class DesktopPersistenceProvider implements PersistenceProvider {
   private assetCache = new Map<string, Blob>();
   private assetUrls = new Map<string, string>();
   private externalChangeCallback: ((data: MindMapFileFormat) => void) | null = null;
   private unsubBridge: (() => void) | null = null;
   private currentFilename: string | null = null;
-  private pendingLoad: {
-    resolve: (result: { data: MindMapFileFormat; filename: string } | null) => void;
-  } | null = null;
-  private pendingSave: {
-    resolve: (filename: string) => void;
-  } | null = null;
 
   constructor() {
     this.unsubBridge = onSwiftMessage((msg) => this.handleMessage(msg));
@@ -35,21 +57,30 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
           }
           this.currentFilename = msg.payload.filename;
 
-          if (this.pendingLoad) {
-            this.pendingLoad.resolve({ data, filename: msg.payload.filename });
-            this.pendingLoad = null;
+          const pending = getPendingLoad();
+          if (pending) {
+            pending.resolve({ data, filename: msg.payload.filename });
+            setPendingLoad(null);
           } else {
             // External load (e.g., file opened via Finder while app is running)
             this.externalChangeCallback?.(data);
+          }
+        }).catch((err) => {
+          console.error("[desktop] parseLimnFile failed:", err);
+          const pending = getPendingLoad();
+          if (pending) {
+            pending.resolve(null);
+            setPendingLoad(null);
           }
         });
         break;
       }
       case "fileSaved": {
         this.currentFilename = msg.payload.filename;
-        if (this.pendingSave) {
-          this.pendingSave.resolve(msg.payload.filename);
-          this.pendingSave = null;
+        const pending = getPendingSave();
+        if (pending) {
+          pending.resolve(msg.payload.filename);
+          setPendingSave(null);
         }
         break;
       }
@@ -79,14 +110,15 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   /** Request a file open dialog from Swift. Returns the loaded data or null if cancelled. */
   async requestOpen(): Promise<{ data: MindMapFileFormat; filename: string } | null> {
     return new Promise((resolve) => {
-      this.pendingLoad = { resolve };
+      setPendingLoad({ resolve });
       postToSwift({ type: "requestOpen" });
       // If Swift doesn't respond (user cancelled), we need a timeout
       // to resolve null so the UI doesn't hang. 60s is generous.
       setTimeout(() => {
-        if (this.pendingLoad) {
-          this.pendingLoad.resolve(null);
-          this.pendingLoad = null;
+        const p = getPendingLoad();
+        if (p) {
+          p.resolve(null);
+          setPendingLoad(null);
         }
       }, 60_000);
     });
@@ -97,12 +129,13 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     const zipBlob = await buildLimnZip(data, this.assetCache);
     const base64 = await blobToBase64(zipBlob);
     return new Promise((resolve) => {
-      this.pendingSave = { resolve };
+      setPendingSave({ resolve });
       postToSwift({ type: "requestSaveAs", payload: { data: base64 } });
       setTimeout(() => {
-        if (this.pendingSave) {
-          this.pendingSave = null;
-          resolve(null);
+        const p = getPendingSave();
+        if (p) {
+          p.resolve(null);
+          setPendingSave(null);
         }
       }, 60_000);
     });

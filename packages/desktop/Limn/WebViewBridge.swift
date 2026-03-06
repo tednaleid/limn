@@ -75,6 +75,8 @@ struct WebViewBridge: NSViewRepresentable {
             }
             let payload = body["payload"] as? [String: Any]
 
+            print("[Limn Swift] Received message: \(type)")
+
             switch type {
             case "ready":
                 // WebView is ready; if we have a file queued, send it
@@ -85,6 +87,7 @@ struct WebViewBridge: NSViewRepresentable {
                 handleSave(base64: base64)
 
             case "requestOpen":
+                print("[Limn Swift] Handling requestOpen")
                 handleRequestOpen()
 
             case "requestSaveAs":
@@ -120,12 +123,17 @@ struct WebViewBridge: NSViewRepresentable {
 
         private func handleRequestOpen() {
             Task { @MainActor in
-                guard let url = await FileOperations.showOpenPanel() else { return }
+                guard let url = await FileOperations.showOpenPanel() else {
+                    print("[Limn Swift] Open panel cancelled")
+                    return
+                }
                 do {
                     let data = try FileOperations.readFile(at: url)
                     let base64 = data.base64EncodedString()
+                    print("[Limn Swift] File read: \(url.lastPathComponent), \(data.count) bytes, base64 length: \(base64.count)")
                     currentFileURL = url
                     NSDocumentController.shared.noteNewRecentDocumentURL(url)
+
                     sendToJS(type: "loadFile", payload: [
                         "data": base64,
                         "filename": url.lastPathComponent,
@@ -174,10 +182,28 @@ struct WebViewBridge: NSViewRepresentable {
                 return
             }
 
-            let js = "window.limn?.desktop?.onMessage?.({type:\"\(type)\",payload:\(payloadJSON)})"
-            webView.evaluateJavaScript(js) { _, error in
+            let js = """
+            (function() {
+                var l = window.limn, d = l && l.desktop, fn = d && d.onMessage;
+                if (fn) {
+                    try {
+                        fn({type:"\(type)",payload:\(payloadJSON)});
+                        var h = d._handler;
+                        return "called, handler=" + (h ? "YES" : "NO") + ", fn=" + fn.toString().substring(0, 120);
+                    } catch(e) {
+                        return "ERROR: " + e.message + " " + e.stack;
+                    }
+                } else {
+                    return "MISSING: limn=" + typeof l + " desktop=" + typeof d + " onMessage=" + typeof fn + " keys=" + (d ? Object.keys(d).join(",") : "N/A");
+                }
+            })()
+            """
+            print("[Limn Swift] Sending to JS: type=\(type)")
+            webView.evaluateJavaScript(js) { result, error in
                 if let error = error {
-                    print("[Limn] JS eval error: \(error.localizedDescription)")
+                    print("[Limn Swift] JS eval error: \(error.localizedDescription)")
+                } else {
+                    print("[Limn Swift] JS eval result: \(result ?? "nil")")
                 }
             }
         }
