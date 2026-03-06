@@ -47,6 +47,20 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Limn Mind Map
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Owner
+            LSItemContentTypes:
+              - com.tednaleid.limn
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.tednaleid.limn
+            UTTypeDescription: Limn Mind Map
+            UTTypeConformsTo:
+              - public.data
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - limn
 
   LimnTests:
     type: bundle.unit-test

@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 
 /// UTType for .limn files (declared in Info.plist via project.yml in Phase 3)
 extension UTType {
-    static let limn = UTType(filenameExtension: "limn") ?? .data
+    static let limn = UTType("com.tednaleid.limn") ?? UTType(filenameExtension: "limn") ?? .data
 }
 
 enum FileOperations {
