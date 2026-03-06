@@ -7,7 +7,7 @@ import SwiftUI
 struct LimnApp: App {
     var body: some Scene {
         WindowGroup {
-            DocumentWindow()
+            DocumentWindow(fileURL: .constant(nil))
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 1200, height: 800)

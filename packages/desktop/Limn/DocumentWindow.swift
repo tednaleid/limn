@@ -4,12 +4,18 @@
 import SwiftUI
 
 struct DocumentWindow: View {
+    @Binding var fileURL: URL?
     @State private var coordinator = WebViewBridge.Coordinator()
 
     var body: some View {
         WebViewBridge(coordinator: coordinator)
             .ignoresSafeArea()
             .focusedSceneValue(\.documentCoordinator, coordinator)
+            .onAppear {
+                if let url = fileURL, url.isFileURL {
+                    coordinator.pendingFileURL = url
+                }
+            }
     }
 }
 

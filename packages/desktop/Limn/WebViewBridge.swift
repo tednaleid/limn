@@ -66,6 +66,9 @@ struct WebViewBridge: NSViewRepresentable {
         /// Path to the currently open file (nil for unsaved documents).
         var currentFileURL: URL?
 
+        /// File URL to load once the web view signals "ready" (cold-start buffering).
+        var pendingFileURL: URL?
+
         // WKScriptMessageHandler: receives messages from JS
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -79,8 +82,10 @@ struct WebViewBridge: NSViewRepresentable {
 
             switch type {
             case "ready":
-                // WebView is ready; if we have a file queued, send it
-                break
+                if let url = pendingFileURL {
+                    pendingFileURL = nil
+                    loadFileIntoWebView(url: url)
+                }
 
             case "save":
                 guard let base64 = payload?["data"] as? String else { return }
@@ -123,20 +128,25 @@ struct WebViewBridge: NSViewRepresentable {
         private func handleRequestOpen() {
             Task { @MainActor in
                 guard let url = await FileOperations.showOpenPanel() else { return }
-                do {
-                    let data = try FileOperations.readFile(at: url)
-                    let base64 = data.base64EncodedString()
-                    currentFileURL = url
-                    updateWindowTitle(url.lastPathComponent)
-                    NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                loadFileIntoWebView(url: url)
+            }
+        }
 
-                    sendToJS(type: "loadFile", payload: [
-                        "data": base64,
-                        "filename": url.lastPathComponent,
-                    ])
-                } catch {
-                    print("[Limn] Open failed: \(error.localizedDescription)")
-                }
+        /// Read a file from disk and send it to the web view as a loadFile message.
+        func loadFileIntoWebView(url: URL) {
+            do {
+                let data = try FileOperations.readFile(at: url)
+                let base64 = data.base64EncodedString()
+                currentFileURL = url
+                updateWindowTitle(url.lastPathComponent)
+                NSDocumentController.shared.noteNewRecentDocumentURL(url)
+
+                sendToJS(type: "loadFile", payload: [
+                    "data": base64,
+                    "filename": url.lastPathComponent,
+                ])
+            } catch {
+                print("[Limn] Open failed: \(error.localizedDescription)")
             }
         }
 
