@@ -6,18 +6,20 @@ import WebKit
 
 /// NSViewRepresentable that creates and manages a WKWebView for the Limn web app.
 struct WebViewBridge: NSViewRepresentable {
+    /// Coordinator is created externally by DocumentWindow so it can be published
+    /// via focusedSceneValue for menu access.
+    let coordinator: Coordinator
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
         // Register the message handler for JS -> Swift communication
-        let handler = context.coordinator
-        config.userContentController.add(handler, name: "limn")
+        config.userContentController.add(coordinator, name: "limn")
 
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator
-        context.coordinator.webView = webView
+        webView.navigationDelegate = coordinator
+        coordinator.webView = webView
 
         // Allow inspecting the web view in Safari dev tools
         webView.isInspectable = true
@@ -30,7 +32,7 @@ struct WebViewBridge: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        coordinator
     }
 
     private func loadContent(into webView: WKWebView) {
