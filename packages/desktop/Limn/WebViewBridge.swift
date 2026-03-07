@@ -140,6 +140,8 @@ struct WebViewBridge: NSViewRepresentable {
                 onFileURLChanged?(url)
                 updateWindowTitle(url.lastPathComponent)
                 NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                SessionStore.createAndStoreBookmark(for: url)
+                appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
 
                 sendToJS(type: "loadFile", payload: [
                     "data": base64,
@@ -165,11 +167,19 @@ struct WebViewBridge: NSViewRepresentable {
                     onFileURLChanged?(url)
                     updateWindowTitle(url.lastPathComponent)
                     NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                    SessionStore.createAndStoreBookmark(for: url)
+                    self.appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
                     sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
                 } catch {
                     print("[Limn] SaveAs failed: \(error.localizedDescription)")
                 }
             }
+        }
+
+        // MARK: - App delegate access
+
+        private var appDelegate: AppDelegate? {
+            NSApp?.delegate as? AppDelegate
         }
 
         // MARK: - Menu-triggered actions

@@ -17,9 +17,10 @@ struct LimnApp: App {
                     }
                 }
         } defaultValue: {
-            // Each new empty window gets a unique sentinel URL so
-            // SwiftUI does not deduplicate them with each other.
-            URL(string: "limn:new/\(UUID().uuidString)")!
+            // If session restore has URLs waiting, use the first one for this
+            // initial window instead of creating a blank canvas.
+            delegate.popFirstBufferedURL()
+                ?? URL(string: "limn:new/\(UUID().uuidString)")!
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 1200, height: 800)
