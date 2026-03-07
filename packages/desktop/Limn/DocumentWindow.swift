@@ -8,32 +8,24 @@ struct DocumentWindow: View {
     @State private var coordinator = WebViewBridge.Coordinator()
 
     var body: some View {
-        WebViewBridge(coordinator: coordinator)
-            .ignoresSafeArea()
-            .focusedSceneValue(\.documentCoordinator, coordinator)
-            .task {
-                let delegate = NSApp?.delegate as? AppDelegate
-                delegate?.registerCoordinator(
+        WebViewBridge(
+            coordinator: coordinator,
+            fileURL: fileURL,
+            onFileURLChanged: { url in
+                fileURL = url
+                (NSApp?.delegate as? AppDelegate)?.updateCoordinatorFileURL(
                     ObjectIdentifier(coordinator),
-                    coordinator: coordinator,
-                    fileURL: fileURL.isFileURL ? fileURL : nil
-                )
-                if fileURL.isFileURL {
-                    coordinator.pendingFileURL = fileURL
-                }
-                coordinator.onFileURLChanged = { url in
-                    fileURL = url
-                    delegate?.updateCoordinatorFileURL(
-                        ObjectIdentifier(coordinator),
-                        fileURL: url
-                    )
-                }
-            }
-            .onDisappear {
-                (NSApp?.delegate as? AppDelegate)?.unregisterCoordinator(
-                    ObjectIdentifier(coordinator)
+                    fileURL: url
                 )
             }
+        )
+        .ignoresSafeArea()
+        .focusedSceneValue(\.documentCoordinator, coordinator)
+        .onDisappear {
+            (NSApp?.delegate as? AppDelegate)?.unregisterCoordinator(
+                ObjectIdentifier(coordinator)
+            )
+        }
     }
 }
 

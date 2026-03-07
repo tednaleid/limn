@@ -50,6 +50,9 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        # Disable macOS automatic window restoration -- we use our own
+        # bookmark-based session restore via SessionStore instead.
+        NSQuitAlwaysKeepsWindows: false
         CFBundleDocumentTypes:
           - CFBundleTypeName: Limn Mind Map
             CFBundleTypeRole: Editor

@@ -9,6 +9,8 @@ struct WebViewBridge: NSViewRepresentable {
     /// Coordinator is created externally by DocumentWindow so it can be published
     /// via focusedSceneValue for menu access.
     let coordinator: Coordinator
+    var fileURL: URL?
+    var onFileURLChanged: ((URL) -> Void)?
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -23,6 +25,19 @@ struct WebViewBridge: NSViewRepresentable {
 
         // Allow inspecting the web view in Safari dev tools
         webView.isInspectable = true
+
+        // Register coordinator with AppDelegate. This runs in makeNSView because
+        // SwiftUI's .task modifier never fires for our WindowGroup(for: URL.self).
+        coordinator.onFileURLChanged = onFileURLChanged
+        let delegate = NSApp?.delegate as? AppDelegate
+        delegate?.registerCoordinator(
+            ObjectIdentifier(coordinator),
+            coordinator: coordinator,
+            fileURL: fileURL?.isFileURL == true ? fileURL : nil
+        )
+        if let url = fileURL, url.isFileURL {
+            coordinator.pendingFileURL = url
+        }
 
         loadContent(into: webView)
         return webView
