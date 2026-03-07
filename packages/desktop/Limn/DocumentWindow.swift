@@ -12,12 +12,27 @@ struct DocumentWindow: View {
             .ignoresSafeArea()
             .focusedSceneValue(\.documentCoordinator, coordinator)
             .onAppear {
+                let delegate = NSApp?.delegate as? AppDelegate
+                delegate?.registerCoordinator(
+                    ObjectIdentifier(coordinator),
+                    coordinator: coordinator,
+                    fileURL: fileURL.isFileURL ? fileURL : nil
+                )
                 if fileURL.isFileURL {
                     coordinator.pendingFileURL = fileURL
                 }
                 coordinator.onFileURLChanged = { url in
                     fileURL = url
+                    delegate?.updateCoordinatorFileURL(
+                        ObjectIdentifier(coordinator),
+                        fileURL: url
+                    )
                 }
+            }
+            .onDisappear {
+                (NSApp?.delegate as? AppDelegate)?.unregisterCoordinator(
+                    ObjectIdentifier(coordinator)
+                )
             }
     }
 }

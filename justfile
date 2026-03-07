@@ -121,6 +121,23 @@ desktop-release: build desktop-gen
 desktop-test: desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug test SYMROOT={{desktop_build_dir}}
 
+# List all open windows in the running desktop app
+desktop-windows:
+    @curl -sf localhost:9876/windows | jq .
+
+# Evaluate JS in the running desktop app's WKWebView
+# Use file= to target a specific window: just desktop-eval '...' file=test-b.limn
+desktop-eval js file="":
+    @curl -sf -X POST 'localhost:9876/eval{{ if file != "" { "?file=" + file } else { "" } }}' -d '{{js}}' | jq .
+
+# Capture a screenshot of the running desktop app (timestamped by default)
+desktop-screenshot file="" path=(".llm/desktop-scratch/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/desktop-scratch && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
+
+# Get editor state (node count, filename, selection) from the running desktop app
+desktop-state file="":
+    @curl -sf 'localhost:9876/state{{ if file != "" { "?file=" + file } else { "" } }}' | jq .
+
 # Clean desktop build artifacts
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app

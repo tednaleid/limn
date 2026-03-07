@@ -22,6 +22,9 @@ settings:
     CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements
     # Allow WKWebView to load local files from the bundle
     INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: true
+  configs:
+    Debug:
+      CODE_SIGN_ENTITLEMENTS: Limn/Limn.debug.entitlements
 
 targets:
   Limn:
@@ -67,6 +70,9 @@ targets:
     platform: macOS
     sources:
       - path: LimnTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
     dependencies:
       - target: Limn
 
@@ -75,5 +81,8 @@ targets:
     platform: macOS
     sources:
       - path: LimnUITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
     dependencies:
       - target: Limn
