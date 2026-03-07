@@ -1,5 +1,5 @@
-// ABOUTME: Native menu bar with File and Edit menus for the Limn desktop app.
-// ABOUTME: Dispatches actions to the focused window's Coordinator via FocusedValue.
+// ABOUTME: Native File and Edit menus for the Limn desktop app.
+// ABOUTME: Uses FocusedValue to dispatch actions to the active window's Coordinator.
 
 import SwiftUI
 

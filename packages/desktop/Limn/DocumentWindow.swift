@@ -15,6 +15,9 @@ struct DocumentWindow: View {
                 if fileURL.isFileURL {
                     coordinator.pendingFileURL = fileURL
                 }
+                coordinator.onFileURLChanged = { url in
+                    fileURL = url
+                }
             }
     }
 }

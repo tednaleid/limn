@@ -69,6 +69,10 @@ struct WebViewBridge: NSViewRepresentable {
         /// File URL to load once the web view signals "ready" (cold-start buffering).
         var pendingFileURL: URL?
 
+        /// Called when the file URL changes (open, save-as) so the window binding
+        /// stays in sync with SwiftUI's WindowGroup dedup.
+        var onFileURLChanged: ((URL) -> Void)?
+
         // WKScriptMessageHandler: receives messages from JS
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -138,6 +142,7 @@ struct WebViewBridge: NSViewRepresentable {
                 let data = try FileOperations.readFile(at: url)
                 let base64 = data.base64EncodedString()
                 currentFileURL = url
+                onFileURLChanged?(url)
                 updateWindowTitle(url.lastPathComponent)
                 NSDocumentController.shared.noteNewRecentDocumentURL(url)
 
@@ -162,6 +167,7 @@ struct WebViewBridge: NSViewRepresentable {
                 do {
                     try FileOperations.writeFile(data, to: url)
                     currentFileURL = url
+                    onFileURLChanged?(url)
                     updateWindowTitle(url.lastPathComponent)
                     NSDocumentController.shared.noteNewRecentDocumentURL(url)
                     sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
