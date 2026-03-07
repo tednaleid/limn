@@ -6,7 +6,8 @@ import AppKit
 @Observable
 class AppDelegate: NSObject, NSApplicationDelegate {
     /// URLs received before we have an openWindow action available.
-    /// Session-restored URLs are appended here in applicationDidFinishLaunching.
+    /// Populated eagerly in init() so they're available before SwiftUI
+    /// evaluates the WindowGroup defaultValue closure.
     var bufferedURLs: [URL] = []
 
     /// Set by a SwiftUI view once the openWindow environment action is available.
@@ -20,11 +21,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private var coordinatorEntries: [ObjectIdentifier: CoordinatorEntry] = [:]
 
+    override init() {
+        super.init()
+        // Restore session here (not in applicationDidFinishLaunching) because
+        // SwiftUI evaluates the WindowGroup defaultValue closure before
+        // applicationDidFinishLaunching fires.
+        bufferedURLs = SessionStore.restoreSession()
+    }
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let restored = SessionStore.restoreSession()
-        bufferedURLs.append(contentsOf: restored)
         #if DEBUG
         DebugServer.start()
         #endif

@@ -18,7 +18,7 @@ All inspection artifacts (screenshots, logs, scripts, notes) go in `.llm/inspect
 
 ## Commands
 
-All commands below are `just` recipes. Run them from the project root.
+All commands below are `just` recipes. Run them from the project root. The optional filename argument is positional (not `file=`).
 
 ### List open windows
 
@@ -32,16 +32,16 @@ Returns JSON array of open windows with index, filename, and URL. Run this first
 
 ```bash
 just desktop-inspect-eval '<js-expression>'
-just desktop-inspect-eval '<js-expression>' file=<filename>
+just desktop-inspect-eval '<js-expression>' <filename>
 ```
 
-Returns `{"result": <value>}` or `{"error": "..."}`. Use `file=` to target a specific window by filename.
+Returns `{"result": <value>}` or `{"error": "..."}`. Pass the filename as the second argument to target a specific window.
 
 ### Capture screenshot
 
 ```bash
 just desktop-inspect-screenshot
-just desktop-inspect-screenshot file=<filename>
+just desktop-inspect-screenshot <filename>
 ```
 
 Saves PNG to `.llm/inspect/screenshot-<timestamp>.png`. After capturing, read the saved PNG file to visually verify rendering.
@@ -50,7 +50,7 @@ Saves PNG to `.llm/inspect/screenshot-<timestamp>.png`. After capturing, read th
 
 ```bash
 just desktop-inspect-state
-just desktop-inspect-state file=<filename>
+just desktop-inspect-state <filename>
 ```
 
 Returns `{"nodeCount": N, "selectedId": "...", "filename": "...", "zoom": N}`.
@@ -59,7 +59,7 @@ Returns `{"nodeCount": N, "selectedId": "...", "filename": "...", "zoom": N}`.
 
 ```bash
 just desktop-inspect-json
-just desktop-inspect-json file=<filename>
+just desktop-inspect-json <filename>
 ```
 
 Returns the full mind map document as pretty-printed JSON (the same structure as a .limn file). Useful for verifying file content, node structure, and data integrity without needing to save and read from disk.
@@ -83,14 +83,14 @@ just desktop-inspect-eval 'window.__lmnErrors || "none"'
 ### Verify file loaded correctly
 
 ```bash
-just desktop-inspect-state file=test-a.limn
-just desktop-inspect-eval 'document.querySelectorAll("[data-node-id]").length' file=test-a.limn
+just desktop-inspect-state test-a.limn
+just desktop-inspect-eval 'document.querySelectorAll("[data-node-id]").length' test-a.limn
 ```
 
 ### Visual verification
 
 ```bash
-just desktop-inspect-screenshot file=test-a.limn
+just desktop-inspect-screenshot test-a.limn
 ```
 
 Then read the saved PNG to see what the app is rendering.
@@ -99,14 +99,14 @@ Then read the saved PNG to see what the app is rendering.
 
 ```bash
 just desktop-inspect-windows
-just desktop-inspect-state file=test-a.limn
-just desktop-inspect-state file=test-b.limn
+just desktop-inspect-state test-a.limn
+just desktop-inspect-state test-b.limn
 ```
 
 ### Verify document data
 
 ```bash
-just desktop-inspect-json file=test-a.limn
+just desktop-inspect-json test-a.limn
 ```
 
 Inspect the full JSON to check node text, positions, parent-child relationships, or any document-level metadata.
@@ -120,8 +120,8 @@ just desktop-inspect-eval 'document.querySelector(".selected")?.textContent'
 
 ## Tips
 
-- All commands except `desktop-inspect-windows` accept `file=<filename>` to target a window.
-- If no `file=` is given, the first registered window is used.
+- All commands except `desktop-inspect-windows` accept an optional filename as their last positional argument to target a window.
+- If no filename is given, the first window is used.
 - The debug server only exists in `#if DEBUG` builds -- it is not in Release.
 - For complex JS, use single quotes around the whole expression in `just desktop-inspect-eval`.
 - Run multiple independent queries in parallel for faster investigation.

@@ -46,12 +46,13 @@ graph LR
 ```bash
 just desktop-inspect-windows                                        # List all open windows
 just desktop-inspect-eval 'document.querySelectorAll("[data-node-id]").length'  # Eval JS in first window
-just desktop-inspect-eval 'document.title' file=test-b.limn         # Eval JS in specific window
+just desktop-inspect-eval 'document.title' test-b.limn              # Eval JS in specific window
 just desktop-inspect-screenshot                                     # Screenshot first window (timestamped)
-just desktop-inspect-screenshot file=test-b.limn                    # Screenshot specific window
+just desktop-inspect-screenshot test-b.limn                         # Screenshot specific window
 just desktop-inspect-state                                          # Node count, filename, selection
-just desktop-inspect-state file=test-a.limn                         # State for specific window
+just desktop-inspect-state test-a.limn                              # State for specific window
 just desktop-inspect-json                                           # Full document JSON
+just desktop-inspect-json test-a.limn                               # JSON for specific window
 ```
 
 Screenshots and other inspection artifacts save to `.llm/inspect/` (gitignored).

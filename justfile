@@ -121,9 +121,13 @@ desktop-release: build desktop-gen
 desktop-test: desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug test SYMROOT={{desktop_build_dir}}
 
-# Quit the running desktop app
+# Quit the running desktop app gracefully (triggers applicationWillTerminate for session save)
 desktop-stop:
-    @osascript -e 'tell application "Limn" to quit' 2>/dev/null || pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"
+    @osascript -e 'tell application "Limn" to quit' 2>/dev/null || echo "Limn is not running"
+
+# Force-kill the running desktop app (no cleanup, session not saved)
+desktop-kill:
+    @pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"
 
 # Clean desktop build artifacts
 desktop-clean:
@@ -136,7 +140,7 @@ desktop-inspect-windows:
     @curl -sf localhost:9876/windows | jq .
 
 # Evaluate JS in the running desktop app's WKWebView
-# Use file= to target a specific window: just desktop-inspect-eval '...' file=test-b.limn
+# Pass filename as second arg to target a specific window: just desktop-inspect-eval '...' test-b.limn
 desktop-inspect-eval js file="":
     @curl -sf -X POST 'localhost:9876/eval{{ if file != "" { "?file=" + file } else { "" } }}' -d '{{js}}' | jq .
 
@@ -150,4 +154,4 @@ desktop-inspect-state file="":
 
 # Get the current document as JSON from the running desktop app
 desktop-inspect-json file="":
-    @just desktop-inspect-eval 'JSON.stringify(window.limn.toJSON())' {{ if file != "" { "file=" + file } else { "" } }} | jq -r '.result' | jq .
+    @just desktop-inspect-eval 'JSON.stringify(window.limn.toJSON())' '{{ if file != "" { file } else { "" } }}' | jq -r '.result' | jq .
