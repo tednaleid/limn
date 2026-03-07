@@ -168,6 +168,11 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     return result;
   }
 
+  /** Signal to Swift that the web view is ready to receive file data. */
+  signalReady(): void {
+    postToSwift({ type: "ready" });
+  }
+
   onExternalChange(callback: (data: MindMapFileFormat) => void): () => void {
     this.externalChangeCallback = callback;
     return () => {

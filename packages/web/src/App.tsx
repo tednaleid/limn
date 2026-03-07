@@ -241,11 +241,15 @@ export function App({ docId, initialData }: AppProps) {
       editor.applyExternalUpdate(data);
       editor.remeasureAllNodes();
     });
+    // Tell Swift the web view is ready to receive files (cold-start buffering)
+    if (desktop) {
+      (provider as DesktopPersistenceProvider).signalReady();
+    }
     return () => {
       autoSave.dispose();
       unsubExternal();
     };
-  }, [editor, provider, loaded]);
+  }, [editor, provider, loaded, desktop]);
 
   // File status: current filename and transient flash message
   const [filename, setFilename] = useState<string | null>(null);
