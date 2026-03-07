@@ -55,6 +55,15 @@ just desktop-state file=<filename>
 
 Returns `{"nodeCount": N, "selectedId": "...", "filename": "...", "zoom": N}`.
 
+### Get document JSON
+
+```bash
+just desktop-json
+just desktop-json file=<filename>
+```
+
+Returns the full mind map document as pretty-printed JSON (the same structure as a .limn file). Useful for verifying file content, node structure, and data integrity without needing to save and read from disk.
+
 ## Saving results
 
 When investigating an issue, save findings to `.llm/inspect/`:
@@ -93,6 +102,14 @@ just desktop-windows
 just desktop-state file=test-a.limn
 just desktop-state file=test-b.limn
 ```
+
+### Verify document data
+
+```bash
+just desktop-json file=test-a.limn
+```
+
+Inspect the full JSON to check node text, positions, parent-child relationships, or any document-level metadata.
 
 ### Inspect DOM structure
 

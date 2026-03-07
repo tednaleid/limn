@@ -138,6 +138,10 @@ desktop-screenshot file="" path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M
 desktop-state file="":
     @curl -sf 'localhost:9876/state{{ if file != "" { "?file=" + file } else { "" } }}' | jq .
 
+# Get the current document as JSON from the running desktop app
+desktop-json file="":
+    @just desktop-eval 'JSON.stringify(window.limn.toJSON())' {{ if file != "" { "file=" + file } else { "" } }} | jq -r '.result' | jq .
+
 # Quit the running desktop app
 desktop-stop:
     @osascript -e 'tell application "Limn" to quit' 2>/dev/null || pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"

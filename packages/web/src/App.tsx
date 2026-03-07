@@ -186,6 +186,15 @@ interface AppProps {
 export function App({ docId, initialData }: AppProps) {
   const editor = useMemo(() => new Editor(domTextMeasurer), []);
   const desktop = useMemo(() => isDesktop(), []);
+
+  // Expose editor.toJSON() on window.limn for debug inspection
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = globalThis as any;
+    if (!g.limn) g.limn = {};
+    g.limn.toJSON = () => editor.toJSON();
+    return () => { delete g.limn.toJSON; };
+  }, [editor]);
   const provider = useMemo(
     () => desktop ? new DesktopPersistenceProvider() : new WebPersistenceProvider(docId),
     [docId, desktop],
