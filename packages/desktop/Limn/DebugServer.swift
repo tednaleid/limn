@@ -11,13 +11,9 @@ import WebKit
 /// Only compiled into Debug builds -- never ships in Release.
 enum DebugServer {
     private nonisolated(unsafe) static var listener: NWListener?
-    private nonisolated(unsafe) static var coordinatorProvider: ((String?) -> WebViewBridge.Coordinator?)?
 
     /// Start listening on localhost:9876.
-    /// - Parameter provider: closure returning a coordinator for a given filename (nil = default).
-    static func start(coordinatorProvider: @escaping (String?) -> WebViewBridge.Coordinator?) {
-        self.coordinatorProvider = coordinatorProvider
-
+    static func start() {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: 9876)
 
@@ -46,7 +42,6 @@ enum DebugServer {
     static func stop() {
         listener?.cancel()
         listener = nil
-        coordinatorProvider = nil
     }
 
     // MARK: - Connection handling
@@ -141,10 +136,53 @@ enum DebugServer {
 
     private static func handleWindows(connection: NWConnection) {
         DispatchQueue.main.async {
-            let delegate = NSApp?.delegate as? AppDelegate
-            let windows = delegate?.windowList() ?? []
+            let windows = findWebViews().enumerated().map { (index, info) -> [String: Any] in
+                var entry: [String: Any] = ["index": index]
+                if let title = info.webView.title, !title.isEmpty {
+                    entry["filename"] = title
+                }
+                if let windowTitle = info.webView.window?.title, !windowTitle.isEmpty {
+                    entry["windowTitle"] = windowTitle
+                }
+                return entry
+            }
             sendJSONArray(windows, connection: connection)
         }
+    }
+
+    /// Walk the NSWindow hierarchy to find all WKWebViews.
+    /// This bypasses the coordinator registry which may not be populated
+    /// when macOS restores windows from a previous session.
+    private struct WebViewInfo {
+        let webView: WKWebView
+    }
+
+    private static func findWebViews() -> [WebViewInfo] {
+        var results: [WebViewInfo] = []
+        for window in NSApp?.windows ?? [] {
+            findWebViewsIn(view: window.contentView, results: &results)
+        }
+        return results
+    }
+
+    private static func findWebViewsIn(view: NSView?, results: inout [WebViewInfo]) {
+        guard let view = view else { return }
+        if let webView = view as? WKWebView {
+            results.append(WebViewInfo(webView: webView))
+            return
+        }
+        for subview in view.subviews {
+            findWebViewsIn(view: subview, results: &results)
+        }
+    }
+
+    /// Find a WKWebView matching the given filename (window title), or the first one.
+    private static func webView(forFilename filename: String?) -> WKWebView? {
+        let all = findWebViews()
+        if let filename = filename {
+            return all.first { $0.webView.window?.title == filename }?.webView
+        }
+        return all.first?.webView
     }
 
     private static func handleEval(body: String, filename: String?, connection: NWConnection) {
@@ -155,8 +193,7 @@ enum DebugServer {
         }
 
         DispatchQueue.main.async {
-            guard let coordinator = coordinatorProvider?(filename),
-                  let webView = coordinator.webView else {
+            guard let webView = webView(forFilename: filename) else {
                 sendJSON(["error": filename != nil ? "No window for file: \(filename!)" : "No active window"], status: 404, connection: connection)
                 return
             }
@@ -173,8 +210,7 @@ enum DebugServer {
 
     private static func handleScreenshot(filename: String?, connection: NWConnection) {
         DispatchQueue.main.async {
-            guard let coordinator = coordinatorProvider?(filename),
-                  let webView = coordinator.webView else {
+            guard let webView = webView(forFilename: filename) else {
                 sendJSON(["error": filename != nil ? "No window for file: \(filename!)" : "No active window"], status: 404, connection: connection)
                 return
             }
@@ -212,8 +248,7 @@ enum DebugServer {
         """
 
         DispatchQueue.main.async {
-            guard let coordinator = coordinatorProvider?(filename),
-                  let webView = coordinator.webView else {
+            guard let webView = webView(forFilename: filename) else {
                 sendJSON(["error": filename != nil ? "No window for file: \(filename!)" : "No active window"], status: 404, connection: connection)
                 return
             }

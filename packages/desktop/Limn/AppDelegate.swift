@@ -26,9 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let restored = SessionStore.restoreSession()
         bufferedURLs.append(contentsOf: restored)
         #if DEBUG
-        DebugServer.start { [weak self] filename in
-            self?.coordinator(forFilename: filename)
-        }
+        DebugServer.start()
         #endif
     }
 

@@ -53,7 +53,7 @@ just desktop-state                                          # Node count, filena
 just desktop-state file=test-a.limn                         # State for specific window
 ```
 
-Screenshots save to `.llm/desktop-scratch/` (gitignored).
+Screenshots and other inspection artifacts save to `.llm/inspect/` (gitignored).
 
 ### Endpoints
 
@@ -66,7 +66,12 @@ Screenshots save to `.llm/desktop-scratch/` (gitignored).
 
 All endpoints except `/windows` accept `?file=<filename>` to target a specific window. Defaults to the first registered window.
 
+### `/inspect` skill
+
+The `/inspect` skill (`.claude/skills/inspect/SKILL.md`) lets Claude use the debug server autonomously. Instead of asking Ted to manually check the app, Claude can evaluate JS, capture screenshots, and read editor state directly. Invoke it with `/inspect` or let it trigger automatically when investigating desktop app behavior.
+
 ## When to Use What
 
 - **Unit tests** (`just test`, `just desktop-test`): Logic, data transformations, state management. Always prefer these.
 - **Debug server** (`just desktop-eval`, etc.): Ad-hoc inspection during development. Verify rendering, check for JS errors, capture screenshots for visual review.
+- **`/inspect` skill**: When Claude needs to investigate the running app without manual intervention from Ted.

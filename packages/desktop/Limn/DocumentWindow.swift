@@ -11,7 +11,7 @@ struct DocumentWindow: View {
         WebViewBridge(coordinator: coordinator)
             .ignoresSafeArea()
             .focusedSceneValue(\.documentCoordinator, coordinator)
-            .onAppear {
+            .task {
                 let delegate = NSApp?.delegate as? AppDelegate
                 delegate?.registerCoordinator(
                     ObjectIdentifier(coordinator),

@@ -131,12 +131,16 @@ desktop-eval js file="":
     @curl -sf -X POST 'localhost:9876/eval{{ if file != "" { "?file=" + file } else { "" } }}' -d '{{js}}' | jq .
 
 # Capture a screenshot of the running desktop app (timestamped by default)
-desktop-screenshot file="" path=(".llm/desktop-scratch/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
-    @mkdir -p .llm/desktop-scratch && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
+desktop-screenshot file="" path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/inspect && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
 
 # Get editor state (node count, filename, selection) from the running desktop app
 desktop-state file="":
     @curl -sf 'localhost:9876/state{{ if file != "" { "?file=" + file } else { "" } }}' | jq .
+
+# Quit the running desktop app
+desktop-stop:
+    @osascript -e 'tell application "Limn" to quit' 2>/dev/null || pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"
 
 # Clean desktop build artifacts
 desktop-clean:
