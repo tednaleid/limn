@@ -32,7 +32,7 @@ Debug builds include a lightweight HTTP server on `localhost:9876` for programma
 
 ```mermaid
 graph LR
-    CLI["just desktop-eval / screenshot / state"]
+    CLI["just desktop-inspect-eval / screenshot / state"]
     CLI -->|curl localhost:9876| DS["DebugServer (NWListener)"]
     DS -->|MainActor| WV["WKWebView"]
     WV -->|evaluateJavaScript| JS["Limn Web App"]
@@ -44,13 +44,14 @@ graph LR
 ### Commands
 
 ```bash
-just desktop-windows                                        # List all open windows
-just desktop-eval 'document.querySelectorAll("[data-node-id]").length'  # Eval JS in first window
-just desktop-eval 'document.title' file=test-b.limn         # Eval JS in specific window
-just desktop-screenshot                                     # Screenshot first window (timestamped)
-just desktop-screenshot file=test-b.limn                    # Screenshot specific window
-just desktop-state                                          # Node count, filename, selection
-just desktop-state file=test-a.limn                         # State for specific window
+just desktop-inspect-windows                                        # List all open windows
+just desktop-inspect-eval 'document.querySelectorAll("[data-node-id]").length'  # Eval JS in first window
+just desktop-inspect-eval 'document.title' file=test-b.limn         # Eval JS in specific window
+just desktop-inspect-screenshot                                     # Screenshot first window (timestamped)
+just desktop-inspect-screenshot file=test-b.limn                    # Screenshot specific window
+just desktop-inspect-state                                          # Node count, filename, selection
+just desktop-inspect-state file=test-a.limn                         # State for specific window
+just desktop-inspect-json                                           # Full document JSON
 ```
 
 Screenshots and other inspection artifacts save to `.llm/inspect/` (gitignored).
@@ -66,12 +67,12 @@ Screenshots and other inspection artifacts save to `.llm/inspect/` (gitignored).
 
 All endpoints except `/windows` accept `?file=<filename>` to target a specific window. Defaults to the first registered window.
 
-### `/inspect` skill
+### `/desktop-inspect` skill
 
-The `/inspect` skill (`.claude/skills/inspect/SKILL.md`) lets Claude use the debug server autonomously. Instead of asking Ted to manually check the app, Claude can evaluate JS, capture screenshots, and read editor state directly. Invoke it with `/inspect` or let it trigger automatically when investigating desktop app behavior.
+The `/desktop-inspect` skill (`.claude/skills/desktop-inspect/SKILL.md`) lets Claude use the debug server autonomously. Instead of asking Ted to manually check the app, Claude can evaluate JS, capture screenshots, and read editor state directly. Invoke it with `/desktop-inspect` or let it trigger automatically when investigating desktop app behavior.
 
 ## When to Use What
 
 - **Unit tests** (`just test`, `just desktop-test`): Logic, data transformations, state management. Always prefer these.
-- **Debug server** (`just desktop-eval`, etc.): Ad-hoc inspection during development. Verify rendering, check for JS errors, capture screenshots for visual review.
-- **`/inspect` skill**: When Claude needs to investigate the running app without manual intervention from Ted.
+- **Debug server** (`just desktop-inspect-eval`, etc.): Ad-hoc inspection during development. Verify rendering, check for JS errors, capture screenshots for visual review.
+- **`/desktop-inspect` skill**: When Claude needs to investigate the running app without manual intervention from Ted.

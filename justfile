@@ -121,27 +121,6 @@ desktop-release: build desktop-gen
 desktop-test: desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug test SYMROOT={{desktop_build_dir}}
 
-# List all open windows in the running desktop app
-desktop-windows:
-    @curl -sf localhost:9876/windows | jq .
-
-# Evaluate JS in the running desktop app's WKWebView
-# Use file= to target a specific window: just desktop-eval '...' file=test-b.limn
-desktop-eval js file="":
-    @curl -sf -X POST 'localhost:9876/eval{{ if file != "" { "?file=" + file } else { "" } }}' -d '{{js}}' | jq .
-
-# Capture a screenshot of the running desktop app (timestamped by default)
-desktop-screenshot file="" path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
-    @mkdir -p .llm/inspect && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
-
-# Get editor state (node count, filename, selection) from the running desktop app
-desktop-state file="":
-    @curl -sf 'localhost:9876/state{{ if file != "" { "?file=" + file } else { "" } }}' | jq .
-
-# Get the current document as JSON from the running desktop app
-desktop-json file="":
-    @just desktop-eval 'JSON.stringify(window.limn.toJSON())' {{ if file != "" { "file=" + file } else { "" } }} | jq -r '.result' | jq .
-
 # Quit the running desktop app
 desktop-stop:
     @osascript -e 'tell application "Limn" to quit' 2>/dev/null || pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"
@@ -149,3 +128,26 @@ desktop-stop:
 # Clean desktop build artifacts
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app
+
+# -- Desktop inspection (debug server on localhost:9876) --
+
+# List all open windows in the running desktop app
+desktop-inspect-windows:
+    @curl -sf localhost:9876/windows | jq .
+
+# Evaluate JS in the running desktop app's WKWebView
+# Use file= to target a specific window: just desktop-inspect-eval '...' file=test-b.limn
+desktop-inspect-eval js file="":
+    @curl -sf -X POST 'localhost:9876/eval{{ if file != "" { "?file=" + file } else { "" } }}' -d '{{js}}' | jq .
+
+# Capture a screenshot of the running desktop app (timestamped by default)
+desktop-inspect-screenshot file="" path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/inspect && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
+
+# Get editor state (node count, filename, selection) from the running desktop app
+desktop-inspect-state file="":
+    @curl -sf 'localhost:9876/state{{ if file != "" { "?file=" + file } else { "" } }}' | jq .
+
+# Get the current document as JSON from the running desktop app
+desktop-inspect-json file="":
+    @just desktop-inspect-eval 'JSON.stringify(window.limn.toJSON())' {{ if file != "" { "file=" + file } else { "" } }} | jq -r '.result' | jq .
