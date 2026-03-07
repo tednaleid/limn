@@ -142,7 +142,7 @@ desktop-inspect-eval js file="":
 
 # Capture a screenshot of the running desktop app (timestamped by default)
 desktop-inspect-screenshot file="" path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
-    @mkdir -p .llm/inspect && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo "Saved to {{path}}"
+    @mkdir -p .llm/inspect && curl -sf 'localhost:9876/screenshot{{ if file != "" { "?file=" + file } else { "" } }}' -o '{{path}}' && echo '{{path}}'
 
 # Get editor state (node count, filename, selection) from the running desktop app
 desktop-inspect-state file="":
