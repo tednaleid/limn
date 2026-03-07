@@ -96,9 +96,12 @@ desktop_build_dir := "/tmp/limn-desktop-build"
 desktop-gen:
     cd packages/desktop && xcodegen generate
 
-# Build the desktop app (Debug)
+# Build the desktop app (Debug) and install to ~/Applications for Finder file association
 desktop-build: desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug build SYMROOT={{desktop_build_dir}}
+    rm -rf ~/Applications/Limn.app
+    cp -R {{desktop_build_dir}}/Debug/Limn.app ~/Applications/Limn.app
+    /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted ~/Applications/Limn.app
 
 # Build and run the desktop app in dev mode (loads from Vite dev server)
 desktop-dev: desktop-gen
@@ -120,4 +123,4 @@ desktop-test: desktop-gen
 
 # Clean desktop build artifacts
 desktop-clean:
-    rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj
+    rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app
