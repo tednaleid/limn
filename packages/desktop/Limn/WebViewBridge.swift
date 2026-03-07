@@ -47,14 +47,9 @@ struct WebViewBridge: NSViewRepresentable {
         if let indexURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "web") {
             webView.loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
         } else {
-            // Fallback: show error message
-            webView.loadHTMLString(
-                "<html><body style='font-family:system-ui;padding:40px;color:#666'>"
-                + "<h2>Web resources not found</h2>"
-                + "<p>Run with LIMN_DEV_URL=http://localhost:5173/limn/ for development.</p>"
-                + "</body></html>",
-                baseURL: nil
-            )
+            // No bundled resources -- try the Vite dev server as a fallback.
+            // This handles Finder-launched dev builds where LIMN_DEV_URL isn't set.
+            webView.load(URLRequest(url: URL(string: "http://localhost:5173/limn/")!))
         }
     }
 

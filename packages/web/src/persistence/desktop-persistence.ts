@@ -33,11 +33,16 @@ function getPendingSave(): PendingSave | null {
 function setPendingSave(p: PendingSave | null): void {
   if (g.limn?.desktop) g.limn.desktop._pendingSave = p;
 }
+function getExternalChangeCb(): ((data: MindMapFileFormat) => void) | null {
+  return g.limn?.desktop?._externalChangeCb ?? null;
+}
+function setExternalChangeCb(cb: ((data: MindMapFileFormat) => void) | null): void {
+  if (g.limn?.desktop) g.limn.desktop._externalChangeCb = cb;
+}
 
 export class DesktopPersistenceProvider implements PersistenceProvider {
   private assetCache = new Map<string, Blob>();
   private assetUrls = new Map<string, string>();
-  private externalChangeCallback: ((data: MindMapFileFormat) => void) | null = null;
   private unsubBridge: (() => void) | null = null;
   private currentFilename: string | null = null;
 
@@ -63,7 +68,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
             setPendingLoad(null);
           } else {
             // External load (e.g., file opened via Finder while app is running)
-            this.externalChangeCallback?.(data);
+            getExternalChangeCb()?.(data);
           }
         }).catch((err) => {
           console.error("[desktop] parseLimnFile failed:", err);
@@ -174,9 +179,9 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   }
 
   onExternalChange(callback: (data: MindMapFileFormat) => void): () => void {
-    this.externalChangeCallback = callback;
+    setExternalChangeCb(callback);
     return () => {
-      this.externalChangeCallback = null;
+      if (getExternalChangeCb() === callback) setExternalChangeCb(null);
     };
   }
 
