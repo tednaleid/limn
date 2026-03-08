@@ -505,7 +505,8 @@ export function MindMapCanvas() {
             />
           ))}
           {visibleNodes.map((node) => {
-            const shouldAnimate = !isDragging;
+            const isEditingThis = isEditing && node.id === selectedId;
+            const shouldAnimate = !isDragging && !isEditingThis;
             const depth = editor.getNodeDepth(node.id);
             const hasChildren = node.children.length > 0;
             return (
