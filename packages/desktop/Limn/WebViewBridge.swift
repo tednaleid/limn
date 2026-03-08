@@ -215,10 +215,12 @@ struct WebViewBridge: NSViewRepresentable {
 
         // MARK: - Window title
 
-        /// Update the macOS window title bar to show the current filename.
+        /// Update the macOS window title bar to show the current filename
+        /// and set the proxy icon via representedURL.
         private func updateWindowTitle(_ filename: String) {
             Task { @MainActor in
                 webView?.window?.title = filename
+                webView?.window?.representedURL = currentFileURL
             }
         }
 
