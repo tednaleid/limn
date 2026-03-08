@@ -145,8 +145,9 @@ struct WebViewBridge: NSViewRepresentable {
                     print("[Limn] Save failed: \(error.localizedDescription)")
                 }
             } else {
-                // No file open yet -- trigger save-as
-                handleRequestSaveAs(base64: base64)
+                // No file path yet (untitled document) -- skip silently.
+                // User must Cmd-S to pick a location first.
+                return
             }
         }
 

@@ -269,10 +269,20 @@ export function App({ docId, initialData }: AppProps) {
     if (desktop) {
       const dp = provider as DesktopPersistenceProvider;
       editor.onSave(() => {
-        void dp.save(editor.toJSON()).then(() => {
-          setFilename(dp.filename);
-          setFlash({ message: "Saved" });
-        });
+        if (dp.filename) {
+          void dp.save(editor.toJSON()).then(() => {
+            setFilename(dp.filename);
+            setFlash({ message: "Saved" });
+          });
+        } else {
+          // Untitled document -- Cmd-S triggers Save As dialog
+          void dp.requestSaveAs(editor.toJSON()).then((name) => {
+            if (name) {
+              setFilename(name);
+              setFlash({ message: "Saved" });
+            }
+          });
+        }
       });
       editor.onSaveAs(() => {
         void dp.requestSaveAs(editor.toJSON()).then((name) => {
