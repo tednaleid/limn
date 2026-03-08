@@ -45,9 +45,9 @@ targets:
         Debug:
           CODE_SIGN_STYLE: Automatic
         Release:
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Developer ID Application"
-          DEVELOPMENT_TEAM: "PLACEHOLDER"
+          # Switch to Manual + "Developer ID Application" + your Team ID
+          # when ready to distribute signed builds. See DESKTOP-APP.md.
+          CODE_SIGN_STYLE: Automatic
           ARCHS: arm64
     info:
       path: Limn/Info.plist

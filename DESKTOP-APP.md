@@ -20,7 +20,21 @@ generated and gitignored. All `desktop-*` recipes call `desktop-gen` automatical
 
 The desktop app is distributed as a signed, notarized DMG via GitHub Releases.
 
-### Prerequisites (one-time setup)
+### Local use (no Apple Developer account)
+
+`just desktop-release` builds a Release `.app` with bundled web resources at
+`/tmp/limn-desktop-build/Release/Limn.app`. It uses Automatic signing, so it
+runs on your own machine without any Apple Developer enrollment.
+
+### Signed distribution (requires Apple Developer account)
+
+The prerequisites below are only needed for `just desktop-package`, which
+produces a signed, notarized DMG that runs on other people's Macs without
+Gatekeeper warnings.
+
+Before enabling distribution, update the Release signing config in
+`packages/desktop/project.yml` (see comments there) to use Manual signing
+with your Developer ID Application certificate and Team ID.
 
 1. **Enroll in the Apple Developer Program** ($99/year) at https://developer.apple.com.
 
@@ -30,8 +44,8 @@ The desktop app is distributed as a signed, notarized DMG via GitHub Releases.
 3. **Note your Team ID** (10-character string). Find it in Xcode: Settings > Accounts,
    or at https://developer.apple.com/account under Membership Details.
 
-4. **Update `packages/desktop/project.yml`**: replace `PLACEHOLDER` in the Release
-   config's `DEVELOPMENT_TEAM` with your Team ID.
+4. **Update `packages/desktop/project.yml`**: switch the Release config from
+   Automatic to Manual signing with your Team ID (see comments in the file).
 
 5. **Create an app-specific password** at https://appleid.apple.com:
    Sign In and Security > App-Specific Passwords.
@@ -72,14 +86,15 @@ GitHub Release that the tag created.
 
 ### Build signing configuration
 
-Debug and Release use different signing strategies (configured in `project.yml`):
+Both Debug and Release default to Automatic signing (configured in `project.yml`).
+For distribution, switch Release to Manual signing:
 
-| Setting | Debug | Release |
-|---------|-------|---------|
-| CODE_SIGN_STYLE | Automatic | Manual |
-| CODE_SIGN_IDENTITY | (default) | Developer ID Application |
-| DEVELOPMENT_TEAM | (auto) | Set in project.yml |
-| ARCHS | (default) | arm64 |
+| Setting | Debug | Release (local) | Release (distribution) |
+|---------|-------|-----------------|----------------------|
+| CODE_SIGN_STYLE | Automatic | Automatic | Manual |
+| CODE_SIGN_IDENTITY | (default) | (default) | Developer ID Application |
+| DEVELOPMENT_TEAM | (auto) | (auto) | Your Team ID |
+| ARCHS | (default) | arm64 | arm64 |
 
 Hardened Runtime is enabled for both configurations. The JIT entitlement
 (`com.apple.security.cs.allow-jit`) is required for WKWebView JavaScript execution.
