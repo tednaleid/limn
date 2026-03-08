@@ -48,8 +48,16 @@
 - [x] Version sync: bump-version.ts updates desktop project.yml MARKETING_VERSION
 - [x] desktop-clean includes Xcode DerivedData cache
 
-## Phase 6: Packaging
-- [ ] Code signing
-- [ ] Hardened Runtime entitlements
-- [ ] Notarization
-- [ ] DMG creation
+## Phase 6a: Packaging & Distribution (local)
+- [x] Release signing config in project.yml (Developer ID, Manual, arm64)
+- [x] `#if DEBUG` guard on localhost fallback in WebViewBridge
+- [x] Auto-increment CURRENT_PROJECT_VERSION in bump-version.ts
+- [x] Packaging script (scripts/desktop-package.py): build, sign, notarize, create DMG
+- [x] justfile recipes: desktop-package, desktop-verify
+- [ ] Ted: enroll in Apple Developer Program, fill in DEVELOPMENT_TEAM
+
+## Phase 6b: CI Automation (deferred)
+- [ ] GitHub Actions workflow for automated builds on version tags
+
+## Phase 6c: App Store (optional, future)
+- [ ] App Store submission

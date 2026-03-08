@@ -64,10 +64,12 @@ for (const file of VERSION_FILES) {
 // Update MARKETING_VERSION in desktop project.yml
 const projectYmlPath = join(ROOT, DESKTOP_PROJECT_YML);
 const projectYml = readFileSync(projectYmlPath, "utf-8");
-const updatedYml = projectYml.replace(
-  /MARKETING_VERSION: "[^"]+"/,
-  `MARKETING_VERSION: "${newVersion}"`,
-);
+const updatedYml = projectYml
+  .replace(/MARKETING_VERSION: "[^"]+"/, `MARKETING_VERSION: "${newVersion}"`)
+  .replace(/CURRENT_PROJECT_VERSION: "\d+"/, (match) => {
+    const current = parseInt(match.match(/\d+/)![0]);
+    return `CURRENT_PROJECT_VERSION: "${current + 1}"`;
+  });
 writeFileSync(projectYmlPath, updatedYml);
 console.log(`Updated ${DESKTOP_PROJECT_YML}`);
 

@@ -137,6 +137,15 @@ desktop-kill:
 desktop-icon source:
     scripts/generate-app-icon.py {{source}}
 
+# Package the desktop app into a signed, notarized DMG
+desktop-package: desktop-release
+    scripts/desktop-package.py
+
+# Verify the built DMG passes Gatekeeper
+desktop-verify:
+    spctl -a -t open --context context:primary-signature {{desktop_build_dir}}/Limn-*.dmg
+    codesign -dvv {{desktop_build_dir}}/Release/Limn.app
+
 # Clean desktop build artifacts (including Xcode DerivedData cache)
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app

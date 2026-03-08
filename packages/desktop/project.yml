@@ -38,10 +38,17 @@ targets:
       - path: Limn/Assets.xcassets
     settings:
       base:
-        CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: true
         # Hardened Runtime: allow JIT for WKWebView JavaScript execution
         INFOPLIST_KEY_com.apple.security.cs.allow-jit: true
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Automatic
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          DEVELOPMENT_TEAM: "PLACEHOLDER"
+          ARCHS: arm64
     info:
       path: Limn/Info.plist
       properties:
