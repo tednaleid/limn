@@ -6,6 +6,7 @@ import SwiftUI
 struct MenuCommands: Commands {
     @FocusedValue(\.documentCoordinator) var coordinator
     @Environment(\.openWindow) var openWindow
+    @Environment(\.dismissWindow) var dismissWindow
 
     var body: some Commands {
         // MARK: - File menu
@@ -14,6 +15,7 @@ struct MenuCommands: Commands {
             Button("New") {
                 let sentinel = URL(string: "limn:new/\(UUID().uuidString)")!
                 openWindow(value: sentinel)
+                dismissWindow(id: "welcome")
             }
             .keyboardShortcut("n")
 
@@ -21,6 +23,7 @@ struct MenuCommands: Commands {
                 Task { @MainActor in
                     guard let url = await FileOperations.showOpenPanel() else { return }
                     openWindow(value: url)
+                    dismissWindow(id: "welcome")
                 }
             }
             .keyboardShortcut("o")

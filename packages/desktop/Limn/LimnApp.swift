@@ -7,23 +7,40 @@ import SwiftUI
 struct LimnApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some Scene {
-        WindowGroup(for: URL.self) { $fileURL in
-            DocumentWindow(fileURL: $fileURL, appDelegate: delegate)
+        Window("Welcome to Limn", id: "welcome") {
+            WelcomeWindow()
                 .task {
                     delegate.drainBufferedURLs { url in
                         openWindow(value: url)
                     }
+                    delegate.showWelcomeAction = {
+                        openWindow(id: "welcome")
+                    }
+                }
+        }
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.presented)
+
+        WindowGroup(for: URL.self) { $fileURL in
+            DocumentWindow(fileURL: $fileURL, appDelegate: delegate)
+                .task {
+                    dismissWindow(id: "welcome")
+                    delegate.drainBufferedURLs { url in
+                        openWindow(value: url)
+                    }
+                    delegate.showWelcomeAction = {
+                        openWindow(id: "welcome")
+                    }
                 }
         } defaultValue: {
-            // If session restore has URLs waiting, use the first one for this
-            // initial window instead of creating a blank canvas.
-            delegate.popFirstBufferedURL()
-                ?? URL(string: "limn:new/\(UUID().uuidString)")!
+            URL(string: "limn:new/\(UUID().uuidString)")!
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 1200, height: 800)
+        .defaultLaunchBehavior(.suppressed)
         .commands {
             MenuCommands()
         }

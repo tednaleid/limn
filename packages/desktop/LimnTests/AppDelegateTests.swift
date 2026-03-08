@@ -9,6 +9,18 @@ final class AppDelegateTests: XCTestCase {
 
     // MARK: - URL buffering
 
+    func testHasBufferedURLsReturnsFalseWhenEmpty() {
+        let delegate = AppDelegate()
+        delegate.bufferedURLs = []
+        XCTAssertFalse(delegate.hasBufferedURLs)
+    }
+
+    func testHasBufferedURLsReturnsTrueWhenNonEmpty() {
+        let delegate = AppDelegate()
+        delegate.bufferedURLs = [URL(string: "file:///tmp/a.limn")!]
+        XCTAssertTrue(delegate.hasBufferedURLs)
+    }
+
     func testDrainBufferedURLsCallsOpenerForEachURL() {
         let delegate = AppDelegate()
         let urlA = URL(string: "file:///tmp/a.limn")!
@@ -50,6 +62,29 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertNil(delegate.popFirstBufferedURL())
     }
 
+    func testApplicationOpenURLsCallsOpenerDirectly() {
+        let delegate = AppDelegate()
+        var opened: [URL] = []
+        delegate.openWindowAction = { url in
+            opened.append(url)
+        }
+
+        let url = URL(string: "file:///tmp/test.limn")!
+        delegate.application(NSApplication.shared, open: [url])
+
+        XCTAssertEqual(opened, [url])
+    }
+
+    func testApplicationOpenURLsBuffersWhenNoAction() {
+        let delegate = AppDelegate()
+        delegate.bufferedURLs = []
+
+        let url = URL(string: "file:///tmp/test.limn")!
+        delegate.application(NSApplication.shared, open: [url])
+
+        XCTAssertEqual(delegate.bufferedURLs, [url])
+    }
+
     // MARK: - Coordinator registry
 
     func testRegisterAndUnregisterCoordinator() {
@@ -77,6 +112,57 @@ final class AppDelegateTests: XCTestCase {
         // Should not crash when fileURL is nil (new unsaved window)
         delegate.registerCoordinator(id, coordinator: coordinator, fileURL: nil)
         delegate.unregisterCoordinator(id)
+    }
+
+    func testUnregisterLastCoordinatorCallsShowWelcome() {
+        let delegate = AppDelegate()
+        var welcomeShown = false
+        delegate.showWelcomeAction = { welcomeShown = true }
+
+        let coordinator = WebViewBridge.Coordinator()
+        let id = ObjectIdentifier(coordinator)
+        delegate.registerCoordinator(id, coordinator: coordinator, fileURL: nil)
+
+        delegate.unregisterCoordinator(id)
+        XCTAssertTrue(welcomeShown)
+    }
+
+    func testUnregisterNonLastCoordinatorDoesNotShowWelcome() {
+        let delegate = AppDelegate()
+        var welcomeShown = false
+        delegate.showWelcomeAction = { welcomeShown = true }
+
+        let coord1 = WebViewBridge.Coordinator()
+        let coord2 = WebViewBridge.Coordinator()
+        delegate.registerCoordinator(ObjectIdentifier(coord1), coordinator: coord1, fileURL: nil)
+        delegate.registerCoordinator(ObjectIdentifier(coord2), coordinator: coord2, fileURL: nil)
+
+        delegate.unregisterCoordinator(ObjectIdentifier(coord1))
+        XCTAssertFalse(welcomeShown)
+    }
+
+    // MARK: - Application reopen
+
+    func testApplicationShouldHandleReopenShowsWelcomeWhenNoWindows() {
+        let delegate = AppDelegate()
+        var welcomeShown = false
+        delegate.showWelcomeAction = { welcomeShown = true }
+
+        let result = delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: false)
+
+        XCTAssertFalse(result)
+        XCTAssertTrue(welcomeShown)
+    }
+
+    func testApplicationShouldHandleReopenDoesNothingWhenWindowsVisible() {
+        let delegate = AppDelegate()
+        var welcomeShown = false
+        delegate.showWelcomeAction = { welcomeShown = true }
+
+        let result = delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: true)
+
+        XCTAssertFalse(result)
+        XCTAssertFalse(welcomeShown)
     }
 
     // MARK: - Coordinator lookup

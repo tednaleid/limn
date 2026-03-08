@@ -13,6 +13,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// Set by a SwiftUI view once the openWindow environment action is available.
     var openWindowAction: ((URL) -> Void)?
 
+    /// Set by a SwiftUI view to show the welcome window when all documents close.
+    var showWelcomeAction: (() -> Void)?
+
+    /// True when there are buffered URLs waiting to open (session restore or file-open on launch).
+    var hasBufferedURLs: Bool { !bufferedURLs.isEmpty }
+
     /// Registry of open coordinators, keyed by coordinator identity.
     /// Stores a weak ref to the coordinator alongside its file URL.
     struct CoordinatorEntry {
@@ -36,10 +42,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - NSApplicationDelegate
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // Prevent `open -a` from creating an extra window when the app is
-        // already running with visible windows. Only create a new window
-        // when there are none (e.g. user clicks the Dock icon after closing all).
-        return !flag
+        if !flag {
+            showWelcomeAction?()
+        }
+        return false
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -69,15 +75,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// or drags a file onto the Dock icon.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            // Reuse an untitled window instead of creating a new one
-            if let (_, entry) = firstUntitledEntry(), let coord = entry.coordinator {
-                if coord.isReady {
-                    coord.loadFileIntoWebView(url: url)
-                } else {
-                    coord.pendingFileURL = url
-                    coord.onFileURLChanged?(url)
-                }
-            } else if let opener = openWindowAction {
+            if let opener = openWindowAction {
                 opener(url)
             } else {
                 bufferedURLs.append(url)
@@ -89,17 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func drainBufferedURLs(opener: @escaping (URL) -> Void) {
         openWindowAction = opener
         for url in bufferedURLs {
-            // Reuse an untitled window instead of creating a new one
-            if let (_, entry) = firstUntitledEntry(), let coord = entry.coordinator {
-                if coord.isReady {
-                    coord.loadFileIntoWebView(url: url)
-                } else {
-                    coord.pendingFileURL = url
-                    coord.onFileURLChanged?(url)
-                }
-            } else {
-                opener(url)
-            }
+            opener(url)
         }
         bufferedURLs.removeAll()
     }
@@ -124,16 +112,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func unregisterCoordinator(_ id: ObjectIdentifier) {
         coordinatorEntries.removeValue(forKey: id)
-    }
-
-    /// Find an untitled coordinator (one with no file URL) to reuse for a file open.
-    private func firstUntitledEntry() -> (ObjectIdentifier, CoordinatorEntry)? {
-        for (id, entry) in coordinatorEntries {
-            if entry.fileURL == nil, entry.coordinator != nil {
-                return (id, entry)
-            }
+        if coordinatorEntries.isEmpty {
+            showWelcomeAction?()
         }
-        return nil
     }
 
     /// Returns a live coordinator, optionally matching a filename.
