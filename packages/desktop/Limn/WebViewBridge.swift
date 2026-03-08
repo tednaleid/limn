@@ -61,9 +61,9 @@ struct WebViewBridge: NSViewRepresentable {
             return
         }
 
-        // Production: load bundled web resources (flattened into Resources/ by Xcode)
-        if let indexURL = Bundle.main.url(forResource: "index", withExtension: "html") {
-            webView.loadFileURL(indexURL, allowingReadAccessTo: Bundle.main.resourceURL!)
+        // Production: load bundled web resources from Resources/web/
+        if let indexURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "web") {
+            webView.loadFileURL(indexURL, allowingReadAccessTo: indexURL.deletingLastPathComponent())
         } else {
             #if DEBUG
             // No bundled resources -- try the Vite dev server as a fallback.
