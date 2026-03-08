@@ -115,9 +115,10 @@ desktop-open file:
     @open -a {{desktop_build_dir}}/Debug/Limn.app '{{file}}'
 
 # Build the desktop app (Release) with bundled web resources
-desktop-release: build desktop-gen
+desktop-release: build
     mkdir -p packages/desktop/Limn/Resources
     cp -r packages/web/dist/ packages/desktop/Limn/Resources/web/
+    cd packages/desktop && xcodegen generate
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Release build SYMROOT={{desktop_build_dir}}
     rm -rf packages/desktop/Limn/Resources
 
