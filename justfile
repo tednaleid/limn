@@ -83,6 +83,13 @@ release: obsidian-build
 bump version="":
     bun run scripts/bump-version.ts {{version}}
 
+# Delete a GitHub release and re-tag the current commit to re-trigger release workflows
+retag tag:
+    gh release delete {{tag}} --yes || true
+    git push origin :refs/tags/{{tag}} || true
+    git tag -f {{tag}}
+    git push && git push --tags
+
 # Clean and reinstall node_modules (fixes esbuild EPIPE errors after bun add)
 clean-install:
     rm -rf node_modules packages/core/node_modules packages/web/node_modules
