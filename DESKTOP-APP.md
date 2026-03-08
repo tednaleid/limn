@@ -107,6 +107,43 @@ Debug builds additionally have network client and unsigned executable entitlemen
 `just bump` runs. Apple requires this number to increase monotonically across
 submissions.
 
+## CI / GitHub Actions
+
+The desktop release is handled by `.github/workflows/release-desktop.yml`, which
+runs independently from the Obsidian plugin release workflow (`release.yml`).
+Both trigger on the same version tag pattern pushed by `just bump`.
+
+### How it works
+
+1. Tag push triggers `release-desktop.yml` on a macOS runner.
+2. Builds the Release `.app` with bundled web resources (`just desktop-release`).
+3. Creates a DMG via `hdiutil create`.
+4. If Apple signing secrets are configured, the app and DMG are re-signed with
+   Developer ID, notarized, and stapled.
+5. Uploads `Limn-<version>.dmg` to the GitHub Release (created by whichever
+   workflow finishes first; `softprops/action-gh-release` is idempotent).
+
+Without signing secrets, the DMG is unsigned but still downloadable. Users will
+need to right-click and Open to bypass Gatekeeper.
+
+### Required secrets (for signed builds)
+
+Configure these in the repository's Settings > Secrets and variables > Actions:
+
+| Secret | Value |
+|--------|-------|
+| `APPLE_CERTIFICATE` | Base64-encoded `.p12` containing Developer ID Application cert + private key |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for the `.p12` file |
+| `APPLE_ID` | Apple ID email used for notarization |
+| `APPLE_TEAM_ID` | 10-character Apple Developer Team ID |
+| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password for the Apple ID |
+
+To export the certificate as base64 for the secret:
+
+```bash
+base64 -i certificate.p12 | pbcopy
+```
+
 ### Troubleshooting
 
 - **"Apple cannot check it for malicious software"**: The DMG was not notarized.

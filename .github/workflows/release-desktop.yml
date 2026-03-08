@@ -1,0 +1,130 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - "[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    runs-on: macos-26
+    env:
+      # Job-level so `if: env.APPLE_CERTIFICATE != ''` gates signing steps
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: extractions/setup-just@v2
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Install dependencies
+        run: just install
+
+      - name: Build Release app with bundled web resources
+        run: just desktop-release
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      # -- Conditional signing (only when Apple Developer secrets are configured) --
+
+      - name: Import signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Store notarization credentials
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials "limn-notarize" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD"
+
+      - name: Re-sign app with Developer ID
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          codesign --force --deep --sign "Developer ID Application" \
+            --options runtime \
+            --entitlements packages/desktop/Limn/Limn.entitlements \
+            --timestamp \
+            /tmp/limn-desktop-build/Release/Limn.app
+
+      # -- DMG creation --
+
+      - name: Create DMG
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_PATH="/tmp/limn-desktop-build/Limn-${VERSION}.dmg"
+          STAGING="$(mktemp -d)"
+
+          cp -R /tmp/limn-desktop-build/Release/Limn.app "$STAGING/Limn.app"
+          ln -s /Applications "$STAGING/Applications"
+
+          hdiutil create \
+            -volname "Limn" \
+            -srcfolder "$STAGING" \
+            -ov \
+            -format UDZO \
+            "$DMG_PATH"
+
+          rm -rf "$STAGING"
+          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign DMG
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          codesign --sign "Developer ID Application" --timestamp "$DMG_PATH"
+
+      - name: Notarize DMG
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          xcrun notarytool submit "$DMG_PATH" \
+            --keychain-profile "limn-notarize" \
+            --wait
+
+      - name: Staple notarization ticket
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          xcrun stapler staple "$DMG_PATH"
+
+      # -- Upload --
+
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.DMG_PATH }}
+
+      # -- Cleanup --
+
+      - name: Clean up keychain
+        if: always() && env.APPLE_CERTIFICATE != ''
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
