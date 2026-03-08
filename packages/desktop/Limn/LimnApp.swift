@@ -10,7 +10,7 @@ struct LimnApp: App {
 
     var body: some Scene {
         WindowGroup(for: URL.self) { $fileURL in
-            DocumentWindow(fileURL: $fileURL)
+            DocumentWindow(fileURL: $fileURL, appDelegate: delegate)
                 .task {
                     delegate.drainBufferedURLs { url in
                         openWindow(value: url)

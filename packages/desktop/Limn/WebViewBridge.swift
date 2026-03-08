@@ -10,6 +10,7 @@ struct WebViewBridge: NSViewRepresentable {
     /// via focusedSceneValue for menu access.
     let coordinator: Coordinator
     var fileURL: URL?
+    let appDelegate: AppDelegate
     var onFileURLChanged: ((URL) -> Void)?
 
     func makeNSView(context: Context) -> WKWebView {
@@ -26,17 +27,19 @@ struct WebViewBridge: NSViewRepresentable {
         // Allow inspecting the web view in Safari dev tools
         webView.isInspectable = true
 
-        // Register coordinator with AppDelegate. This runs in makeNSView because
-        // SwiftUI's .task modifier never fires for our WindowGroup(for: URL.self).
-        coordinator.onFileURLChanged = onFileURLChanged
-        let delegate = NSApp?.delegate as? AppDelegate
-        delegate?.registerCoordinator(
-            ObjectIdentifier(coordinator),
-            coordinator: coordinator,
-            fileURL: fileURL?.isFileURL == true ? fileURL : nil
-        )
-        if let url = fileURL, url.isFileURL {
-            coordinator.pendingFileURL = url
+        // Register coordinator with AppDelegate. Uses assumeIsolated because
+        // makeNSView runs on the main thread but is nonisolated in Swift 6,
+        // while coordinator properties are @MainActor-isolated.
+        MainActor.assumeIsolated {
+            coordinator.onFileURLChanged = onFileURLChanged
+            appDelegate.registerCoordinator(
+                ObjectIdentifier(coordinator),
+                coordinator: coordinator,
+                fileURL: fileURL?.isFileURL == true ? fileURL : nil
+            )
+            if let url = fileURL, url.isFileURL {
+                coordinator.pendingFileURL = url
+            }
         }
 
         loadContent(into: webView)
@@ -79,6 +82,9 @@ struct WebViewBridge: NSViewRepresentable {
         /// File URL to load once the web view signals "ready" (cold-start buffering).
         var pendingFileURL: URL?
 
+        /// True after the web view has sent the "ready" message.
+        var isReady = false
+
         /// Called when the file URL changes (open, save-as) so the window binding
         /// stays in sync with SwiftUI's WindowGroup dedup.
         var onFileURLChanged: ((URL) -> Void)?
@@ -96,6 +102,7 @@ struct WebViewBridge: NSViewRepresentable {
 
             switch type {
             case "ready":
+                isReady = true
                 if let url = pendingFileURL {
                     pendingFileURL = nil
                     loadFileIntoWebView(url: url)

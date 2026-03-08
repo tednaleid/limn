@@ -110,6 +110,10 @@ desktop-dev: desktop-gen
     @echo "Make sure 'just serve' is running in another terminal."
     LIMN_DEV_URL="http://localhost:5173/limn/" {{desktop_build_dir}}/Debug/Limn.app/Contents/MacOS/Limn
 
+# Open a .limn file in the running desktop app (sends via Apple Events)
+desktop-open file:
+    @open -a {{desktop_build_dir}}/Debug/Limn.app '{{file}}'
+
 # Build the desktop app (Release) with bundled web resources
 desktop-release: build desktop-gen
     mkdir -p packages/desktop/Limn/Resources
@@ -132,6 +136,10 @@ desktop-kill:
 # Clean desktop build artifacts
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app
+
+# Reset desktop app preferences (session bookmarks, user defaults)
+desktop-reset:
+    @defaults delete com.tednaleid.Limn 2>/dev/null && echo "Cleared com.tednaleid.Limn defaults" || echo "No defaults to clear"
 
 # -- Desktop inspection (debug server on localhost:9876) --
 

@@ -144,6 +144,7 @@ enum DebugServer {
                 if let windowTitle = info.webView.window?.title, !windowTitle.isEmpty {
                     entry["windowTitle"] = windowTitle
                 }
+                entry["visible"] = info.webView.window?.isVisible ?? false
                 return entry
             }
             sendJSONArray(windows, connection: connection)

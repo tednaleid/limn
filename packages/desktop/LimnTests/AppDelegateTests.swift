@@ -4,6 +4,7 @@
 import XCTest
 @testable import Limn
 
+@MainActor
 final class AppDelegateTests: XCTestCase {
 
     // MARK: - URL buffering
@@ -45,6 +46,7 @@ final class AppDelegateTests: XCTestCase {
 
     func testPopFirstBufferedURLReturnsNilWhenEmpty() {
         let delegate = AppDelegate()
+        delegate.bufferedURLs.removeAll()  // init() may restore from session
         XCTAssertNil(delegate.popFirstBufferedURL())
     }
 

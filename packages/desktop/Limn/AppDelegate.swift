@@ -3,7 +3,7 @@
 
 import AppKit
 
-@Observable
+@Observable @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     /// URLs received before we have an openWindow action available.
     /// Populated eagerly in init() so they're available before SwiftUI
@@ -21,6 +21,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private var coordinatorEntries: [ObjectIdentifier: CoordinatorEntry] = [:]
 
+    /// File URLs captured in applicationShouldTerminate for cleanup in
+    /// applicationWillTerminate (after .onDisappear has cleared the registry).
+    private var sessionFileURLs: [URL] = []
+
     override init() {
         super.init()
         // Restore session here (not in applicationDidFinishLaunching) because
@@ -31,19 +35,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - NSApplicationDelegate
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // Prevent `open -a` from creating an extra window when the app is
+        // already running with visible windows. Only create a new window
+        // when there are none (e.g. user clicks the Dock icon after closing all).
+        return !flag
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG
         DebugServer.start()
         #endif
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // Save session here, before windows close. applicationWillTerminate fires
+        // after .onDisappear has already unregistered all coordinators.
+        sessionFileURLs = coordinatorEntries.values.compactMap(\.fileURL).filter { $0.isFileURL }
+        SessionStore.saveSession(fileURLs: sessionFileURLs)
+        return .terminateNow
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         #if DEBUG
         DebugServer.stop()
         #endif
-        let fileURLs = coordinatorEntries.values.compactMap(\.fileURL).filter { $0.isFileURL }
-        SessionStore.saveSession(fileURLs: fileURLs)
-        for url in fileURLs {
+        for url in sessionFileURLs {
             SessionStore.stopAccessingResource(for: url)
         }
     }
@@ -52,7 +69,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// or drags a file onto the Dock icon.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
-            if let opener = openWindowAction {
+            // Reuse an untitled window instead of creating a new one
+            if let (_, entry) = firstUntitledEntry(), let coord = entry.coordinator {
+                if coord.isReady {
+                    coord.loadFileIntoWebView(url: url)
+                } else {
+                    coord.pendingFileURL = url
+                    coord.onFileURLChanged?(url)
+                }
+            } else if let opener = openWindowAction {
                 opener(url)
             } else {
                 bufferedURLs.append(url)
@@ -64,7 +89,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func drainBufferedURLs(opener: @escaping (URL) -> Void) {
         openWindowAction = opener
         for url in bufferedURLs {
-            opener(url)
+            // Reuse an untitled window instead of creating a new one
+            if let (_, entry) = firstUntitledEntry(), let coord = entry.coordinator {
+                if coord.isReady {
+                    coord.loadFileIntoWebView(url: url)
+                } else {
+                    coord.pendingFileURL = url
+                    coord.onFileURLChanged?(url)
+                }
+            } else {
+                opener(url)
+            }
         }
         bufferedURLs.removeAll()
     }
@@ -89,6 +124,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func unregisterCoordinator(_ id: ObjectIdentifier) {
         coordinatorEntries.removeValue(forKey: id)
+    }
+
+    /// Find an untitled coordinator (one with no file URL) to reuse for a file open.
+    private func firstUntitledEntry() -> (ObjectIdentifier, CoordinatorEntry)? {
+        for (id, entry) in coordinatorEntries {
+            if entry.fileURL == nil, entry.coordinator != nil {
+                return (id, entry)
+            }
+        }
+        return nil
     }
 
     /// Returns a live coordinator, optionally matching a filename.

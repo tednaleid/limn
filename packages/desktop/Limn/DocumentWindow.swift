@@ -5,15 +5,17 @@ import SwiftUI
 
 struct DocumentWindow: View {
     @Binding var fileURL: URL
+    let appDelegate: AppDelegate
     @State private var coordinator = WebViewBridge.Coordinator()
 
     var body: some View {
         WebViewBridge(
             coordinator: coordinator,
             fileURL: fileURL,
+            appDelegate: appDelegate,
             onFileURLChanged: { url in
                 fileURL = url
-                (NSApp?.delegate as? AppDelegate)?.updateCoordinatorFileURL(
+                appDelegate.updateCoordinatorFileURL(
                     ObjectIdentifier(coordinator),
                     fileURL: url
                 )
@@ -22,7 +24,7 @@ struct DocumentWindow: View {
         .ignoresSafeArea()
         .focusedSceneValue(\.documentCoordinator, coordinator)
         .onDisappear {
-            (NSApp?.delegate as? AppDelegate)?.unregisterCoordinator(
+            appDelegate.unregisterCoordinator(
                 ObjectIdentifier(coordinator)
             )
         }
