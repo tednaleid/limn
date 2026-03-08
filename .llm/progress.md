@@ -42,9 +42,11 @@
 - [x] Session save/restore across app restarts
 - [x] window.representedURL for proxy icon
 - [x] Window title shows filename
-- [x] App icon (placeholder LIMN design)
-- [x] About panel (auto-generated from Info.plist)
+- [x] App icon with generation script (just desktop-icon)
+- [x] About panel (auto-generated from Info.plist, version synced with packages)
 - [x] Dark mode detection (WKWebView propagates prefers-color-scheme)
+- [x] Version sync: bump-version.ts updates desktop project.yml MARKETING_VERSION
+- [x] desktop-clean includes Xcode DerivedData cache
 
 ## Phase 6: Packaging
 - [ ] Code signing
