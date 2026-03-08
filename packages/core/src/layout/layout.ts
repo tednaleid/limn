@@ -98,8 +98,20 @@ export function positionNewSibling(
   referenceId: string,
 ): void {
   const ref = store.getNode(referenceId);
-  store.setNodePosition(siblingId, ref.x, ref.y + ref.height + V_GAP);
   const sibling = store.getNode(siblingId);
+
+  // For left-side nodes, compute x from parent so the sibling's right edge
+  // aligns near the parent, rather than inheriting the wide reference's x.
+  let x = ref.x;
+  if (sibling.parentId !== null) {
+    const dir = branchDirection(store, referenceId);
+    if (dir < 0) {
+      const parent = store.getNode(sibling.parentId);
+      x = childXFromParent(parent.x, parent.width, dir, sibling.width);
+    }
+  }
+
+  store.setNodePosition(siblingId, x, ref.y + ref.height + V_GAP);
   if (sibling.parentId !== null) {
     centerChildren(store, sibling.parentId);
   }

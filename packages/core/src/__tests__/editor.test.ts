@@ -124,6 +124,49 @@ describe("Editor", () => {
     });
   });
 
+  describe("addSibling", () => {
+    test("left-side sibling positioned by own width, not reference width", () => {
+      // A wide left-side node should not cause a narrow new sibling to be
+      // placed far to the left. The sibling's right edge should be near
+      // the parent, same as childXFromParent would compute.
+      const leftMap: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [{
+          id: "r0", text: "Root", x: 0, y: 0, width: 100, height: 32,
+          children: [{
+            // Wide left-side child: right edge at 0 - 150 = -150
+            id: "wide", text: "a]very wide left node text here", x: -400, y: 0, width: 250, height: 32,
+            children: [],
+          }],
+        }],
+        assets: [],
+      };
+      const ed = new TestEditor();
+      ed.loadJSON(leftMap);
+
+      const sibId = ed.addSibling("wide");
+      expect(sibId).not.toBeNull();
+      const sib = ed.getNode(sibId!);
+      const parent = ed.getNode("r0");
+
+      // The new sibling (narrow, empty text) should NOT be at x=-400
+      // Its right edge should be near parent, at parentX - CHILD_GAP
+      const expectedRightEdge = parent.x - 150; // CHILD_GAP = H_OFFSET - 100 = 150
+      expect(sib.x + sib.width).toBeCloseTo(expectedRightEdge, 0);
+    });
+
+    test("right-side sibling matches reference x position", () => {
+      // Right-side siblings should still share the same x as reference
+      const sibId = editor.addSibling("n1");
+      expect(sibId).not.toBeNull();
+      const sib = editor.getNode(sibId!);
+      const ref = editor.getNode("n1");
+      expect(sib.x).toBe(ref.x);
+    });
+  });
+
   describe("deleteNode", () => {
     test("removes node and selects nearest sibling", () => {
       editor.select("n2");
