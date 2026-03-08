@@ -43,6 +43,7 @@ def validate_source(path: Path) -> Image.Image:
     return img
 
 
+
 def clean_old_icons() -> int:
     """Remove existing icon PNGs from the appiconset directory."""
     removed = 0
