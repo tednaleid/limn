@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "6.2"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     PRODUCT_BUNDLE_IDENTIFIER: com.tednaleid.Limn
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.9.2"
     CURRENT_PROJECT_VERSION: "1"
     INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
     CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements

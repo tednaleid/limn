@@ -16,6 +16,8 @@ const VERSION_FILES = [
   "manifest.json",
 ];
 
+const DESKTOP_PROJECT_YML = "packages/desktop/project.yml";
+
 const VERSIONS_JSON = "packages/obsidian/versions.json";
 
 function readJson(path: string): Record<string, unknown> {
@@ -59,6 +61,16 @@ for (const file of VERSION_FILES) {
   console.log(`Updated ${file}`);
 }
 
+// Update MARKETING_VERSION in desktop project.yml
+const projectYmlPath = join(ROOT, DESKTOP_PROJECT_YML);
+const projectYml = readFileSync(projectYmlPath, "utf-8");
+const updatedYml = projectYml.replace(
+  /MARKETING_VERSION: "[^"]+"/,
+  `MARKETING_VERSION: "${newVersion}"`,
+);
+writeFileSync(projectYmlPath, updatedYml);
+console.log(`Updated ${DESKTOP_PROJECT_YML}`);
+
 // Update versions.json (add new version mapping)
 const versionsData = readJson(VERSIONS_JSON) as Record<string, string>;
 const minAppVersion = (readJson("packages/obsidian/manifest.json") as Record<string, string>).minAppVersion;
@@ -67,7 +79,7 @@ writeJson(VERSIONS_JSON, versionsData);
 console.log(`Updated ${VERSIONS_JSON}`);
 
 // Commit, tag, and push
-run(`git add ${VERSION_FILES.join(" ")} ${VERSIONS_JSON}`);
+run(`git add ${VERSION_FILES.join(" ")} ${VERSIONS_JSON} ${DESKTOP_PROJECT_YML}`);
 run(`git commit -m "Bump version to ${newVersion}"`);
 run(`git tag ${newVersion}`);
 run(`git push && git push --tags`);

@@ -133,9 +133,14 @@ desktop-stop:
 desktop-kill:
     @pkill -f 'Limn.app/Contents/MacOS/Limn' 2>/dev/null || echo "Limn is not running"
 
-# Clean desktop build artifacts
+# Generate macOS app icon sizes from a 1024x1024 source PNG
+desktop-icon source:
+    scripts/generate-app-icon.py {{source}}
+
+# Clean desktop build artifacts (including Xcode DerivedData cache)
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app
+    rm -rf ~/Library/Developer/Xcode/DerivedData/Limn-*
 
 # Reset desktop app preferences (session bookmarks, user defaults)
 desktop-reset:
