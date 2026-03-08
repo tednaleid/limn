@@ -116,10 +116,11 @@ desktop-open file:
 
 # Build the desktop app (Release) with bundled web resources
 desktop-release: desktop-gen
-    cd packages/web && bunx vite build --base "./" --outDir dist-desktop
-    # Strip crossorigin attributes -- file:// URLs fail CORS checks in WKWebView
-    sed -i '' 's/ crossorigin//g' packages/web/dist-desktop/index.html
+    cd packages/web && bunx vite build --config vite.config.desktop.ts
+    # WKWebView file:// URLs cannot load ES modules or pass CORS checks
+    sed -i '' -e 's/ crossorigin//g' -e 's/ type="module"//g' -e 's/<script /<script defer /g' packages/web/dist-desktop/index.html
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Release build SYMROOT={{desktop_build_dir}}
+    rm -rf {{desktop_build_dir}}/Release/Limn.app/Contents/Resources/web
     cp -r packages/web/dist-desktop/ {{desktop_build_dir}}/Release/Limn.app/Contents/Resources/web/
     rm -rf packages/web/dist-desktop
 
