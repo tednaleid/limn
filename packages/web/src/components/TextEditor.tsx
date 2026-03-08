@@ -112,6 +112,7 @@ export function TextEditor({ editor, node, camera, branchColor }: TextEditorProp
         boxShadow: `0 0 0 ${2}px ${branchColor ?? "var(--editor-shadow)"}`,
         background: "var(--editor-bg)",
         color: node.parentId === null && branchColor ? branchColor : "var(--text-color)",
+        whiteSpace: node.widthConstrained ? "pre-wrap" : "pre",
         resize: "none",
         overflow: "hidden",
         boxSizing: "border-box",
