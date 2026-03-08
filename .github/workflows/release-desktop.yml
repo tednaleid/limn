@@ -77,13 +77,13 @@ jobs:
             --timestamp \
             /tmp/limn-desktop-build/Release/Limn.app
 
-      # Strip the CI runner's dev signature when not re-signing with Developer ID.
-      # An unknown dev signature + quarantine xattr = "damaged" on other Macs.
-      # Unsigned apps get the friendlier "unidentified developer" dialog instead.
-      - name: Remove ad-hoc signature
+      # Replace the CI runner's dev certificate with an ad-hoc signature.
+      # The dev cert is untrusted on other Macs ("damaged" error). Ad-hoc
+      # keeps the app launchable and shows "unidentified developer" instead.
+      - name: Ad-hoc re-sign
         if: env.APPLE_CERTIFICATE == ''
         run: |
-          codesign --remove-signature /tmp/limn-desktop-build/Release/Limn.app
+          codesign --force --deep --sign - /tmp/limn-desktop-build/Release/Limn.app
 
       # -- DMG creation --
 
