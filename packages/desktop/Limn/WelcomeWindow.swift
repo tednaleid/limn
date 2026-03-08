@@ -7,6 +7,7 @@ import SwiftUI
 struct WelcomeWindow: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
+    @State private var recentURLs: [URL] = []
 
     var body: some View {
         VStack(spacing: 20) {
@@ -48,12 +49,13 @@ struct WelcomeWindow: View {
             Spacer()
         }
         .frame(width: 360, height: 400)
+        .onAppear {
+            recentURLs = NSDocumentController.shared.recentDocumentURLs
+        }
     }
 
     @ViewBuilder
     private var recentFilesList: some View {
-        let recentURLs = NSDocumentController.shared.recentDocumentURLs
-
         if recentURLs.isEmpty {
             Text("No Recent Files")
                 .foregroundStyle(.tertiary)
