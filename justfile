@@ -121,6 +121,13 @@ desktop-release: build desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Release build SYMROOT={{desktop_build_dir}}
     rm -rf packages/desktop/Limn/Resources
 
+# Build Release app and install to ~/Applications for daily use
+desktop-release-install: desktop-release
+    rm -rf ~/Applications/Limn.app
+    cp -R {{desktop_build_dir}}/Release/Limn.app ~/Applications/Limn.app
+    /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted ~/Applications/Limn.app
+    @echo "Installed to ~/Applications/Limn.app"
+
 # Run desktop unit tests
 desktop-test: desktop-gen
     cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug test SYMROOT={{desktop_build_dir}}
