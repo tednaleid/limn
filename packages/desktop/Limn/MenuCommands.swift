@@ -45,6 +45,16 @@ struct MenuCommands: Commands {
             .disabled(coordinator == nil)
         }
 
+        // MARK: - Help menu
+
+        CommandGroup(replacing: .help) {
+            Button("Keyboard Shortcuts") {
+                coordinator?.triggerKeyboardShortcut(key: "?")
+            }
+            .keyboardShortcut("/", modifiers: [.command, .shift])
+            .disabled(coordinator == nil)
+        }
+
         // MARK: - Edit menu
 
         CommandGroup(replacing: .undoRedo) {

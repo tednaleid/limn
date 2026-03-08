@@ -52,6 +52,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         DebugServer.start()
         #endif
+
+        // Remove the default "Limn Help" item that macOS adds automatically.
+        // Our SwiftUI CommandGroup(replacing: .help) provides a Keyboard Shortcuts item instead.
+        NSApp.helpMenu = nil
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
