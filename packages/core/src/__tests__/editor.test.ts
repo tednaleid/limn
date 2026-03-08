@@ -464,6 +464,81 @@ describe("Editor", () => {
       editor.setText("n1", "foo");
       expect(editor.getNode("n1").width).toBe(40);
     });
+
+    test("left-side node grows leftward (right edge anchored)", () => {
+      // Create a left-side child: x < parent.x
+      // n0 is at x=0, width=100. Place left child at x=-250, width=100
+      const leftMap: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [{
+          id: "r0", text: "Root", x: 0, y: 0, width: 100, height: 32,
+          children: [{
+            id: "L1", text: "Left", x: -250, y: 0, width: 100, height: 32,
+            children: [],
+          }],
+        }],
+        assets: [],
+      };
+      const ed = new TestEditor();
+      ed.loadJSON(leftMap);
+
+      const rightEdgeBefore = ed.getNode("L1").x + ed.getNode("L1").width;
+
+      // "Left" = 4 chars → 4*8+16 = 48. Change to longer text.
+      // "Much longer text" = 16 chars → 16*8+16 = 144
+      ed.setText("L1", "Much longer text");
+      const nodeAfter = ed.getNode("L1");
+
+      expect(nodeAfter.width).toBe(144);
+      // Right edge should stay the same
+      expect(nodeAfter.x + nodeAfter.width).toBeCloseTo(rightEdgeBefore, 0);
+    });
+
+    test("left-side node shrinks rightward (right edge anchored)", () => {
+      const leftMap: MindMapFileFormat = {
+        version: 1,
+        meta: { id: "test", mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
+        camera: { x: 0, y: 0, zoom: 1 },
+        roots: [{
+          id: "r0", text: "Root", x: 0, y: 0, width: 100, height: 32,
+          children: [{
+            id: "L1", text: "Much longer text", x: -294, y: 0, width: 144, height: 32,
+            children: [],
+          }],
+        }],
+        assets: [],
+      };
+      const ed = new TestEditor();
+      ed.loadJSON(leftMap);
+
+      const rightEdgeBefore = ed.getNode("L1").x + ed.getNode("L1").width;
+
+      // "ab" = 2 chars → 2*8+16 = 32
+      ed.setText("L1", "ab");
+      const nodeAfter = ed.getNode("L1");
+
+      expect(nodeAfter.width).toBe(32);
+      expect(nodeAfter.x + nodeAfter.width).toBeCloseTo(rightEdgeBefore, 0);
+    });
+
+    test("right-side node x unchanged when text grows", () => {
+      const xBefore = editor.getNode("n1").x;
+      // "Child 1" = 7 chars → 7*8+16 = 72
+      // "A longer child name" = 19 chars → 19*8+16 = 168
+      editor.setText("n1", "A longer child name");
+      expect(editor.getNode("n1").x).toBe(xBefore);
+    });
+
+    test("siblings re-center vertically when one grows taller", () => {
+      // n1 and n2 are siblings. Make n1's text multi-line to increase height.
+      const n2yBefore = editor.getNode("n2").y;
+      // Multi-line text increases height: 3 lines → 3*20+6*2 = 72
+      editor.setText("n1", "Line 1\nLine 2\nLine 3");
+      // n2 should have shifted down to accommodate n1's taller subtree
+      expect(editor.getNode("n2").y).toBeGreaterThan(n2yBefore);
+    });
   });
 
   describe("toggleCollapse", () => {

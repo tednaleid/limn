@@ -784,8 +784,23 @@ export class Editor {
     if (this.lastUndoLabel !== squashLabel) {
       this.pushUndo(squashLabel);
     }
+    const node = this.store.getNode(nodeId);
+    const oldWidth = node.width;
     this.store.setText(nodeId, text);
     this.remeasureNode(nodeId);
+
+    if (node.width !== oldWidth && node.parentId !== null) {
+      // Left-side nodes: shift x so right edge stays anchored
+      const dir = branchDirection(this.store, nodeId);
+      if (dir < 0) {
+        this.store.setNodePosition(nodeId, node.x - (node.width - oldWidth), node.y);
+      }
+      // Re-center siblings vertically and cascade up
+      relayoutSubtree(this.store, node.parentId);
+      relayoutFromNode(this.store, node.parentId);
+      this.resolveOverlapForNode(node.parentId);
+    }
+
     this.notify();
   }
 
