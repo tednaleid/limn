@@ -57,7 +57,7 @@
 - [ ] Ted: enroll in Apple Developer Program, fill in DEVELOPMENT_TEAM
 
 ## Phase 6b: CI Automation (deferred)
-- [ ] GitHub Actions workflow for automated builds on version tags
+- [x] GitHub Actions workflow for automated builds on version tags
 
 ## Phase 6c: App Store (optional, future)
 - [ ] App Store submission
