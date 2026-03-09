@@ -39,12 +39,17 @@ function getExternalChangeCb(): ((data: MindMapFileFormat) => void) | null {
 function setExternalChangeCb(cb: ((data: MindMapFileFormat) => void) | null): void {
   if (g.limn?.desktop) g.limn.desktop._externalChangeCb = cb;
 }
+function getCurrentFilename(): string | null {
+  return g.limn?.desktop?._currentFilename ?? null;
+}
+function setCurrentFilename(f: string | null): void {
+  if (g.limn?.desktop) g.limn.desktop._currentFilename = f;
+}
 
 export class DesktopPersistenceProvider implements PersistenceProvider {
   private assetCache = new Map<string, Blob>();
   private assetUrls = new Map<string, string>();
   private unsubBridge: (() => void) | null = null;
-  private currentFilename: string | null = null;
 
   constructor() {
     this.unsubBridge = onSwiftMessage((msg) => this.handleMessage(msg));
@@ -60,7 +65,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
           for (const [id, assetBlob] of assetBlobs) {
             this.assetCache.set(id, assetBlob);
           }
-          this.currentFilename = msg.payload.filename;
+          setCurrentFilename(msg.payload.filename);
 
           const pending = getPendingLoad();
           if (pending) {
@@ -81,7 +86,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         break;
       }
       case "fileSaved": {
-        this.currentFilename = msg.payload.filename;
+        setCurrentFilename(msg.payload.filename);
         const pending = getPendingSave();
         if (pending) {
           pending.resolve(msg.payload.filename);
@@ -90,14 +95,14 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         break;
       }
       case "fileClosed": {
-        this.currentFilename = null;
+        setCurrentFilename(null);
         break;
       }
     }
   }
 
   get filename(): string | null {
-    return this.currentFilename;
+    return getCurrentFilename();
   }
 
   async load(): Promise<MindMapFileFormat | null> {

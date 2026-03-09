@@ -153,6 +153,29 @@ describe("DesktopPersistenceProvider", () => {
     expect(changes[0]!.meta.id).toBe("test-1");
   });
 
+  it("filename survives StrictMode dual-instance (second handler, first reader)", async () => {
+    // React StrictMode creates two instances via useMemo. The second instance's
+    // onSwiftMessage handler replaces the first's (last-writer-wins). But React
+    // keeps the first instance. Filename must be visible from either instance.
+    const first = new DesktopPersistenceProvider();
+    const second = new DesktopPersistenceProvider(); // replaces global handler
+    provider = second; // for cleanup
+
+    const base64 = await buildBase64Zip(MINIMAL_MAP);
+    const dispatch = getDispatcher();
+
+    // Dispatch goes through the second instance's handler
+    dispatch({ type: "loadFile", payload: { data: base64, filename: "strict.limn" } });
+
+    await vi.waitFor(() => {
+      expect(second.filename).toBe("strict.limn");
+    });
+    // The first instance must also see the filename
+    expect(first.filename).toBe("strict.limn");
+
+    first.dispose();
+  });
+
   it("requestOpen resolves with loaded data", async () => {
     const postMessage = vi.fn();
     g.webkit = { messageHandlers: { limn: { postMessage } } };
