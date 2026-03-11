@@ -15,7 +15,9 @@ struct WebViewBridge: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        #if DEBUG
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
+        #endif
 
         // Register the message handler for JS -> Swift communication
         config.userContentController.add(coordinator, name: "limn")
@@ -25,7 +27,9 @@ struct WebViewBridge: NSViewRepresentable {
         coordinator.webView = webView
 
         // Allow inspecting the web view in Safari dev tools
+        #if DEBUG
         webView.isInspectable = true
+        #endif
 
         // Register coordinator with AppDelegate. Uses assumeIsolated because
         // makeNSView runs on the main thread but is nonisolated in Swift 6,

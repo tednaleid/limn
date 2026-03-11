@@ -158,6 +158,9 @@ export function MindMapCanvas() {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      // Only initiate interactions on primary (left) button
+      if (e.button !== 0) return;
+
       const target = e.target as SVGElement;
       const isCanvas = target.tagName === "svg" || target.classList.contains("canvas-bg");
 
