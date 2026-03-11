@@ -36,6 +36,8 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Shift", "Enter"], description: "Create sibling node" },
       { keys: ["Backspace"], description: "Delete node" },
       { keys: ["Space"], description: "Toggle collapse" },
+      { keys: ["c"], description: "Cycle branch color forward" },
+      { keys: ["Shift", "c"], description: "Cycle branch color backward" },
     ],
   },
   {

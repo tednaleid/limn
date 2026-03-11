@@ -17,7 +17,7 @@ import {
   resolveTreeOverlap,
 } from "../layout/layout";
 import { nextBranchColorIndex } from "../theme/palette";
-import { resolveTheme, DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME } from "../theme/theme";
+import { resolveTheme, DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME, BRANCH_COUNT } from "../theme/theme";
 import type { ThemeDefinition } from "../theme/theme";
 import { stripMarkdown, parseMarkdownLines } from "../markdown/inlineMarkdown";
 import {
@@ -226,6 +226,43 @@ export class Editor {
   setNodeColorIndex(id: string, colorIndex: number): void {
     const node = this.store.getNode(id);
     node.style = { ...node.style, colorIndex };
+    this.notify();
+  }
+
+  /** Cycle a node's branch colorIndex forward (+1) or backward (-1).
+   *  For child nodes: if the resulting color matches the inherited parent color,
+   *  the explicit colorIndex is removed so the node reverts to inheritance. */
+  cycleNodeColor(id: string, direction: 1 | -1): void {
+    this.pushUndo("cycle-color");
+    const node = this.store.getNode(id);
+    const isRoot = node.parentId === null;
+    const current = node.style?.colorIndex;
+
+    if (isRoot) {
+      // Root always has an explicit colorIndex; just cycle it
+      const idx = current ?? 0;
+      node.style = { ...node.style, colorIndex: ((idx + direction) % BRANCH_COUNT + BRANCH_COUNT) % BRANCH_COUNT };
+    } else {
+      // Walk up to find the inherited colorIndex (skip this node's own)
+      let inherited: number | undefined;
+      // parentId is non-null here because isRoot is false
+      let ancestor = this.store.getNode(node.parentId as string);
+      while (true) {
+        if (ancestor.style?.colorIndex !== undefined) { inherited = ancestor.style.colorIndex; break; }
+        if (ancestor.parentId === null) break;
+        ancestor = this.store.getNode(ancestor.parentId);
+      }
+      const base = current ?? inherited ?? 0;
+      const next = ((base + direction) % BRANCH_COUNT + BRANCH_COUNT) % BRANCH_COUNT;
+      if (next === inherited) {
+        // Matches what the node would inherit — remove explicit color
+        const style = { ...node.style };
+        delete style.colorIndex;
+        node.style = Object.keys(style).length > 0 ? style : undefined;
+      } else {
+        node.style = { ...node.style, colorIndex: next };
+      }
+    }
     this.notify();
   }
 

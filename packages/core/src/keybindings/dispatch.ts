@@ -328,6 +328,23 @@ const bindings: KeyBinding[] = [
     },
   },
   {
+    key: "c",
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.cycleNodeColor(sel, 1);
+    },
+  },
+  {
+    key: "c",
+    modifiers: { shift: true },
+    mode: "nav",
+    action: (editor) => {
+      const sel = editor.getSelectedId();
+      if (sel) editor.cycleNodeColor(sel, -1);
+    },
+  },
+  {
     key: "r",
     mode: "nav",
     action: (editor) => {

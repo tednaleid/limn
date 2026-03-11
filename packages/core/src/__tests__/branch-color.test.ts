@@ -220,6 +220,195 @@ describe("branch color adoption on reparent", () => {
   });
 });
 
+describe("cycleNodeColor", () => {
+  let editor: TestEditor;
+
+  beforeEach(() => {
+    resetIdCounter();
+    editor = new TestEditor();
+  });
+
+  it("cycles root node color forward", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(1);
+
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(2);
+  });
+
+  it("cycles root node color backward", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.cycleNodeColor(rootId, -1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(BRANCH_COUNT - 1);
+  });
+
+  it("root color wraps around forward", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    editor.setNodeColorIndex(rootId, BRANCH_COUNT - 1);
+
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+  });
+
+  it("assigns next color to a child node that has no explicit color", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    // Root has colorIndex 0
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+    // Child inherits 0 from root
+    expect(editor.getBranchColorIndex(childId)).toBe(0);
+
+    editor.cycleNodeColor(childId, 1);
+    // Should get the next color (1), not stay at inherited (0)
+    expect(editor.getBranchColorIndex(childId)).toBe(1);
+    // Verify it's an explicit colorIndex on the child
+    expect(editor.getNode(childId).style?.colorIndex).toBe(1);
+  });
+
+  it("cycles child node backward from inherited color", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+
+    editor.cycleNodeColor(childId, -1);
+    expect(editor.getBranchColorIndex(childId)).toBe(BRANCH_COUNT - 1);
+  });
+
+  it("removes explicit color when it matches inherited color", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    // Root has colorIndex 0
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+
+    // Give child explicit colorIndex 1
+    editor.cycleNodeColor(childId, 1);
+    expect(editor.getNode(childId).style?.colorIndex).toBe(1);
+
+    // Cycle backward — should go back to 0, which matches inherited,
+    // so explicit colorIndex should be removed
+    editor.cycleNodeColor(childId, -1);
+    expect(editor.getNode(childId).style?.colorIndex).toBeUndefined();
+    // But it still resolves to the inherited color
+    expect(editor.getBranchColorIndex(childId)).toBe(0);
+  });
+
+  it("cycling child through all colors and back removes explicit color", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+    // Root has colorIndex 0, child inherits 0
+
+    // Cycle forward through all 14 colors — should land back at inherited
+    for (let i = 0; i < BRANCH_COUNT; i++) {
+      editor.cycleNodeColor(childId, 1);
+    }
+    // After 14 forward cycles, we're back to the inherited color
+    expect(editor.getNode(childId).style?.colorIndex).toBeUndefined();
+    expect(editor.getBranchColorIndex(childId)).toBe(0);
+  });
+
+  it("child color cascades to grandchildren", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+    const grandchildId = editor.addChild(childId, "Grandchild");
+    editor.exitEditMode();
+
+    editor.cycleNodeColor(childId, 1);
+    expect(editor.getBranchColorIndex(grandchildId)).toBe(1);
+  });
+
+  it("root and child cycle independently", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    const childId = editor.addChild(rootId, "Child");
+    editor.exitEditMode();
+
+    // Give child explicit color
+    editor.cycleNodeColor(childId, 1);
+    expect(editor.getBranchColorIndex(childId)).toBe(1);
+
+    // Cycle root — child should not be affected
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(1);
+    expect(editor.getBranchColorIndex(childId)).toBe(1);
+
+    // Cycle root again
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(2);
+    // Child still has its own explicit color
+    expect(editor.getBranchColorIndex(childId)).toBe(1);
+  });
+
+  it("is undoable", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.cycleNodeColor(rootId, 1);
+    expect(editor.getBranchColorIndex(rootId)).toBe(1);
+
+    editor.undo();
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.redo();
+    expect(editor.getBranchColorIndex(rootId)).toBe(1);
+  });
+
+  it("is triggered by pressing c in nav mode", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    editor.select(rootId);
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.pressKey("c");
+    expect(editor.getBranchColorIndex(rootId)).toBe(1);
+  });
+
+  it("is triggered by pressing Shift+c to cycle backward", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    const rootId = editor.getRoots()[0]!.id;
+    editor.select(rootId);
+    expect(editor.getBranchColorIndex(rootId)).toBe(0);
+
+    editor.pressKey("c", { shift: true });
+    expect(editor.getBranchColorIndex(rootId)).toBe(BRANCH_COUNT - 1);
+  });
+
+  it("does nothing when no node is selected", () => {
+    editor.addRoot("Root", 0, 0);
+    editor.exitEditMode();
+    editor.deselect();
+    // Should not throw
+    editor.pressKey("c");
+  });
+});
+
 describe("branch color serialization", () => {
   it("colorIndex survives round-trip through toJSON/loadJSON", () => {
     const editor = new TestEditor();
