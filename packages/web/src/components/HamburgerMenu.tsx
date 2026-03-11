@@ -23,6 +23,37 @@ function normalizeTheme(theme: string): string {
 
 export type MenuItemDef = { label: string; shortcut?: string; onClick: () => void } | null;
 
+export type ThemeFocusTarget =
+  | { type: "menu-item"; index: number }
+  | { type: "theme-mode" }
+  | { type: "theme-palette"; mode: "light" | "dark"; offset: number };
+
+/** Map a focusIndex to the kind of item it targets. */
+export function resolveThemeFocusTarget(
+  focusIndex: number,
+  menuItemCount: number,
+  showTheme: boolean,
+  lightThemeCount: number,
+  darkThemeCount: number,
+): ThemeFocusTarget | null {
+  if (focusIndex < menuItemCount) {
+    return { type: "menu-item", index: focusIndex };
+  }
+  if (!showTheme) return null;
+  if (focusIndex === menuItemCount) {
+    return { type: "theme-mode" };
+  }
+  const paletteIndex = focusIndex - menuItemCount - 1;
+  if (paletteIndex < lightThemeCount) {
+    return { type: "theme-palette", mode: "light", offset: paletteIndex };
+  }
+  const darkOffset = paletteIndex - lightThemeCount;
+  if (darkOffset < darkThemeCount) {
+    return { type: "theme-palette", mode: "dark", offset: darkOffset };
+  }
+  return null;
+}
+
 export interface HamburgerMenuProps {
   items?: MenuItemDef[];
   showTheme?: boolean;
@@ -40,6 +71,9 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
   const currentTheme = normalizeTheme(editor.getTheme());
 
   const [focusIndex, setFocusIndex] = useState(0);
+  const modeValues: string[] = THEME_OPTIONS.map((o) => o.value);
+  const modeIndex = modeValues.indexOf(currentTheme);
+  const [themeModeFocus, setThemeModeFocus] = useState(modeIndex >= 0 ? modeIndex : 2);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -50,14 +84,71 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
     return () => window.removeEventListener("limn:toggle-menu", handleToggleMenu);
   }, []);
 
-  // Reset focusIndex when menu opens
+  // Reset focusIndex and theme mode focus when menu opens
   useEffect(() => {
-    if (open) setFocusIndex(0);
+    if (open) {
+      setFocusIndex(0);
+      const idx = modeValues.indexOf(currentTheme);
+      setThemeModeFocus(idx >= 0 ? idx : 2);
+    }
   }, [open]);
+
+  const handleOpen = () => { editor.requestOpen(); close(); };
+  const handleSave = () => { editor.requestSave(); close(); };
+  const handleSaveAs = () => { editor.requestSaveAs(); close(); };
+  const handleExport = () => { editor.requestExport(); close(); };
+  const handleShare = () => { editor.requestShare(); close(); };
+  const handleClear = () => {
+    window.location.hash = "local-doc=" + crypto.randomUUID();
+    window.location.reload();
+  };
+  const handleShortcuts = () => { setShowShortcuts(true); close(); };
+  const handleKeystrokeOverlay = () => {
+    window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
+    close();
+  };
+  const handleAbout = () => { setShowAbout(true); close(); };
+  const handleTheme = (theme: string) => { editor.setTheme(theme); };
+
+  // Build a flat list of actionable menu items for keyboard navigation.
+  // This must match the order they appear in the rendered menu.
+  const actionableItems: { label: string; onClick: () => void }[] = items
+    ? items.filter((item): item is NonNullable<MenuItemDef> => item !== null)
+    : [
+        { label: "Open", onClick: handleOpen },
+        { label: "Save", onClick: handleSave },
+        { label: "Save As", onClick: handleSaveAs },
+        { label: "Export SVG", onClick: handleExport },
+        ...(showShare ? [{ label: "Copy Share Link", onClick: handleShare }] : []),
+        { label: "New", onClick: handleClear },
+      ];
+  // Always append the fixed items at the bottom
+  actionableItems.push(
+    { label: "Keyboard Shortcuts", onClick: handleShortcuts },
+    { label: "Keystroke Overlay", onClick: handleKeystrokeOverlay },
+    { label: "About", onClick: handleAbout },
+  );
+  const actionableItemCount = actionableItems.length;
+  const { light: lightThemeKeys, dark: darkThemeKeys } = getThemesByMode();
+  const allThemeKeys = [...lightThemeKeys, ...darkThemeKeys];
+  const totalItemCount = actionableItemCount + (showTheme ? 1 + allThemeKeys.length : 0);
+
+  const activateItemAtIndex = (index: number) => {
+    const item = actionableItems[index];
+    if (item) item.onClick();
+  };
+
+  const selectThemePaletteKey = (target: { mode: "light" | "dark"; offset: number }) => {
+    const key = allThemeKeys[target.mode === "light" ? target.offset : lightThemeKeys.length + target.offset];
+    if (key) (target.mode === "light" ? handleLightTheme : handleDarkTheme)(key);
+  };
 
   // Keyboard navigation (capture phase, before canvas handler)
   useEffect(() => {
     if (!open) return;
+    const target = resolveThemeFocusTarget(
+      focusIndex, actionableItemCount, showTheme, lightThemeKeys.length, darkThemeKeys.length,
+    );
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
         case "Escape":
@@ -68,24 +159,65 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
         case "ArrowDown":
           e.stopPropagation();
           e.preventDefault();
-          setFocusIndex((prev) => (prev + 1) % actionableItemCount);
+          setFocusIndex((prev) => (prev + 1) % totalItemCount);
           break;
         case "k":
         case "ArrowUp":
           e.stopPropagation();
           e.preventDefault();
-          setFocusIndex((prev) => (prev - 1 + actionableItemCount) % actionableItemCount);
+          setFocusIndex((prev) => (prev - 1 + totalItemCount) % totalItemCount);
           break;
         case "Enter":
           e.stopPropagation();
           e.preventDefault();
-          activateItemAtIndex(focusIndex);
+          if (target?.type === "menu-item") {
+            activateItemAtIndex(target.index);
+          } else if (target?.type === "theme-palette") {
+            selectThemePaletteKey(target);
+          }
+          break;
+        case " ":
+          if (target?.type === "theme-palette") {
+            e.stopPropagation();
+            e.preventDefault();
+            selectThemePaletteKey(target);
+          }
+          break;
+        case "h":
+        case "ArrowLeft":
+          if (target?.type === "theme-mode") {
+            e.stopPropagation();
+            e.preventDefault();
+            setThemeModeFocus((prev) => {
+              const next = Math.max(0, prev - 1);
+              const opt = THEME_OPTIONS[next];
+              if (opt) handleTheme(opt.value);
+              return next;
+            });
+          }
+          break;
+        case "l":
+        case "ArrowRight":
+          if (target?.type === "theme-mode") {
+            e.stopPropagation();
+            e.preventDefault();
+            setThemeModeFocus((prev) => {
+              const next = Math.min(THEME_OPTIONS.length - 1, prev + 1);
+              const opt = THEME_OPTIONS[next];
+              if (opt) handleTheme(opt.value);
+              return next;
+            });
+          } else if (target?.type === "theme-palette") {
+            e.stopPropagation();
+            e.preventDefault();
+            selectThemePaletteKey(target);
+          }
           break;
       }
     };
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [open, close, focusIndex]);
+  }, [open, close, focusIndex, totalItemCount]);
 
   // Close on outside click
   useEffect(() => {
@@ -108,46 +240,6 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
     window.addEventListener("limn:show-shortcuts", handleShowShortcuts);
     return () => window.removeEventListener("limn:show-shortcuts", handleShowShortcuts);
   }, []);
-
-  const handleOpen = () => { editor.requestOpen(); close(); };
-  const handleSave = () => { editor.requestSave(); close(); };
-  const handleSaveAs = () => { editor.requestSaveAs(); close(); };
-  const handleExport = () => { editor.requestExport(); close(); };
-  const handleShare = () => { editor.requestShare(); close(); };
-  const handleClear = () => {
-    window.location.hash = "local-doc=" + crypto.randomUUID();
-    window.location.reload();
-  };
-  const handleShortcuts = () => { setShowShortcuts(true); close(); };
-  const handleKeystrokeOverlay = () => {
-    window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
-    close();
-  };
-  const handleAbout = () => { setShowAbout(true); close(); };
-  const handleTheme = (theme: string) => { editor.setTheme(theme); };
-  // Build a flat list of actionable menu items for keyboard navigation.
-  // This must match the order they appear in the rendered menu.
-  const actionableItems: { label: string; onClick: () => void }[] = items
-    ? items.filter((item): item is NonNullable<MenuItemDef> => item !== null)
-    : [
-        { label: "Open", onClick: handleOpen },
-        { label: "Save", onClick: handleSave },
-        { label: "Save As", onClick: handleSaveAs },
-        { label: "Export SVG", onClick: handleExport },
-        ...(showShare ? [{ label: "Copy Share Link", onClick: handleShare }] : []),
-        { label: "New", onClick: handleClear },
-      ];
-  // Always append the fixed items at the bottom
-  actionableItems.push(
-    { label: "Keyboard Shortcuts", onClick: handleShortcuts },
-    { label: "Keystroke Overlay", onClick: handleKeystrokeOverlay },
-    { label: "About", onClick: handleAbout },
-  );
-  const actionableItemCount = actionableItems.length;
-  const activateItemAtIndex = (index: number) => {
-    const item = actionableItems[index];
-    if (item) item.onClick();
-  };
 
   const handleLightTheme = (key: ThemeKey) => {
     editor.setLightTheme(key);
@@ -247,18 +339,32 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
             active={focusIndex === actionableItemCount - 2}
           />
           <MenuItem label="About" onClick={handleAbout} active={focusIndex === actionableItemCount - 1} />
-          {showTheme && (
-            <>
-              <MenuDivider />
-              <ThemeRow currentTheme={currentTheme} onSelect={handleTheme} />
-              <ThemeSubmenu
-                activeLightTheme={editor.getLightTheme()}
-                activeDarkTheme={editor.getDarkTheme()}
-                onSelectLight={handleLightTheme}
-                onSelectDark={handleDarkTheme}
-              />
-            </>
-          )}
+          {showTheme && (() => {
+            const target = resolveThemeFocusTarget(
+              focusIndex, actionableItemCount, showTheme, lightThemeKeys.length, darkThemeKeys.length,
+            );
+            const focusedThemeKey = target?.type === "theme-palette"
+              ? allThemeKeys[target.mode === "light" ? target.offset : lightThemeKeys.length + target.offset]
+              : undefined;
+            return (
+              <>
+                <MenuDivider />
+                <ThemeRow
+                  currentTheme={currentTheme}
+                  onSelect={handleTheme}
+                  active={target?.type === "theme-mode"}
+                  focusedOptionIndex={target?.type === "theme-mode" ? themeModeFocus : undefined}
+                />
+                <ThemeSubmenu
+                  activeLightTheme={editor.getLightTheme()}
+                  activeDarkTheme={editor.getDarkTheme()}
+                  onSelectLight={handleLightTheme}
+                  onSelectDark={handleDarkTheme}
+                  focusedKey={focusedThemeKey}
+                />
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
@@ -300,9 +406,11 @@ function MenuItem({ label, shortcut, onClick, active }: {
   );
 }
 
-function ThemeRow({ currentTheme, onSelect }: {
+function ThemeRow({ currentTheme, onSelect, active, focusedOptionIndex }: {
   currentTheme: string;
   onSelect: (theme: string) => void;
+  active?: boolean;
+  focusedOptionIndex?: number;
 }) {
   return (
     <div
@@ -311,6 +419,7 @@ function ThemeRow({ currentTheme, onSelect }: {
         alignItems: "center",
         padding: "6px 12px",
         gap: 8,
+        background: active ? "var(--selection-bg)" : "transparent",
       }}
     >
       <span style={{ flex: 1, fontSize: 14, color: "var(--text-color)" }}>Theme</span>
@@ -323,9 +432,10 @@ function ThemeRow({ currentTheme, onSelect }: {
           gap: 2,
         }}
       >
-        {THEME_OPTIONS.map((opt) => {
+        {THEME_OPTIONS.map((opt, i) => {
           const Icon = opt.icon;
-          const active = currentTheme === opt.value;
+          const isActive = currentTheme === opt.value;
+          const isFocused = active && focusedOptionIndex === i;
           return (
             <button
               key={opt.value}
@@ -335,14 +445,14 @@ function ThemeRow({ currentTheme, onSelect }: {
               style={{
                 width: 28,
                 height: 28,
-                border: "none",
+                border: isFocused ? "2px solid var(--selection-border)" : "none",
                 borderRadius: 6,
-                background: active ? "var(--selection-bg)" : "transparent",
+                background: isActive ? "var(--selection-bg)" : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: active ? "var(--selection-border)" : "var(--text-muted)",
+                color: isActive ? "var(--selection-border)" : "var(--text-muted)",
               }}
             >
               <Icon />
@@ -354,11 +464,12 @@ function ThemeRow({ currentTheme, onSelect }: {
   );
 }
 
-function ThemeSubmenu({ activeLightTheme, activeDarkTheme, onSelectLight, onSelectDark }: {
+function ThemeSubmenu({ activeLightTheme, activeDarkTheme, onSelectLight, onSelectDark, focusedKey }: {
   activeLightTheme: string;
   activeDarkTheme: string;
   onSelectLight: (key: ThemeKey) => void;
   onSelectDark: (key: ThemeKey) => void;
+  focusedKey?: string;
 }) {
   const { light, dark } = getThemesByMode();
 
@@ -369,22 +480,25 @@ function ThemeSubmenu({ activeLightTheme, activeDarkTheme, onSelectLight, onSele
         keys={light}
         activeKey={activeLightTheme}
         onSelect={onSelectLight}
+        focusedKey={focusedKey}
       />
       <ThemeGroup
         label="Dark"
         keys={dark}
         activeKey={activeDarkTheme}
         onSelect={onSelectDark}
+        focusedKey={focusedKey}
       />
     </div>
   );
 }
 
-function ThemeGroup({ label, keys, activeKey, onSelect }: {
+function ThemeGroup({ label, keys, activeKey, onSelect, focusedKey }: {
   label: string;
   keys: ThemeKey[];
   activeKey: string;
   onSelect: (key: ThemeKey) => void;
+  focusedKey?: string;
 }) {
   return (
     <div style={{ marginTop: 4 }}>
@@ -393,6 +507,7 @@ function ThemeGroup({ label, keys, activeKey, onSelect }: {
         const theme = THEME_REGISTRY[key];
         if (!theme) return null;
         const active = key === activeKey;
+        const focused = key === focusedKey;
         return (
           <button
             key={key}
@@ -404,7 +519,7 @@ function ThemeGroup({ label, keys, activeKey, onSelect }: {
               width: "100%",
               padding: "3px 4px",
               border: "none",
-              background: "transparent",
+              background: focused ? "var(--selection-bg)" : "transparent",
               cursor: "pointer",
               fontSize: 13,
               color: "var(--text-color)",
