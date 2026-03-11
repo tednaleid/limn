@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 import click
-from PIL import Image
+from PIL import Image, ImageDraw
 
 APPICONSET = (
     Path(__file__).resolve().parent.parent
@@ -53,10 +53,33 @@ def clean_old_icons() -> int:
     return removed
 
 
+def make_squircle_mask(size: int) -> Image.Image:
+    """Create a macOS squircle (continuous rounded rect) mask.
+
+    The corner radius is ~22.37% of the icon size, matching Apple's macOS
+    icon shape. Uses a supersampled rounded rectangle for smooth edges.
+    """
+    # Supersample 4x for anti-aliased edges
+    ss = 4
+    ss_size = size * ss
+    radius = round(size * 0.2237 * ss)
+
+    mask = Image.new("L", (ss_size, ss_size), 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle([0, 0, ss_size - 1, ss_size - 1], radius=radius, fill=255)
+    return mask.resize((size, size), Image.LANCZOS)
+
+
 def generate_icons(source: Image.Image) -> None:
     """Resize source image to all required sizes."""
+    if source.mode != "RGBA":
+        source = source.convert("RGBA")
     for size_label, scale, pixels, filename in ICON_SLOTS:
         resized = source.resize((pixels, pixels), Image.LANCZOS)
+        # Apply macOS squircle mask so the icon has transparent corners.
+        # Without this, macOS Tahoe puts the icon in "squircle jail".
+        mask = make_squircle_mask(pixels)
+        resized.putalpha(mask)
         resized.save(APPICONSET / filename, "PNG")
         click.echo(f"  {filename:30s} {pixels:4d}x{pixels:<4d} ({size_label} @{scale}x)")
 

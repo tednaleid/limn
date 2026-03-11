@@ -18,10 +18,7 @@ settings:
     PRODUCT_BUNDLE_IDENTIFIER: com.tednaleid.Limn
     MARKETING_VERSION: "0.9.5"
     CURRENT_PROJECT_VERSION: "3"
-    INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
     CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements
-    # Allow WKWebView to load local files from the bundle
-    INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: true
   configs:
     Debug:
       CODE_SIGN_ENTITLEMENTS: Limn/Limn.debug.entitlements
@@ -59,6 +56,8 @@ targets:
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         # Disable macOS automatic window restoration -- we use our own
         # bookmark-based session restore via SessionStore instead.
+        NSPrincipalClass: NSApplication
+        LSApplicationCategoryType: "public.app-category.productivity"
         NSQuitAlwaysKeepsWindows: false
         CFBundleDocumentTypes:
           - CFBundleTypeName: Limn Mind Map
