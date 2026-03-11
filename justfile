@@ -154,6 +154,27 @@ desktop-kill:
 desktop-icon source:
     scripts/generate-app-icon.py {{source}}
 
+# Nuke the macOS icon cache. Run after changing app icons if Stage Manager
+# or Finder still shows the old icon. Pass --force to actually delete.
+desktop-nuke-icon-cache force="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Commands to clear macOS icon caches:"
+    echo "  sudo rm -rf /Library/Caches/com.apple.iconservices.store"
+    echo "  sudo find /private/var/folders/ -name com.apple.dock.iconcache or com.apple.iconservices -exec rm -rf"
+    echo "  killall Dock Finder"
+    echo
+    if [ "{{force}}" = "--force" ]; then
+        echo "Clearing caches (requires sudo)..."
+        sudo rm -rf /Library/Caches/com.apple.iconservices.store
+        sudo find /private/var/folders/ \( -name com.apple.dock.iconcache -or -name com.apple.iconservices \) -exec rm -rf {} \; 2>/dev/null || true
+        killall Dock; killall Finder
+        echo "Done. Dock and Finder restarted."
+    else
+        echo "Dry run. To execute, run:"
+        echo "  just desktop-nuke-icon-cache --force"
+    fi
+
 # Package the desktop app into a signed, notarized DMG
 desktop-package: desktop-release
     scripts/desktop-package.py
