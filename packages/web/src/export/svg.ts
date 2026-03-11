@@ -44,17 +44,26 @@ function serializeWithTheme(svgEl: Element): string {
 }
 
 /**
+ * Serialize the mind map canvas SVG element to a string with embedded theme.
+ * Returns null if no canvas element is found.
+ */
+export function serializeSvg(): string | null {
+  const svgEl = document.querySelector("svg[data-limn-canvas]");
+  if (!svgEl) {
+    console.error("No SVG canvas found for export");
+    return null;
+  }
+  return serializeWithTheme(svgEl);
+}
+
+/**
  * Export the mind map canvas SVG element as a downloadable .svg file.
  * Finds the main SVG element in the DOM and serializes it.
  */
 export function exportSvg(): void {
-  const svgEl = document.querySelector("svg[data-limn-canvas]");
-  if (!svgEl) {
-    console.error("No SVG canvas found for export");
-    return;
-  }
+  const svgString = serializeSvg();
+  if (!svgString) return;
 
-  const svgString = serializeWithTheme(svgEl);
   const blob = new Blob([svgString], { type: "image/svg+xml" });
   downloadBlob(blob, "limn.svg");
 }

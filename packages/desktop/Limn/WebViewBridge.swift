@@ -127,6 +127,10 @@ struct WebViewBridge: NSViewRepresentable {
                 guard let base64 = payload?["data"] as? String else { return }
                 handleRequestSaveAs(base64: base64)
 
+            case "exportSvg":
+                guard let base64 = payload?["data"] as? String else { return }
+                handleExportSvg(base64: base64)
+
             default:
                 print("[Limn] Unknown message type: \(type)")
             }
@@ -203,6 +207,28 @@ struct WebViewBridge: NSViewRepresentable {
                     sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
                 } catch {
                     print("[Limn] SaveAs failed: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        private func handleExportSvg(base64: String) {
+            guard let data = Data(base64Encoded: base64) else {
+                print("[Limn] Export SVG failed: invalid base64")
+                return
+            }
+
+            Task { @MainActor in
+                let panel = NSSavePanel()
+                panel.allowedContentTypes = [.svg]
+                panel.nameFieldStringValue = "limn.svg"
+                panel.canCreateDirectories = true
+
+                let response = panel.runModal()
+                guard response == .OK, let url = panel.url else { return }
+                do {
+                    try data.write(to: url, options: .atomic)
+                } catch {
+                    print("[Limn] Export SVG failed: \(error.localizedDescription)")
                 }
             }
         }

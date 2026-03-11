@@ -26,11 +26,12 @@ export type MenuItemDef = { label: string; shortcut?: string; onClick: () => voi
 export interface HamburgerMenuProps {
   items?: MenuItemDef[];
   showTheme?: boolean;
+  showShare?: boolean;
   keystrokeOverlay?: boolean;
   aboutVariant?: AboutVariant;
 }
 
-export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay, aboutVariant }: HamburgerMenuProps) {
+export function HamburgerMenu({ items, showTheme = true, showShare = true, keystrokeOverlay, aboutVariant }: HamburgerMenuProps) {
   const editor = useEditor();
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -133,7 +134,7 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay, about
         { label: "Save", onClick: handleSave },
         { label: "Save As", onClick: handleSaveAs },
         { label: "Export SVG", onClick: handleExport },
-        { label: "Copy Share Link", onClick: handleShare },
+        ...(showShare ? [{ label: "Copy Share Link", onClick: handleShare }] : []),
         { label: "New", onClick: handleClear },
       ];
   // Always append the fixed items at the bottom
@@ -222,15 +223,20 @@ export function HamburgerMenu({ items, showTheme = true, keystrokeOverlay, about
               );
             })()
           ) : (
-            <>
-              <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} active={focusIndex === 0} />
-              <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} active={focusIndex === 1} />
-              <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} active={focusIndex === 2} />
-              <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} active={focusIndex === 3} />
-              <MenuItem label="Copy Share Link" onClick={handleShare} active={focusIndex === 4} />
-              <MenuDivider />
-              <MenuItem label="New" onClick={handleClear} active={focusIndex === 5} />
-            </>
+            (() => {
+              let idx = 0;
+              return (
+                <>
+                  <MenuItem label="Open..." shortcut="Cmd+O" onClick={handleOpen} active={focusIndex === idx++} />
+                  <MenuItem label="Save" shortcut="Cmd+S" onClick={handleSave} active={focusIndex === idx++} />
+                  <MenuItem label="Save As..." shortcut="Shift+Cmd+S" onClick={handleSaveAs} active={focusIndex === idx++} />
+                  <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} active={focusIndex === idx++} />
+                  {showShare && <MenuItem label="Copy Share Link" onClick={handleShare} active={focusIndex === idx++} />}
+                  <MenuDivider />
+                  <MenuItem label="New" onClick={handleClear} active={focusIndex === idx++} />
+                </>
+              );
+            })()
           )}
           <MenuDivider />
           <MenuItem label="Keyboard Shortcuts" shortcut="?" onClick={handleShortcuts} active={focusIndex === actionableItemCount - 3} />

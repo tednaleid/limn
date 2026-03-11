@@ -21,11 +21,17 @@ export interface RequestSaveAsMessage {
   payload: { data: string }; // base64-encoded ZIP bytes
 }
 
+export interface ExportSvgMessage {
+  type: "exportSvg";
+  payload: { data: string }; // base64-encoded SVG string
+}
+
 export type OutgoingMessage =
   | ReadyMessage
   | SaveMessage
   | RequestOpenMessage
-  | RequestSaveAsMessage;
+  | RequestSaveAsMessage
+  | ExportSvgMessage;
 
 // -- Message types: Swift -> JS --
 

@@ -16,9 +16,9 @@ import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
 import { DesktopPersistenceProvider } from "./persistence/desktop-persistence";
-import { isDesktop } from "./persistence/desktop-bridge";
+import { isDesktop, postToSwift } from "./persistence/desktop-bridge";
 import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename } from "./persistence/file";
-import { exportSvg } from "./export/svg";
+import { exportSvg, serializeSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
 
@@ -354,7 +354,14 @@ export function App({ docId, initialData }: AppProps) {
       });
     }
     editor.onExport(() => {
-      exportSvg();
+      if (desktop) {
+        const svgString = serializeSvg();
+        if (svgString) {
+          postToSwift({ type: "exportSvg", payload: { data: btoa(svgString) } });
+        }
+      } else {
+        exportSvg();
+      }
     });
     editor.onThemeChange(() => {
       applyThemeFromMeta(editor.getTheme(), editor.getLightTheme(), editor.getDarkTheme());
@@ -366,24 +373,26 @@ export function App({ docId, initialData }: AppProps) {
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
-    editor.onShare(() => {
-      void (async () => {
-        const data = prepareForShare(editor.toJSON());
-        const compressed = compressToUrl(data);
-        const shareUrl = window.location.origin + window.location.pathname + "#data=" + compressed;
-        if (shareUrl.length > MAX_SHARE_URL_LENGTH) {
-          setFlash({ message: "Map too large to share as URL", isError: true });
-          return;
-        }
-        try {
-          await navigator.clipboard.writeText(shareUrl);
-          const hasImages = editor.getAssets().length > 0;
-          setFlash({ message: hasImages ? "Share link copied (without images)" : "Share link copied" });
-        } catch {
-          setFlash({ message: "Failed to copy link", isError: true });
-        }
-      })();
-    });
+    if (!desktop) {
+      editor.onShare(() => {
+        void (async () => {
+          const data = prepareForShare(editor.toJSON());
+          const compressed = compressToUrl(data);
+          const shareUrl = window.location.origin + window.location.pathname + "#data=" + compressed;
+          if (shareUrl.length > MAX_SHARE_URL_LENGTH) {
+            setFlash({ message: "Map too large to share as URL", isError: true });
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            const hasImages = editor.getAssets().length > 0;
+            setFlash({ message: hasImages ? "Share link copied (without images)" : "Share link copied" });
+          } catch {
+            setFlash({ message: "Failed to copy link", isError: true });
+          }
+        })();
+      });
+    }
   }, [editor, provider]);
 
   // Initialize filename from any previously set file handle
@@ -487,7 +496,7 @@ export function App({ docId, initialData }: AppProps) {
         <AssetUrlContext.Provider value={assetUrls}>
           <div style={{ width: "100vw", height: "100vh", overflow: "hidden", position: "relative" }}>
             <MindMapCanvas />
-            <HamburgerMenu keystrokeOverlay={showKeystrokeOverlay} />
+            <HamburgerMenu keystrokeOverlay={showKeystrokeOverlay} showShare={!desktop} />
             <FileStatusBar filename={filename} flash={flash} onFlashDone={clearFlash} />
             <ToolbarOverlay />
             <KeystrokeOverlay enabled={showKeystrokeOverlay} />
