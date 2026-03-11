@@ -54,6 +54,11 @@ body,
   background: var(--selection-bg);
 }
 
+/* Prevent browser text selection on SVG nodes during drag */
+[data-limn-canvas] text {
+  user-select: none;
+}
+
 /* Inline code styling for text measurement and rendering */
 .limn-code { font-family: monospace; }
 
