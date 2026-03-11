@@ -7,7 +7,7 @@ import { formatKeystrokeParts } from "./formatKeystroke";
 /** Delay before released keys start fading (ms). */
 const FADE_DELAY_MS = 20;
 /** Duration of the CSS opacity fade (ms). Must match the transition in KeystrokeOverlay. */
-const FADE_DURATION_MS = 800;
+const FADE_DURATION_MS = 2980;
 
 /** Returns true if the e.code value is a modifier key (Meta, Shift, Control, Alt). */
 function isModifierCode(code: string): boolean {
