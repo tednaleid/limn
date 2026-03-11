@@ -16,8 +16,8 @@ settings:
     SWIFT_VERSION: "6.2"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     PRODUCT_BUNDLE_IDENTIFIER: com.tednaleid.Limn
-    MARKETING_VERSION: "0.9.4"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.9.5"
+    CURRENT_PROJECT_VERSION: "3"
     INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
     CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements
     # Allow WKWebView to load local files from the bundle
