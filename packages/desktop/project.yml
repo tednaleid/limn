@@ -16,8 +16,8 @@ settings:
     SWIFT_VERSION: "6.2"
     MACOSX_DEPLOYMENT_TARGET: "26.0"
     PRODUCT_BUNDLE_IDENTIFIER: com.tednaleid.Limn
-    MARKETING_VERSION: "0.9.6"
-    CURRENT_PROJECT_VERSION: "4"
+    MARKETING_VERSION: "0.9.7"
+    CURRENT_PROJECT_VERSION: "5"
     CODE_SIGN_ENTITLEMENTS: Limn/Limn.entitlements
   configs:
     Debug:
