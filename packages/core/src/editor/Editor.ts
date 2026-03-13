@@ -1017,7 +1017,9 @@ export class Editor {
       this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId);
     } else {
-      const directionHint = direction === "right" ? -1 : 1;
+      const directionHint = target.parentId === null
+        ? (direction === "right" ? -1 : 1)
+        : branchDirection(this.store, target.id);
       this.store.moveNode(nodeId, target.id);
       this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId, directionHint);

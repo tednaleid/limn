@@ -594,6 +594,61 @@ describe("moveNode structural moves", () => {
       // Should indent into n1 as before
       expect(editor.getNode("n2").parentId).toBe("n1");
     });
+
+    test("Alt+Right into non-root target places child on correct (right) side", () => {
+      // root (0,0) -> parent (211,0) -> [child1 (422,0), child2 (500,40)]
+      // child1 has no previous sibling, Alt+Right spatial-reparents into child2
+      // child1 must end up to the RIGHT of child2 (away from root)
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.addChild("n1", "child1");
+      editor.exitEditMode();
+      editor.addChild("n1", "child2");
+      editor.exitEditMode();
+
+      // Position child2 clearly to the right of child1 so spatial reparent finds it
+      editor.setNodePosition("n2", 422, 0);
+      editor.setNodePosition("n3", 500, 40);
+
+      editor.select("n2");
+      editor.pressKey("ArrowRight", { alt: true });
+      // child1 should reparent to child2
+      expect(editor.getNode("n2").parentId).toBe("n3");
+      // Must be on the RIGHT side (away from root), not left
+      expect(editor.getNode("n2").x).toBeGreaterThan(editor.getNode("n3").x);
+    });
+
+    test("Alt+Left into non-root target places child on correct (left) side", () => {
+      // root (0,0) -> parent (-250,0) -> [child1 (-422,0), child2 (-500,40)]
+      // On left-side branch, Alt+Left = away from parent = indent
+      // child1 must end up to the LEFT of child2 (away from root)
+      editor = new TestEditor();
+      editor.addRoot("root", 0, 0);
+      editor.select("n0");
+      editor.exitEditMode();
+      editor.addChild("n0", "parent");
+      editor.exitEditMode();
+      editor.setNodePosition("n1", -250, 0);
+      editor.addChild("n1", "child1");
+      editor.exitEditMode();
+      editor.addChild("n1", "child2");
+      editor.exitEditMode();
+
+      // Position child2 clearly to the left of child1 so spatial reparent finds it
+      editor.setNodePosition("n2", -422, 0);
+      editor.setNodePosition("n3", -500, 40);
+
+      editor.select("n2");
+      editor.pressKey("ArrowLeft", { alt: true });
+      // child1 should reparent to child2
+      expect(editor.getNode("n2").parentId).toBe("n3");
+      // Must be on the LEFT side (away from root), not right
+      expect(editor.getNode("n2").x).toBeLessThan(editor.getNode("n3").x);
+    });
   });
 
   describe("viewport follows reparent", () => {
