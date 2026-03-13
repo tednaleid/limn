@@ -157,3 +157,8 @@ base64 -i certificate.p12 | pbcopy
 
 - **`spctl` rejects the DMG**: The notarization ticket was not stapled.
   Run `xcrun stapler staple /tmp/limn-desktop-build/Limn-<version>.dmg`.
+
+
+### Desktop Icon
+
+© David Gregory & Debbie Marshall, Wellcome Images/Wellcome Library, London (CC BY 4.0) Creative Commons Attribution 4.0 (International)
