@@ -4,6 +4,7 @@
 import type { Platform } from "@limn/core";
 
 export const PLATFORM: Platform =
+  typeof navigator !== "undefined" &&
   /mac/i.test(
     (navigator as { userAgentData?: { platform?: string } }).userAgentData
       ?.platform ?? navigator.platform ?? "",
