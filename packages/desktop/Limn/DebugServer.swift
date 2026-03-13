@@ -238,7 +238,7 @@ enum DebugServer {
         let js = """
         (function() {
             var nodes = document.querySelectorAll('[data-node-id]');
-            var selected = document.querySelector('[data-node-id].selected');
+            var selected = document.querySelector('[data-node-id][aria-selected="true"]');
             return JSON.stringify({
                 nodeCount: nodes.length,
                 selectedId: selected ? selected.getAttribute('data-node-id') : null,
