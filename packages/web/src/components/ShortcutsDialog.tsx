@@ -2,8 +2,9 @@
 // ABOUTME: Shows all shortcuts grouped by category with kbd-style key badges.
 
 import { useEffect, useCallback, useRef } from "react";
-import { SHORTCUT_GROUPS } from "@limn/core";
+import { SHORTCUT_GROUPS, displayKey } from "@limn/core";
 import type { ShortcutEntry, ShortcutGroup } from "@limn/core";
+import { PLATFORM } from "../platform";
 
 export interface ShortcutsDialogProps {
   onClose: () => void;
@@ -169,7 +170,7 @@ function ShortcutRow({ entry, isMouse }: { entry: ShortcutEntry; isMouse: boolea
       <div style={{ minWidth: 180, display: "flex", alignItems: "center", gap: 4 }}>
         {isMouse ? (
           <span style={{ color: "var(--text-muted)" }}>
-            {entry.keys.join(" + ")}
+            {entry.keys.map((k) => displayKey(k, PLATFORM)).join(" + ")}
           </span>
         ) : (
           <>
@@ -178,14 +179,14 @@ function ShortcutRow({ entry, isMouse }: { entry: ShortcutEntry; isMouse: boolea
                 {i > 0 && (
                   <span style={{ color: "var(--text-muted)", fontSize: 11 }}>+</span>
                 )}
-                <KbdBadge>{key}</KbdBadge>
+                <KbdBadge>{displayKey(key, PLATFORM)}</KbdBadge>
               </span>
             ))}
             {entry.altKeys && (
               <>
                 <span style={{ color: "var(--text-muted)", fontSize: 11 }}>or</span>
                 {entry.altKeys.map((key, i) => (
-                  <KbdBadge key={i}>{key}</KbdBadge>
+                  <KbdBadge key={i}>{displayKey(key, PLATFORM)}</KbdBadge>
                 ))}
               </>
             )}

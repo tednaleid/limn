@@ -65,6 +65,8 @@ export type { DerivedThemeVars } from "./theme/derive";
 export { deriveThemeVars, THEME_CSS_VARS } from "./theme/derive";
 export { dispatch } from "./keybindings/dispatch";
 export type { Modifiers } from "./keybindings/dispatch";
+export { displayKey } from "./keybindings/platformKeys";
+export type { Platform } from "./keybindings/platformKeys";
 export { TestEditor } from "./test-editor/TestEditor";
 export {
   parseInlineMarkdown,
