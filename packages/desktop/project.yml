@@ -65,6 +65,7 @@ targets:
             LSHandlerRank: Owner
             LSItemContentTypes:
               - com.tednaleid.limn
+              - com.tednaleid.limnz
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: com.tednaleid.limn
             UTTypeDescription: Limn Mind Map
@@ -73,6 +74,13 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension:
                 - limn
+          - UTTypeIdentifier: com.tednaleid.limnz
+            UTTypeDescription: Limn Mind Map Bundle
+            UTTypeConformsTo:
+              - public.data
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - limnz
 
   LimnTests:
     type: bundle.unit-test

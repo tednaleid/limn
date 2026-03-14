@@ -7,10 +7,10 @@ export interface ReadyMessage {
   type: "ready";
 }
 
-export interface SaveMessage {
+export type SaveMessage = {
   type: "save";
-  payload: { json: string }; // plain JSON text (cross-platform compatible)
-}
+  payload: { json: string } | { data: string }; // json = plain text (.limn), data = base64 ZIP (.limnz)
+};
 
 export interface RequestOpenMessage {
   type: "requestOpen";

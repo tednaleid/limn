@@ -4,9 +4,11 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// UTType for .limn files (declared in Info.plist via project.yml in Phase 3)
+/// UTType for .limn files (plain JSON, declared in Info.plist via project.yml)
 extension UTType {
     static let limn = UTType("com.tednaleid.limn") ?? UTType(filenameExtension: "limn") ?? .data
+    /// UTType for .limnz files (ZIP bundles for portable sharing)
+    static let limnz = UTType("com.tednaleid.limnz") ?? UTType(filenameExtension: "limnz") ?? .data
 }
 
 enum FileOperations {
@@ -15,11 +17,11 @@ enum FileOperations {
     static func showOpenPanel() async -> URL? {
         await MainActor.run {
             let panel = NSOpenPanel()
-            panel.allowedContentTypes = [.limn]
+            panel.allowedContentTypes = [.limn, .limnz]
             panel.allowsMultipleSelection = false
             panel.canChooseDirectories = false
             panel.canChooseFiles = true
-            panel.message = "Choose a .limn mind map file"
+            panel.message = "Choose a .limn or .limnz mind map file"
 
             let response = panel.runModal()
             return response == .OK ? panel.url : nil

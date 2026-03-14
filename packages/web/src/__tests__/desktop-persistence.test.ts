@@ -297,4 +297,48 @@ describe("DesktopPersistenceProvider", () => {
     expect(result!.filename).toBe("opened.limn");
     expect(result!.data.meta.id).toBe("test-1");
   });
+
+  it("save() sends base64 ZIP to Swift when filename is .limnz", async () => {
+    const postMessage = vi.fn();
+    g.webkit = { messageHandlers: { limn: { postMessage } } };
+
+    provider = new DesktopPersistenceProvider();
+    const dispatch = getDispatcher();
+
+    // Set filename to .limnz via fileSaved message
+    dispatch({ type: "fileSaved", payload: { filename: "test.limnz" } });
+
+    await provider.save(MINIMAL_MAP);
+
+    const saveMsg = postMessage.mock.calls.find(
+      (c: unknown[]) => (c[0] as { type: string }).type === "save",
+    );
+    expect(saveMsg).toBeDefined();
+    // Should send base64 ZIP data, not plain JSON
+    expect(saveMsg![0].payload.data).toBeDefined();
+    expect(saveMsg![0].payload.json).toBeUndefined();
+    // Verify the base64 decodes to a valid ZIP (starts with PK)
+    const binary = atob(saveMsg![0].payload.data);
+    expect(binary.charCodeAt(0)).toBe(0x50); // P
+    expect(binary.charCodeAt(1)).toBe(0x4b); // K
+  });
+
+  it("save() sends plain JSON when filename is .limn (not .limnz)", async () => {
+    const postMessage = vi.fn();
+    g.webkit = { messageHandlers: { limn: { postMessage } } };
+
+    provider = new DesktopPersistenceProvider();
+    const dispatch = getDispatcher();
+
+    dispatch({ type: "fileSaved", payload: { filename: "test.limn" } });
+
+    await provider.save(MINIMAL_MAP);
+
+    const saveMsg = postMessage.mock.calls.find(
+      (c: unknown[]) => (c[0] as { type: string }).type === "save",
+    );
+    expect(saveMsg).toBeDefined();
+    expect(saveMsg![0].payload.json).toBeDefined();
+    expect(saveMsg![0].payload.data).toBeUndefined();
+  });
 });

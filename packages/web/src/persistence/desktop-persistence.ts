@@ -5,7 +5,7 @@ import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
 import { postToSwift, onSwiftMessage } from "./desktop-bridge";
 import type { IncomingMessage, LoadFileMessage } from "./desktop-bridge";
-import { parseLimnFile } from "./file";
+import { parseLimnFile, buildLimnZip } from "./file";
 
 // Pending request state is stored on the global object so it survives
 // React StrictMode double-invoking useMemo (which creates two instances,
@@ -142,8 +142,20 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   }
 
   async save(data: MindMapFileFormat): Promise<void> {
-    const json = JSON.stringify(data, null, 2);
-    postToSwift({ type: "save", payload: { json } });
+    if (getCurrentFilename()?.endsWith(".limnz")) {
+      // Preserve ZIP format for .limnz files
+      const assetBlobs = new Map<string, Blob>();
+      for (const asset of data.assets ?? []) {
+        const blob = this.assetCache.get(asset.id);
+        if (blob) assetBlobs.set(asset.id, blob);
+      }
+      const zipBlob = await buildLimnZip(data, assetBlobs);
+      const base64 = await blobToBase64(zipBlob);
+      postToSwift({ type: "save", payload: { data: base64 } });
+    } else {
+      const json = JSON.stringify(data, null, 2);
+      postToSwift({ type: "save", payload: { json } });
+    }
   }
 
   /** Request a file open dialog from Swift. Returns the loaded data or null if cancelled. */
@@ -182,13 +194,8 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   async saveAsset(assetId: string, blob: Blob): Promise<void> {
     this.assetCache.set(assetId, blob);
     // Write asset to sidecar directory via Swift bridge
-    const buffer = await blob.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-    postToSwift({ type: "saveAsset", payload: { assetId, data: btoa(binary) } });
+    const base64 = await blobToBase64(blob);
+    postToSwift({ type: "saveAsset", payload: { assetId, data: base64 } });
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {
@@ -239,6 +246,16 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 }
 
 // -- Helpers --
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
 
 function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64);
