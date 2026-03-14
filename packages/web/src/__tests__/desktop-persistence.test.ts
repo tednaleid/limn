@@ -62,7 +62,7 @@ describe("DesktopPersistenceProvider", () => {
     expect(await provider.load()).toBeNull();
   });
 
-  it("save() sends a save message to Swift", async () => {
+  it("save() sends plain JSON text to Swift", async () => {
     const postMessage = vi.fn();
     g.webkit = { messageHandlers: { limn: { postMessage } } };
 
@@ -72,7 +72,11 @@ describe("DesktopPersistenceProvider", () => {
     expect(postMessage).toHaveBeenCalledTimes(1);
     const msg = postMessage.mock.calls[0]![0];
     expect(msg.type).toBe("save");
-    expect(typeof msg.payload.data).toBe("string"); // base64
+    expect(typeof msg.payload.json).toBe("string");
+    // Verify it's valid JSON containing the document data
+    const parsed = JSON.parse(msg.payload.json);
+    expect(parsed.meta.id).toBe("test-1");
+    expect(parsed.version).toBe(1);
   });
 
   it("handles loadFile message and updates filename", async () => {

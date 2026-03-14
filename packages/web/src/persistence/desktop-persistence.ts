@@ -4,7 +4,7 @@
 import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
 import { postToSwift, onSwiftMessage } from "./desktop-bridge";
 import type { IncomingMessage } from "./desktop-bridge";
-import { buildLimnZip, parseLimnFile } from "./file";
+import { parseLimnFile } from "./file";
 
 // Pending request state is stored on the global object so it survives
 // React StrictMode double-invoking useMemo (which creates two instances,
@@ -112,9 +112,8 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   }
 
   async save(data: MindMapFileFormat): Promise<void> {
-    const zipBlob = await buildLimnZip(data, this.assetCache);
-    const base64 = await blobToBase64(zipBlob);
-    postToSwift({ type: "save", payload: { data: base64 } });
+    const json = JSON.stringify(data, null, 2);
+    postToSwift({ type: "save", payload: { json } });
   }
 
   /** Request a file open dialog from Swift. Returns the loaded data or null if cancelled. */
@@ -136,11 +135,10 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 
   /** Request a save-as dialog from Swift. Returns the new filename. */
   async requestSaveAs(data: MindMapFileFormat): Promise<string | null> {
-    const zipBlob = await buildLimnZip(data, this.assetCache);
-    const base64 = await blobToBase64(zipBlob);
+    const json = JSON.stringify(data, null, 2);
     return new Promise((resolve) => {
       setPendingSave({ resolve });
-      postToSwift({ type: "requestSaveAs", payload: { data: base64 } });
+      postToSwift({ type: "requestSaveAs", payload: { json } });
       setTimeout(() => {
         const p = getPendingSave();
         if (p) {
@@ -213,12 +211,3 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}

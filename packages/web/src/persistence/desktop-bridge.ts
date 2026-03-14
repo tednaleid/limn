@@ -9,7 +9,7 @@ export interface ReadyMessage {
 
 export interface SaveMessage {
   type: "save";
-  payload: { data: string }; // base64-encoded ZIP bytes
+  payload: { json: string }; // plain JSON text (cross-platform compatible)
 }
 
 export interface RequestOpenMessage {
@@ -18,7 +18,7 @@ export interface RequestOpenMessage {
 
 export interface RequestSaveAsMessage {
   type: "requestSaveAs";
-  payload: { data: string }; // base64-encoded ZIP bytes
+  payload: { json: string }; // plain JSON text
 }
 
 export interface ExportSvgMessage {

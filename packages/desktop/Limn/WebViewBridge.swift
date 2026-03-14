@@ -117,15 +117,23 @@ struct WebViewBridge: NSViewRepresentable {
                 }
 
             case "save":
-                guard let base64 = payload?["data"] as? String else { return }
-                handleSave(base64: base64)
+                if let json = payload?["json"] as? String {
+                    handleSaveJSON(json: json)
+                } else if let base64 = payload?["data"] as? String {
+                    // Legacy: base64-encoded ZIP from older JS builds
+                    handleSave(base64: base64)
+                }
 
             case "requestOpen":
                 handleRequestOpen()
 
             case "requestSaveAs":
-                guard let base64 = payload?["data"] as? String else { return }
-                handleRequestSaveAs(base64: base64)
+                if let json = payload?["json"] as? String {
+                    handleRequestSaveAsJSON(json: json)
+                } else if let base64 = payload?["data"] as? String {
+                    // Legacy: base64-encoded ZIP from older JS builds
+                    handleRequestSaveAs(base64: base64)
+                }
 
             case "exportSvg":
                 guard let base64 = payload?["data"] as? String else { return }
@@ -138,25 +146,37 @@ struct WebViewBridge: NSViewRepresentable {
 
         // MARK: - Message handlers
 
+        /// Save data to the current file. No-op for untitled documents.
+        private func saveToCurrentFile(_ data: Data) {
+            guard let url = currentFileURL else {
+                // No file path yet (untitled document) -- skip silently.
+                // User must Cmd-S to pick a location first.
+                return
+            }
+            do {
+                try FileOperations.writeFile(data, to: url)
+                sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
+            } catch {
+                print("[Limn] Save failed: \(error.localizedDescription)")
+            }
+        }
+
+        /// Save plain JSON text to the current file (cross-platform compatible format).
+        private func handleSaveJSON(json: String) {
+            guard let data = json.data(using: .utf8) else {
+                print("[Limn] Save failed: could not encode JSON as UTF-8")
+                return
+            }
+            saveToCurrentFile(data)
+        }
+
+        /// Legacy: save base64-encoded ZIP data (for backward compatibility).
         private func handleSave(base64: String) {
             guard let data = Data(base64Encoded: base64) else {
                 print("[Limn] Save failed: invalid base64")
                 return
             }
-
-            if let url = currentFileURL {
-                // Save to the current file
-                do {
-                    try FileOperations.writeFile(data, to: url)
-                    sendToJS(type: "fileSaved", payload: ["filename": url.lastPathComponent])
-                } catch {
-                    print("[Limn] Save failed: \(error.localizedDescription)")
-                }
-            } else {
-                // No file path yet (untitled document) -- skip silently.
-                // User must Cmd-S to pick a location first.
-                return
-            }
+            saveToCurrentFile(data)
         }
 
         private func handleRequestOpen() {
@@ -187,12 +207,8 @@ struct WebViewBridge: NSViewRepresentable {
             }
         }
 
-        private func handleRequestSaveAs(base64: String) {
-            guard let data = Data(base64Encoded: base64) else {
-                print("[Limn] SaveAs failed: invalid base64")
-                return
-            }
-
+        /// Show a save panel and write data to the chosen location.
+        private func saveAsToNewFile(_ data: Data) {
             Task { @MainActor in
                 let suggestedName = currentFileURL?.lastPathComponent ?? "Untitled.limn"
                 guard let url = await FileOperations.showSavePanel(suggestedName: suggestedName) else { return }
@@ -209,6 +225,24 @@ struct WebViewBridge: NSViewRepresentable {
                     print("[Limn] SaveAs failed: \(error.localizedDescription)")
                 }
             }
+        }
+
+        /// Save-as with plain JSON text (cross-platform compatible format).
+        private func handleRequestSaveAsJSON(json: String) {
+            guard let data = json.data(using: .utf8) else {
+                print("[Limn] SaveAs failed: could not encode JSON as UTF-8")
+                return
+            }
+            saveAsToNewFile(data)
+        }
+
+        /// Legacy: save-as with base64-encoded ZIP data (for backward compatibility).
+        private func handleRequestSaveAs(base64: String) {
+            guard let data = Data(base64Encoded: base64) else {
+                print("[Limn] SaveAs failed: invalid base64")
+                return
+            }
+            saveAsToNewFile(data)
         }
 
         private func handleExportSvg(base64: String) {
