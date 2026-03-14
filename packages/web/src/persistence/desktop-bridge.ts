@@ -37,7 +37,12 @@ export type OutgoingMessage =
 
 export interface LoadFileMessage {
   type: "loadFile";
-  payload: { data: string; filename: string }; // base64-encoded ZIP bytes
+  payload: {
+    data: string;       // JSON text (format=json) or base64-encoded ZIP (format=zip)
+    filename: string;
+    format?: "json" | "zip";  // absent for legacy ZIP messages
+    assets?: Record<string, string>;  // assetId -> base64 (sidecar assets, json format only)
+  };
 }
 
 export interface FileSavedMessage {

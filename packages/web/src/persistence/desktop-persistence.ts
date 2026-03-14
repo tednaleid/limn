@@ -2,8 +2,9 @@
 // ABOUTME: Delegates file I/O to Swift via the JS-Swift bridge; assets cached in memory.
 
 import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
+import { migrateToLatest } from "@limn/core";
 import { postToSwift, onSwiftMessage } from "./desktop-bridge";
-import type { IncomingMessage } from "./desktop-bridge";
+import type { IncomingMessage, LoadFileMessage } from "./desktop-bridge";
 import { parseLimnFile } from "./file";
 
 // Pending request state is stored on the global object so it survives
@@ -58,25 +59,8 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   private handleMessage(msg: IncomingMessage): void {
     switch (msg.type) {
       case "loadFile": {
-        const bytes = base64ToBytes(msg.payload.data);
-        const blob = new Blob([bytes.buffer as ArrayBuffer]);
-        void parseLimnFile(blob).then(({ data, assetBlobs }) => {
-          // Cache all assets from the loaded file
-          for (const [id, assetBlob] of assetBlobs) {
-            this.assetCache.set(id, assetBlob);
-          }
-          setCurrentFilename(msg.payload.filename);
-
-          const pending = getPendingLoad();
-          if (pending) {
-            pending.resolve({ data, filename: msg.payload.filename });
-            setPendingLoad(null);
-          } else {
-            // External load (e.g., file opened via Finder while app is running)
-            getExternalChangeCb()?.(data);
-          }
-        }).catch((err) => {
-          console.error("[desktop] parseLimnFile failed:", err);
+        void this.handleLoadFile(msg).catch((err) => {
+          console.error("[desktop] loadFile failed:", err);
           const pending = getPendingLoad();
           if (pending) {
             pending.resolve(null);
@@ -98,6 +82,46 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         setCurrentFilename(null);
         break;
       }
+    }
+  }
+
+  /** Handle a loadFile message from Swift, supporting both JSON and ZIP formats. */
+  private async handleLoadFile(msg: LoadFileMessage): Promise<void> {
+    let data: MindMapFileFormat;
+
+    if (msg.payload.format === "json") {
+      // Plain JSON with optional sidecar assets
+      const raw = JSON.parse(msg.payload.data);
+      data = migrateToLatest(raw);
+
+      // Load sidecar assets (assetId -> base64)
+      if (msg.payload.assets) {
+        for (const [assetId, base64] of Object.entries(msg.payload.assets)) {
+          const bytes = base64ToBytes(base64);
+          const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+          this.assetCache.set(assetId, new Blob([buf]));
+        }
+      }
+    } else {
+      // ZIP format (or legacy without format field)
+      const bytes = base64ToBytes(msg.payload.data);
+      const blob = new Blob([bytes.buffer as ArrayBuffer]);
+      const result = await parseLimnFile(blob);
+      data = result.data;
+      for (const [id, assetBlob] of result.assetBlobs) {
+        this.assetCache.set(id, assetBlob);
+      }
+    }
+
+    setCurrentFilename(msg.payload.filename);
+
+    const pending = getPendingLoad();
+    if (pending) {
+      pending.resolve({ data, filename: msg.payload.filename });
+      setPendingLoad(null);
+    } else {
+      // External load (e.g., file opened via Finder while app is running)
+      getExternalChangeCb()?.(data);
     }
   }
 

@@ -186,11 +186,36 @@ struct WebViewBridge: NSViewRepresentable {
             }
         }
 
+        /// Derive the sidecar assets directory URL for a .limn file.
+        /// e.g., /path/to/Map.limn -> /path/to/Map.assets/
+        private func sidecarAssetsURL(for fileURL: URL) -> URL {
+            let base = fileURL.deletingPathExtension()
+            return base.appendingPathExtension("assets")
+        }
+
+        /// Read all files from a sidecar assets directory, returning a dict
+        /// of { filename: base64-encoded-data }. Filenames are assetIds.
+        private func readSidecarAssets(at dirURL: URL) -> [String: String] {
+            var assets: [String: String] = [:]
+            let fm = FileManager.default
+            guard fm.fileExists(atPath: dirURL.path),
+                  let contents = try? fm.contentsOfDirectory(atPath: dirURL.path) else {
+                return assets
+            }
+            for filename in contents {
+                let fileURL = dirURL.appendingPathComponent(filename)
+                if let data = try? Data(contentsOf: fileURL) {
+                    assets[filename] = data.base64EncodedString()
+                }
+            }
+            return assets
+        }
+
         /// Read a file from disk and send it to the web view as a loadFile message.
+        /// Detects whether the file is JSON or ZIP and loads sidecar assets if present.
         func loadFileIntoWebView(url: URL) {
             do {
                 let data = try FileOperations.readFile(at: url)
-                let base64 = data.base64EncodedString()
                 currentFileURL = url
                 onFileURLChanged?(url)
                 updateWindowTitle(url.lastPathComponent)
@@ -198,10 +223,34 @@ struct WebViewBridge: NSViewRepresentable {
                 SessionStore.createAndStoreBookmark(for: url)
                 appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
 
-                sendToJS(type: "loadFile", payload: [
-                    "data": base64,
-                    "filename": url.lastPathComponent,
-                ])
+                // Detect format: ZIP starts with PK (0x50, 0x4B)
+                let isZip = data.count >= 2 && data[data.startIndex] == 0x50 && data[data.startIndex + 1] == 0x4B
+
+                if isZip {
+                    sendToJS(type: "loadFile", payload: [
+                        "data": data.base64EncodedString(),
+                        "filename": url.lastPathComponent,
+                        "format": "zip",
+                    ])
+                } else {
+                    // Plain JSON -- also check for sidecar assets directory
+                    guard let json = String(data: data, encoding: .utf8) else {
+                        print("[Limn] Open failed: file is not valid UTF-8")
+                        return
+                    }
+                    let sidecarDir = sidecarAssetsURL(for: url)
+                    let assets = readSidecarAssets(at: sidecarDir)
+
+                    var payload: [String: Any] = [
+                        "data": json,
+                        "filename": url.lastPathComponent,
+                        "format": "json",
+                    ]
+                    if !assets.isEmpty {
+                        payload["assets"] = assets
+                    }
+                    sendToJS(type: "loadFile", payload: payload)
+                }
             } catch {
                 print("[Limn] Open failed: \(error.localizedDescription)")
             }

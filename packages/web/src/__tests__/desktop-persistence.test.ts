@@ -141,6 +141,64 @@ describe("DesktopPersistenceProvider", () => {
     expect(urls1.get("a1")).toBe(urls2.get("a1"));
   });
 
+  it("handles loadFile with format=json (plain JSON text)", async () => {
+    provider = new DesktopPersistenceProvider();
+    const dispatch = getDispatcher();
+    const json = JSON.stringify(MINIMAL_MAP);
+
+    dispatch({ type: "loadFile", payload: { data: json, filename: "test.limn", format: "json" } });
+
+    await vi.waitFor(() => {
+      expect(provider.filename).toBe("test.limn");
+    });
+  });
+
+  it("handles loadFile with format=json and sidecar assets", async () => {
+    provider = new DesktopPersistenceProvider();
+    const dispatch = getDispatcher();
+
+    const mapWithAssets: MindMapFileFormat = {
+      ...MINIMAL_MAP,
+      assets: [{ id: "a1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 }],
+    };
+    const json = JSON.stringify(mapWithAssets);
+    // Simulate a sidecar asset: base64-encode "test image data"
+    const assetBase64 = btoa("test image data");
+
+    dispatch({
+      type: "loadFile",
+      payload: {
+        data: json,
+        filename: "test.limn",
+        format: "json",
+        assets: { a1: assetBase64 },
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(provider.filename).toBe("test.limn");
+    });
+
+    // Asset should be cached
+    const blob = await provider.loadAsset("a1");
+    expect(blob).toBeDefined();
+    const text = await blob!.text();
+    expect(text).toBe("test image data");
+  });
+
+  it("handles loadFile without format field (backward compat with ZIP)", async () => {
+    provider = new DesktopPersistenceProvider();
+    const base64 = await buildBase64Zip(MINIMAL_MAP);
+    const dispatch = getDispatcher();
+
+    // No format field -- should use ZIP path
+    dispatch({ type: "loadFile", payload: { data: base64, filename: "legacy.limn" } });
+
+    await vi.waitFor(() => {
+      expect(provider.filename).toBe("legacy.limn");
+    });
+  });
+
   it("calls external change callback for loadFile without pending request", async () => {
     provider = new DesktopPersistenceProvider();
     const changes: MindMapFileFormat[] = [];
