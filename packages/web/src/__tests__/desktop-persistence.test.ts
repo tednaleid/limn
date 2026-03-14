@@ -211,6 +211,34 @@ describe("DesktopPersistenceProvider", () => {
     });
   });
 
+  it("loading a ZIP file sends saveAsset messages to migrate assets to sidecar", async () => {
+    const postMessage = vi.fn();
+    g.webkit = { messageHandlers: { limn: { postMessage } } };
+
+    provider = new DesktopPersistenceProvider();
+    const dispatch = getDispatcher();
+
+    const mapWithAssets: MindMapFileFormat = {
+      ...MINIMAL_MAP,
+      assets: [{ id: "img1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 }],
+    };
+    const imgBlob = new Blob(["fake png data"], { type: "image/png" });
+    const base64 = await buildBase64Zip(mapWithAssets, new Map([["img1", imgBlob]]));
+
+    dispatch({ type: "loadFile", payload: { data: base64, filename: "old.limn", format: "zip" } });
+
+    await vi.waitFor(() => {
+      expect(provider.filename).toBe("old.limn");
+    });
+
+    // Should have sent a saveAsset message to migrate the asset to sidecar
+    const assetMsgs = postMessage.mock.calls.filter(
+      (c: unknown[]) => (c[0] as { type: string }).type === "saveAsset",
+    );
+    expect(assetMsgs).toHaveLength(1);
+    expect(assetMsgs[0]![0].payload.assetId).toBe("img1");
+  });
+
   it("calls external change callback for loadFile without pending request", async () => {
     provider = new DesktopPersistenceProvider();
     const changes: MindMapFileFormat[] = [];
