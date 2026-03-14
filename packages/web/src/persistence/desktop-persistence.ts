@@ -175,6 +175,14 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 
   async saveAsset(assetId: string, blob: Blob): Promise<void> {
     this.assetCache.set(assetId, blob);
+    // Write asset to sidecar directory via Swift bridge
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+    postToSwift({ type: "saveAsset", payload: { assetId, data: btoa(binary) } });
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {

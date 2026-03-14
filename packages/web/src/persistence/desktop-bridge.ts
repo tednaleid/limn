@@ -26,9 +26,15 @@ export interface ExportSvgMessage {
   payload: { data: string }; // base64-encoded SVG string
 }
 
+export interface SaveAssetMessage {
+  type: "saveAsset";
+  payload: { assetId: string; data: string }; // base64-encoded blob
+}
+
 export type OutgoingMessage =
   | ReadyMessage
   | SaveMessage
+  | SaveAssetMessage
   | RequestOpenMessage
   | RequestSaveAsMessage
   | ExportSvgMessage;

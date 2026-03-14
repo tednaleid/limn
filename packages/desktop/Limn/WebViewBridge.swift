@@ -93,6 +93,10 @@ struct WebViewBridge: NSViewRepresentable {
         /// True after the web view has sent the "ready" message.
         var isReady = false
 
+        /// Assets buffered before the document has a file path (untitled).
+        /// Flushed to the sidecar directory when the file is first saved.
+        var pendingAssets: [String: Data] = [:]
+
         /// Called when the file URL changes (open, save-as) so the window binding
         /// stays in sync with SwiftUI's WindowGroup dedup.
         var onFileURLChanged: ((URL) -> Void)?
@@ -133,6 +137,12 @@ struct WebViewBridge: NSViewRepresentable {
                 } else if let base64 = payload?["data"] as? String {
                     // Legacy: base64-encoded ZIP from older JS builds
                     handleRequestSaveAs(base64: base64)
+                }
+
+            case "saveAsset":
+                if let assetId = payload?["assetId"] as? String,
+                   let base64 = payload?["data"] as? String {
+                    handleSaveAsset(assetId: assetId, base64: base64)
                 }
 
             case "exportSvg":
@@ -177,6 +187,45 @@ struct WebViewBridge: NSViewRepresentable {
                 return
             }
             saveToCurrentFile(data)
+        }
+
+        /// Write an asset to the sidecar directory, or buffer it if untitled.
+        private func handleSaveAsset(assetId: String, base64: String) {
+            guard let data = Data(base64Encoded: base64) else {
+                print("[Limn] SaveAsset failed: invalid base64")
+                return
+            }
+
+            guard let fileURL = currentFileURL else {
+                // Untitled document -- buffer until file is first saved
+                pendingAssets[assetId] = data
+                return
+            }
+
+            let sidecarDir = sidecarAssetsURL(for: fileURL)
+            do {
+                try FileManager.default.createDirectory(at: sidecarDir, withIntermediateDirectories: true)
+                let assetURL = sidecarDir.appendingPathComponent(assetId)
+                try data.write(to: assetURL, options: .atomic)
+            } catch {
+                print("[Limn] SaveAsset failed: \(error.localizedDescription)")
+            }
+        }
+
+        /// Write any pending assets to the sidecar directory after a file path is established.
+        private func flushPendingAssets() {
+            guard let fileURL = currentFileURL, !pendingAssets.isEmpty else { return }
+            let sidecarDir = sidecarAssetsURL(for: fileURL)
+            do {
+                try FileManager.default.createDirectory(at: sidecarDir, withIntermediateDirectories: true)
+                for (assetId, data) in pendingAssets {
+                    let assetURL = sidecarDir.appendingPathComponent(assetId)
+                    try data.write(to: assetURL, options: .atomic)
+                }
+                pendingAssets.removeAll()
+            } catch {
+                print("[Limn] Flush pending assets failed: \(error.localizedDescription)")
+            }
         }
 
         private func handleRequestOpen() {
@@ -264,6 +313,7 @@ struct WebViewBridge: NSViewRepresentable {
                 do {
                     try FileOperations.writeFile(data, to: url)
                     currentFileURL = url
+                    flushPendingAssets()
                     onFileURLChanged?(url)
                     updateWindowTitle(url.lastPathComponent)
                     NSDocumentController.shared.noteNewRecentDocumentURL(url)

@@ -110,14 +110,26 @@ describe("DesktopPersistenceProvider", () => {
     expect(provider.filename).toBeNull();
   });
 
-  it("caches assets in memory", async () => {
+  it("caches assets in memory and sends saveAsset to Swift", async () => {
+    const postMessage = vi.fn();
+    g.webkit = { messageHandlers: { limn: { postMessage } } };
+
     provider = new DesktopPersistenceProvider();
     const blob = new Blob(["test image data"], { type: "image/png" });
     await provider.saveAsset("asset-1", blob);
 
+    // Asset should be cached locally
     const loaded = await provider.loadAsset("asset-1");
     expect(loaded).toBeDefined();
     expect(loaded!.size).toBe(blob.size);
+
+    // Should also send saveAsset message to Swift
+    const assetMsg = postMessage.mock.calls.find(
+      (c: unknown[]) => (c[0] as { type: string }).type === "saveAsset",
+    );
+    expect(assetMsg).toBeDefined();
+    expect(assetMsg![0].payload.assetId).toBe("asset-1");
+    expect(typeof assetMsg![0].payload.data).toBe("string"); // base64
   });
 
   it("generates blob URLs for cached assets", async () => {
