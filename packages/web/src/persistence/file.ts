@@ -1,5 +1,5 @@
 // ABOUTME: File save/load using browser-fs-access for File System Access API with fallback.
-// ABOUTME: Saves .limn files as ZIP bundles containing data.json + assets/.
+// ABOUTME: Saves .limnz files as ZIP bundles containing data.json + assets/.
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
@@ -7,12 +7,20 @@ import type { Editor, PersistenceProvider } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 
-const LIMN_EXTENSION = ".limn";
+const LIMNZ_EXTENSION = ".limnz";
 const LIMN_MIME = "application/octet-stream";
 
-const FILE_OPTIONS = {
+/** Options for saving .limnz files (ZIP bundles). */
+const SAVE_FILE_OPTIONS = {
   mimeTypes: [LIMN_MIME],
-  extensions: [LIMN_EXTENSION],
+  extensions: [LIMNZ_EXTENSION],
+  description: "Limn Mind Map Bundle",
+};
+
+/** Options for opening files (accepts both .limn and .limnz). */
+const OPEN_FILE_OPTIONS = {
+  mimeTypes: [LIMN_MIME],
+  extensions: [".limn", LIMNZ_EXTENSION],
   description: "Limn Mind Map",
 };
 
@@ -120,7 +128,7 @@ export async function buildLimnZip(
 }
 
 /**
- * Save the current editor state to a .limn ZIP file.
+ * Save the current editor state to a .limnz ZIP file.
  * On Chromium: uses showSaveFilePicker, reuses handle for subsequent saves.
  * On Safari/Firefox: triggers a download via <a download>.
  * Returns the filename that was saved to (for UI feedback).
@@ -142,11 +150,11 @@ export async function saveToFile(editor: Editor, provider: PersistenceProvider):
 
   const zipBlob = await buildLimnZip(data, assetBlobs);
 
-  const defaultName = currentFilename ?? `${data.meta.id}${LIMN_EXTENSION}`;
+  const defaultName = currentFilename ?? `${data.meta.id}${LIMNZ_EXTENSION}`;
 
   const handle = await fileSave(zipBlob, {
     fileName: defaultName,
-    ...FILE_OPTIONS,
+    ...SAVE_FILE_OPTIONS,
   }, currentHandle ?? undefined);
 
   // Remember the handle for subsequent saves (Chromium only)
@@ -159,7 +167,7 @@ export async function saveToFile(editor: Editor, provider: PersistenceProvider):
 }
 
 /**
- * Save the current editor state to a new .limn file (always shows file picker).
+ * Save the current editor state to a new .limnz file (always shows file picker).
  * Clears the current handle so the next Cmd+S save goes to the new location.
  * Returns the filename that was saved to (for UI feedback).
  */
@@ -177,12 +185,12 @@ export async function saveAsToFile(editor: Editor, provider: PersistenceProvider
 
   const zipBlob = await buildLimnZip(data, assetBlobs);
 
-  const defaultName = currentFilename ?? `${data.meta.id}${LIMN_EXTENSION}`;
+  const defaultName = currentFilename ?? `${data.meta.id}${LIMNZ_EXTENSION}`;
 
   // Pass undefined as handle to always show the file picker
   const handle = await fileSave(zipBlob, {
     fileName: defaultName,
-    ...FILE_OPTIONS,
+    ...SAVE_FILE_OPTIONS,
   }, undefined);
 
   if (handle) {
@@ -194,13 +202,13 @@ export async function saveAsToFile(editor: Editor, provider: PersistenceProvider
 }
 
 /**
- * Open a .limn file and load it into the editor.
- * Supports both ZIP bundles and legacy plain JSON files.
+ * Open a .limn or .limnz file and load it into the editor.
+ * Supports both ZIP bundles (.limnz) and plain JSON files (.limn).
  * Asset blobs are stored in IndexedDB for later retrieval.
  */
 export async function openFile(editor: Editor, provider?: PersistenceProvider): Promise<string> {
   const file = await fileOpen({
-    ...FILE_OPTIONS,
+    ...OPEN_FILE_OPTIONS,
     id: "limn",
   });
 
