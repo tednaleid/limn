@@ -21,20 +21,19 @@ enum SessionStore {
         }
     }
 
-    /// Create a security-scoped bookmark for the parent directory of a file.
-    /// Call this when the Powerbox grants directory access (e.g., after NSSavePanel).
-    /// Enables sidecar directory creation for assets.
-    static func createAndStoreDirectoryBookmark(for fileURL: URL) {
+    /// Create a security-scoped bookmark for a directory and associate it with a file.
+    /// When `directory` is provided, bookmarks that URL directly (e.g., from NSOpenPanel).
+    /// When omitted, derives the directory from the file URL (works when Powerbox
+    /// grants directory access, e.g., after NSSavePanel).
+    static func createAndStoreDirectoryBookmark(for fileURL: URL, directory: URL? = nil) {
         guard fileURL.isFileURL else { return }
-        let dir = fileURL.deletingLastPathComponent()
+        let dir = directory ?? fileURL.deletingLastPathComponent()
         do {
             let data = try FileOperations.createBookmark(for: dir)
             var stored = allDirectoryBookmarks()
             stored[fileURL.absoluteString] = data
             UserDefaults.standard.set(stored, forKey: dirBookmarksKey)
         } catch {
-            // Expected to fail when opened via NSOpenPanel (no directory access).
-            // Sidecar writes will work after the user saves via NSSavePanel.
             print("[Limn] Directory bookmark not available for \(fileURL.lastPathComponent)")
         }
     }

@@ -202,13 +202,53 @@ struct WebViewBridge: NSViewRepresentable {
                 return
             }
 
+            // Try to start directory access from a stored bookmark
+            SessionStore.startAccessingDirectory(for: fileURL)
+
             let sidecarDir = sidecarAssetsURL(for: fileURL)
+            if writeSidecarAsset(assetId: assetId, data: data, sidecarDir: sidecarDir) {
+                return
+            }
+
+            // Write failed (sandbox permission) -- buffer and ask for access
+            pendingAssets[assetId] = data
+            requestDirectoryAccess(for: fileURL)
+        }
+
+        /// Try to write an asset file into the sidecar directory. Returns true on success.
+        private func writeSidecarAsset(assetId: String, data: Data, sidecarDir: URL) -> Bool {
             do {
                 try FileManager.default.createDirectory(at: sidecarDir, withIntermediateDirectories: true)
                 let assetURL = sidecarDir.appendingPathComponent(assetId)
                 try data.write(to: assetURL, options: .atomic)
+                return true
             } catch {
-                print("[Limn] SaveAsset failed: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        /// Show an open panel asking the user to grant access to the folder
+        /// containing their .limn file. Bookmarks the directory so future
+        /// asset saves work without prompting again.
+        private func requestDirectoryAccess(for fileURL: URL) {
+            Task { @MainActor in
+                let parentDir = fileURL.deletingLastPathComponent()
+                let panel = NSOpenPanel()
+                panel.canChooseDirectories = true
+                panel.canChooseFiles = false
+                panel.allowsMultipleSelection = false
+                panel.prompt = "Grant Access"
+                panel.message = "Limn needs access to this folder to save images alongside your mind map."
+                panel.directoryURL = parentDir
+
+                let response = panel.runModal()
+                guard response == .OK, let dirURL = panel.url else { return }
+
+                // Bookmark the granted directory for future sessions
+                SessionStore.createAndStoreDirectoryBookmark(for: fileURL, directory: dirURL)
+
+                // Now flush all buffered assets
+                flushPendingAssets()
             }
         }
 
