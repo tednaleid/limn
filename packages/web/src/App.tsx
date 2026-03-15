@@ -375,13 +375,16 @@ export function App({ docId, initialData }: AppProps) {
       });
     }
     editor.onExport(() => {
+      const bounds = editor.getContentBounds();
       if (desktop) {
-        const svgString = serializeSvg();
-        if (svgString) {
-          postToSwift({ type: "exportSvg", payload: { data: btoa(svgString) } });
-        }
+        void (async () => {
+          const svgString = await serializeSvg(bounds);
+          if (svgString) {
+            postToSwift({ type: "exportSvg", payload: { data: btoa(svgString) } });
+          }
+        })();
       } else {
-        exportSvg();
+        void exportSvg(bounds);
       }
     });
     editor.onThemeChange(() => {

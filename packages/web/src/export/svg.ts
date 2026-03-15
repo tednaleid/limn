@@ -4,6 +4,14 @@
 import { THEME_CSS_VARS } from "@limn/core";
 import type { DerivedThemeVars } from "@limn/core";
 
+/** Bounding box of content in world coordinates. */
+export interface ContentBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 /** Build a CSS style block that defines all theme variables on the svg element. */
 export function buildThemeStyleBlock(vars: DerivedThemeVars): string {
   const lines = Object.entries(vars)
@@ -22,11 +30,72 @@ function readComputedThemeVars(el: Element): DerivedThemeVars {
   return vars as unknown as DerivedThemeVars;
 }
 
-/** Clone an SVG element and inject theme CSS variables into a <defs><style> block. */
-function serializeWithTheme(svgEl: Element): string {
+/** Convert a Blob to a data: URI. */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Replace blob: URLs in <image> elements with embedded data: URIs. */
+async function embedImages(clone: Element): Promise<void> {
+  const images = clone.querySelectorAll("image[href]");
+  for (const img of images) {
+    const href = img.getAttribute("href");
+    if (!href || !href.startsWith("blob:")) continue;
+    try {
+      const response = await fetch(href);
+      const blob = await response.blob();
+      const dataUrl = await blobToDataUrl(blob);
+      img.setAttribute("href", dataUrl);
+    } catch {
+      // Remove broken image elements rather than leaving broken refs
+      img.remove();
+    }
+  }
+}
+
+/** Remove elements that are only needed for interactive rendering, not export. */
+function cleanCloneForExport(clone: Element): void {
+  // Remove canvas background rect (export uses viewBox, not a bg rect)
+  clone.querySelector(".canvas-bg")?.remove();
+
+  // Remove the camera transform from the content <g>
+  // The content <g> is the first <g> child with a transform attribute
+  for (const g of clone.querySelectorAll(":scope > g[transform]")) {
+    g.removeAttribute("transform");
+  }
+}
+
+/**
+ * Clone an SVG element, clean it for export, embed images, set viewBox,
+ * and inject theme CSS variables.
+ */
+async function serializeWithTheme(svgEl: Element, bounds: ContentBounds | null): Promise<string> {
   const clone = svgEl.cloneNode(true) as Element;
   const vars = readComputedThemeVars(svgEl);
   const css = buildThemeStyleBlock(vars);
+
+  cleanCloneForExport(clone);
+  await embedImages(clone);
+
+  // Set viewBox and explicit dimensions so the SVG displays correctly standalone
+  if (bounds) {
+    const padding = 20;
+    const vbX = bounds.minX - padding;
+    const vbY = bounds.minY - padding;
+    const vbW = bounds.maxX - bounds.minX + padding * 2;
+    const vbH = bounds.maxY - bounds.minY + padding * 2;
+    clone.setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
+    clone.setAttribute("width", String(vbW));
+    clone.setAttribute("height", String(vbH));
+  }
+
+  // Remove interactive-only style attributes from the root SVG
+  clone.removeAttribute("style");
 
   const ns = "http://www.w3.org/2000/svg";
   let defs = clone.querySelector("defs");
@@ -46,22 +115,24 @@ function serializeWithTheme(svgEl: Element): string {
 /**
  * Serialize the mind map canvas SVG element to a string with embedded theme.
  * Returns null if no canvas element is found.
+ * @param bounds - Content bounding box for viewBox calculation. If null, no viewBox is set.
  */
-export function serializeSvg(): string | null {
+export async function serializeSvg(bounds?: ContentBounds | null): Promise<string | null> {
   const svgEl = document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return null;
   }
-  return serializeWithTheme(svgEl);
+  return serializeWithTheme(svgEl, bounds ?? null);
 }
 
 /**
  * Export the mind map canvas SVG element as a downloadable .svg file.
  * Finds the main SVG element in the DOM and serializes it.
+ * @param bounds - Content bounding box for viewBox calculation.
  */
-export function exportSvg(): void {
-  const svgString = serializeSvg();
+export async function exportSvg(bounds?: ContentBounds | null): Promise<void> {
+  const svgString = await serializeSvg(bounds);
   if (!svgString) return;
 
   const blob = new Blob([svgString], { type: "image/svg+xml" });
@@ -71,28 +142,37 @@ export function exportSvg(): void {
 /**
  * Export the mind map canvas as a downloadable .png file.
  * Renders the SVG to a canvas element, then converts to PNG.
+ * @param bounds - Content bounding box for viewBox calculation.
  */
-export function exportPng(): void {
+export async function exportPng(bounds?: ContentBounds | null): Promise<void> {
   const svgEl = document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;
   }
 
-  const svgString = serializeWithTheme(svgEl);
+  const svgString = await serializeWithTheme(svgEl, bounds ?? null);
   const blob = new Blob([svgString], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
 
   const img = new Image();
   img.onload = () => {
+    // Use viewBox dimensions for canvas size if bounds are available
+    const width = bounds
+      ? (bounds.maxX - bounds.minX + 40)
+      : svgEl.clientWidth;
+    const height = bounds
+      ? (bounds.maxY - bounds.minY + 40)
+      : svgEl.clientHeight;
+
     const canvas = document.createElement("canvas");
-    canvas.width = svgEl.clientWidth * 2; // 2x for retina
-    canvas.height = svgEl.clientHeight * 2;
+    canvas.width = width * 2; // 2x for retina
+    canvas.height = height * 2;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.scale(2, 2);
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, width, height);
     URL.revokeObjectURL(url);
 
     canvas.toBlob((pngBlob) => {
