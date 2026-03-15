@@ -370,14 +370,10 @@ export class Editor {
     this.notify();
   }
 
-  /** Zoom to fit all visible nodes in the given viewport dimensions. */
-  zoomToFit(viewportWidth: number, viewportHeight: number): void {
+  /** Compute the bounding box of all visible nodes. Returns null if no visible nodes. */
+  getContentBounds(): { minX: number; minY: number; maxX: number; maxY: number } | null {
     const visible = this.store.getVisibleNodes();
-    if (visible.length === 0) {
-      this.camera = { x: 0, y: 0, zoom: 1 };
-      this.notify();
-      return;
-    }
+    if (visible.length === 0) return null;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const node of visible) {
@@ -386,7 +382,19 @@ export class Editor {
       maxX = Math.max(maxX, node.x + node.width);
       maxY = Math.max(maxY, node.y + node.height);
     }
+    return { minX, minY, maxX, maxY };
+  }
 
+  /** Zoom to fit all visible nodes in the given viewport dimensions. */
+  zoomToFit(viewportWidth: number, viewportHeight: number): void {
+    const bounds = this.getContentBounds();
+    if (!bounds) {
+      this.camera = { x: 0, y: 0, zoom: 1 };
+      this.notify();
+      return;
+    }
+
+    const { minX, minY, maxX, maxY } = bounds;
     const contentW = maxX - minX;
     const contentH = maxY - minY;
     const padding = 40;

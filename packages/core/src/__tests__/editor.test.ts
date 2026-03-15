@@ -1527,4 +1527,33 @@ describe("Editor", () => {
       expect(editor.hasUnsavedChanges()).toBe(false);
     });
   });
+
+  describe("getContentBounds", () => {
+    test("returns null for empty editor", () => {
+      const empty = new TestEditor();
+      expect(empty.getContentBounds()).toBeNull();
+    });
+
+    test("returns correct bounds for loaded map", () => {
+      // sampleMap has nodes at:
+      //   n0: (0, 0) 100x32
+      //   n1: (250, -30) 100x32
+      //   n2: (250, 30) 100x32
+      //   n3: (500, -30) 100x32
+      const bounds = editor.getContentBounds();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.minX).toBe(0);
+      expect(bounds!.minY).toBe(-30);
+      expect(bounds!.maxX).toBe(600); // 500 + 100
+      expect(bounds!.maxY).toBe(62);  // 30 + 32
+    });
+
+    test("excludes collapsed children", () => {
+      editor.toggleCollapse("n1");
+      const bounds = editor.getContentBounds();
+      expect(bounds).not.toBeNull();
+      // n3 (500, -30) should be excluded since n1 is collapsed
+      expect(bounds!.maxX).toBe(350); // 250 + 100
+    });
+  });
 });
