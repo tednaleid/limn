@@ -59,9 +59,24 @@ async function embedImages(clone: Element): Promise<void> {
 }
 
 /** Remove elements that are only needed for interactive rendering, not export. */
-function cleanCloneForExport(clone: Element): void {
-  // Remove canvas background rect (export uses viewBox, not a bg rect)
-  clone.querySelector(".canvas-bg")?.remove();
+function cleanCloneForExport(clone: Element, bounds: ContentBounds | null): void {
+  const bgRect = clone.querySelector(".canvas-bg");
+  if (bgRect && bounds) {
+    // Repurpose the bg rect to fill the viewBox with the theme background
+    const padding = 20;
+    bgRect.setAttribute("x", String(bounds.minX - padding));
+    bgRect.setAttribute("y", String(bounds.minY - padding));
+    bgRect.setAttribute("width", String(bounds.maxX - bounds.minX + padding * 2));
+    bgRect.setAttribute("height", String(bounds.maxY - bounds.minY + padding * 2));
+    bgRect.removeAttribute("class");
+  } else if (bgRect) {
+    bgRect.remove();
+  }
+
+  // Remove interactive resize handles
+  for (const el of clone.querySelectorAll("[data-image-resize-handle], [data-resize-handle]")) {
+    el.remove();
+  }
 
   // Remove the camera transform from the content <g>
   // The content <g> is the first <g> child with a transform attribute
@@ -79,7 +94,7 @@ async function serializeWithTheme(svgEl: Element, bounds: ContentBounds | null):
   const vars = readComputedThemeVars(svgEl);
   const css = buildThemeStyleBlock(vars);
 
-  cleanCloneForExport(clone);
+  cleanCloneForExport(clone, bounds);
   await embedImages(clone);
 
   // Set viewBox and explicit dimensions so the SVG displays correctly standalone
@@ -109,7 +124,13 @@ async function serializeWithTheme(svgEl: Element, bounds: ContentBounds | null):
   defs.insertBefore(style, defs.firstChild);
 
   const serializer = new XMLSerializer();
-  return serializer.serializeToString(clone);
+  let xml = serializer.serializeToString(clone);
+  // XMLSerializer can copy characters from DOM text nodes that are valid in
+  // HTML but not as raw bytes in XML. Replace them with numeric references.
+  // This covers non-breaking spaces (U+00A0) and XML-illegal control chars.
+  xml = xml.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u00A0\uFFFE\uFFFF]/g,
+    (ch) => `&#${ch.charCodeAt(0)};`);
+  return xml;
 }
 
 /**
