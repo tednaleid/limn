@@ -1,5 +1,5 @@
 // ABOUTME: PersistenceProvider backed by the Obsidian vault API.
-// ABOUTME: Assets stored as sidecar files in a .assets/ folder next to the .limn file.
+// ABOUTME: Assets stored as sidecar files in a .limn-assets/ folder next to the .limn file.
 
 import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
 import type { LimnView } from "./LimnView";
@@ -63,6 +63,6 @@ export class ObsidianPersistenceProvider implements PersistenceProvider {
     const dir = file.parent?.path ?? "";
     const base = file.basename;
     const prefix = dir ? `${dir}/` : "";
-    return `${prefix}${base}.assets/${assetId}`;
+    return `${prefix}${base}.limn-assets/${assetId}`;
   }
 }

@@ -62,7 +62,7 @@ bun run build      # production build
 - Diff-based undo/redo (snapshot capture, no Command classes)
 - SVG rendering with pan/zoom viewport
 - IndexedDB auto-save with cross-tab sync
-- Sidecar asset storage for images (`file.limn` + `file.assets/`)
+- Sidecar asset storage for images (`file.limn` + `file.limn-assets/`)
 
 ## Storage
 

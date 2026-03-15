@@ -236,10 +236,10 @@ struct WebViewBridge: NSViewRepresentable {
         }
 
         /// Derive the sidecar assets directory URL for a .limn file.
-        /// e.g., /path/to/Map.limn -> /path/to/Map.assets/
+        /// e.g., /path/to/Map.limn -> /path/to/Map.limn-assets/
         private func sidecarAssetsURL(for fileURL: URL) -> URL {
             let base = fileURL.deletingPathExtension()
-            return base.appendingPathExtension("assets")
+            return base.appendingPathExtension("limn-assets")
         }
 
         /// Read all files from a sidecar assets directory, returning a dict
@@ -270,6 +270,7 @@ struct WebViewBridge: NSViewRepresentable {
                 updateWindowTitle(url.lastPathComponent)
                 NSDocumentController.shared.noteNewRecentDocumentURL(url)
                 SessionStore.createAndStoreBookmark(for: url)
+                SessionStore.createAndStoreDirectoryBookmark(for: url)
                 appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
 
                 // Detect format: ZIP starts with PK (0x50, 0x4B)
@@ -313,6 +314,7 @@ struct WebViewBridge: NSViewRepresentable {
                 do {
                     try FileOperations.writeFile(data, to: url)
                     currentFileURL = url
+                    SessionStore.createAndStoreDirectoryBookmark(for: url)
                     flushPendingAssets()
                     onFileURLChanged?(url)
                     updateWindowTitle(url.lastPathComponent)

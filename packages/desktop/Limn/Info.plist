@@ -18,6 +18,7 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>com.tednaleid.limn</string>
+				<string>com.tednaleid.limnz</string>
 			</array>
 		</dict>
 	</array>
@@ -59,6 +60,23 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>limn</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Limn Mind Map Bundle</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.tednaleid.limnz</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>limnz</string>
 				</array>
 			</dict>
 		</dict>

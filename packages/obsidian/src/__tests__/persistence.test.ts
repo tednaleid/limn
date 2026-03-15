@@ -55,12 +55,12 @@ describe("ObsidianPersistenceProvider", () => {
       expect(new Uint8Array(loadedBuffer)).toEqual(new Uint8Array(content as ArrayBuffer));
     });
 
-    it("stores assets in the sidecar .assets/ folder", async () => {
+    it("stores assets in the sidecar .limn-assets/ folder", async () => {
       const blob = new Blob(["data"]);
       await provider.saveAsset("img1", blob);
 
       const files = vault.adapter.getFiles();
-      expect(files.has("notes/My Map.assets/img1")).toBe(true);
+      expect(files.has("notes/My Map.limn-assets/img1")).toBe(true);
     });
 
     it("creates the assets folder if it does not exist", async () => {
@@ -68,7 +68,7 @@ describe("ObsidianPersistenceProvider", () => {
       await provider.saveAsset("img1", blob);
 
       // Verify the folder was created in the vault
-      expect(vault.getAbstractFileByPath("notes/My Map.assets")).not.toBeNull();
+      expect(vault.getAbstractFileByPath("notes/My Map.limn-assets")).not.toBeNull();
     });
 
     it("returns undefined for missing assets", async () => {
@@ -98,7 +98,7 @@ describe("ObsidianPersistenceProvider", () => {
       const blob = new Blob(["x"]);
       await p.saveAsset("a1", blob);
       const files = (v.app.vault as MockVault).adapter.getFiles();
-      expect(files.has("docs/project/design.assets/a1")).toBe(true);
+      expect(files.has("docs/project/design.limn-assets/a1")).toBe(true);
     });
 
     it("handles root-level files (no parent directory)", () => {
@@ -109,7 +109,7 @@ describe("ObsidianPersistenceProvider", () => {
       const blob = new Blob(["x"]);
       return p.saveAsset("a1", blob).then(() => {
         const files = vlt.adapter.getFiles();
-        expect(files.has("notes.assets/a1")).toBe(true);
+        expect(files.has("notes.limn-assets/a1")).toBe(true);
       });
     });
   });

@@ -112,7 +112,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         this.assetCache.set(id, assetBlob);
       }
       // Migrate ZIP assets to sidecar: send each asset to Swift so they
-      // get written to the .assets/ directory. The next auto-save will
+      // get written to the .limn-assets/ directory. The next auto-save will
       // write JSON (not ZIP), completing the migration.
       for (const [id, assetBlob] of result.assetBlobs) {
         void this.saveAsset(id, assetBlob);

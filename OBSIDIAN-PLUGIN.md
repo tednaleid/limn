@@ -20,7 +20,7 @@ Key classes:
   returns it via `getViewData()`. Mounts an isolated React tree into the view container.
 - **ObsidianPersistenceProvider** implements `PersistenceProvider` using Obsidian's vault API.
   Triggers saves via `TextFileView.requestSave()`. Stores image assets as sidecar files in
-  a `.assets/` folder next to the `.limn` file.
+  a `.limn-assets/` folder next to the `.limn` file.
 - **DomTextMeasurer** is shared with the web app. The `createDomTextMeasurer(container)`
   factory appends the measurement element to the view container instead of `document.body`.
 
@@ -30,7 +30,7 @@ Key classes:
 `@limn/core`) without ZIP wrapping, since Obsidian handles binary assets as separate
 vault files. The web app stores `.limn` files as ZIP bundles.
 
-Image assets are stored in a sidecar folder: `MyMap.assets/` alongside `MyMap.limn`.
+Image assets are stored in a sidecar folder: `MyMap.limn-assets/` alongside `MyMap.limn`.
 
 ## Local development setup
 
@@ -88,7 +88,7 @@ After `just obsidian-install <vault>`:
 - [ ] Edit mind map (add nodes, move, delete), close file, reopen -- verify persistence
 - [ ] Cmd+Z / Cmd+Shift+Z undo/redo works
 - [ ] Keyboard navigation (arrows, Enter, Tab) works
-- [ ] Paste image, verify sidecar `.assets/` folder created
+- [ ] Paste image, verify sidecar `.limn-assets/` folder created
 - [ ] Open same file in two panes, verify no conflicts
 - [ ] File renamed in vault sidebar -- verify view updates
 
