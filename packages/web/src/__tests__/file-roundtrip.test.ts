@@ -237,6 +237,42 @@ describe("file round-trip", () => {
     expect(new Uint8Array(roundTripped)).toEqual(blobContent);
   });
 
+  it("produces deterministic output (byte-identical for same input)", async () => {
+    const input = makeFile({
+      roots: [
+        { id: "r1", text: "Root", x: 0, y: 0, width: 100, height: 32, children: [] },
+      ],
+      assets: [
+        { id: "a1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 },
+      ],
+    });
+    const blob = new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])]);
+    const assetBlobs = new Map([["a1", blob]]);
+
+    const zip1 = await buildLimnZip(input, assetBlobs);
+    const zip2 = await buildLimnZip(input, assetBlobs);
+
+    const bytes1 = new Uint8Array(await zip1.arrayBuffer());
+    const bytes2 = new Uint8Array(await zip2.arrayBuffer());
+    expect(bytes1).toEqual(bytes2);
+  });
+
+  it("uses STORE compression (raw JSON visible in ZIP bytes)", async () => {
+    const input = makeFile({
+      roots: [
+        { id: "r1", text: "Unique-Marker-String", x: 0, y: 0, width: 100, height: 32, children: [] },
+      ],
+    });
+
+    const zip = await buildLimnZip(input, new Map());
+    const bytes = new Uint8Array(await zip.arrayBuffer());
+
+    // With STORE (level 0), the raw JSON is embedded uncompressed in the ZIP.
+    // Search for our marker string in the raw bytes.
+    const text = new TextDecoder("latin1").decode(bytes);
+    expect(text).toContain("Unique-Marker-String");
+  });
+
   it("parses legacy plain JSON (non-ZIP)", async () => {
     const input = makeFile({
       roots: [

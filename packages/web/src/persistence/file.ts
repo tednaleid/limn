@@ -1,14 +1,20 @@
 // ABOUTME: File save/load using browser-fs-access for File System Access API with fallback.
-// ABOUTME: Saves .limnz files as ZIP bundles containing data.json + assets/.
+// ABOUTME: Saves .limn files as ZIP (STORE) bundles containing data.json + assets/.
 
 import { fileSave, fileOpen, supported as fsAccessSupported } from "browser-fs-access";
-import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
+import { zipSync, unzipSync, strToU8, strFromU8, type ZipOptions } from "fflate";
 import type { Editor, PersistenceProvider } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 
 const LIMNZ_EXTENSION = ".limnz";
 const LIMN_MIME = "application/octet-stream";
+
+/** Fixed mtime for deterministic ZIP output (git-friendly). */
+const FIXED_MTIME = new Date("2024-01-01T00:00:00Z");
+
+/** STORE options: no compression, fixed mtime for deterministic output. */
+const STORE_OPTS: ZipOptions = { level: 0, mtime: FIXED_MTIME };
 
 /** Options for saving .limnz files (ZIP bundles). */
 const SAVE_FILE_OPTIONS = {
@@ -110,15 +116,19 @@ export async function buildLimnZip(
   assetBlobs: Map<string, Blob>,
 ): Promise<Blob> {
   const json = JSON.stringify(data, null, 2);
-  const zipFiles: Record<string, Uint8Array> = {
-    "data.json": strToU8(json),
+  const zipFiles: Record<string, [Uint8Array, ZipOptions]> = {
+    "data.json": [strToU8(json), STORE_OPTS],
   };
 
-  for (const asset of data.assets ?? []) {
+  // Sort assets by filename for deterministic ZIP entry order
+  const sortedAssets = [...(data.assets ?? [])].sort((a, b) =>
+    a.filename.localeCompare(b.filename),
+  );
+  for (const asset of sortedAssets) {
     const blob = assetBlobs.get(asset.id);
     if (blob) {
       const buffer = await blob.arrayBuffer();
-      zipFiles[`assets/${asset.filename}`] = new Uint8Array(buffer);
+      zipFiles[`assets/${asset.filename}`] = [new Uint8Array(buffer), STORE_OPTS];
     }
   }
 

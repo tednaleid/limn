@@ -2,7 +2,7 @@
 
 ## Status
 
-PROPOSED
+ACCEPTED
 
 ## Goals
 
@@ -269,6 +269,8 @@ If an image *does* change, that commit's delta is proportional to the image size
 
 **Tension:** Trades human-readability and text-tool compatibility for universal single-file simplicity. The format works perfectly across all platforms and sandboxes, but you lose the ability to casually inspect or diff files with `cat` and `git diff`. For users who version-control their mind maps in git, the storage is efficient but the workflow requires extra tooling.
 
+**Future improvement -- Obsidian search integration:** The Obsidian plugin could auto-generate a lightweight companion `.limn.md` file alongside each `.limn` ZIP, containing YAML frontmatter with tags and aliases plus a text extract of node labels. This `.md` file would get full Obsidian indexing (search, graph view, backlinks) while the `.limn` file holds the actual data. Excalidraw uses a conceptually similar approach -- its `.excalidraw.md` files contain searchable text extractions of drawing content. The companion file adds a maintenance burden but is invisible to users and would restore most of the Obsidian integration lost by moving to a binary format.
+
 ### Option G: Line-based text format (JSONL) with inline base64
 
 Use a line-oriented text format where each line is a self-contained JSON object. Node data gets one line per node. Image data lives on its own line as a base64 string. Because each line is independent, git diffs show only the lines that actually changed -- unchanged images produce zero diff noise.
@@ -311,11 +313,36 @@ This is a breaking change: entirely new serialization format, requiring a migrat
 
 ## Decision
 
-(To be decided.)
+**Option F: ZIP (STORE) as the universal `.limn` format.**
+
+A `.limn` file is a ZIP archive using STORE compression (no DEFLATE) with deterministic creation (fixed timestamps, sorted entries). It contains `data.json` plus an `assets/` directory for images. All three platforms -- web, desktop, and Obsidian -- read and write the same format.
+
+This option was chosen because:
+
+- **It solves the macOS sandbox problem cleanly.** A single file needs no sibling directory access. No permission prompts, no security-scoped bookmark workarounds.
+- **One format eliminates format divergence.** Maintaining two serialization paths (JSON + sidecar for Obsidian, ZIP for web/desktop) is complexity that compounds over time as features are added. Every new feature would need to work in both formats.
+- **STORE-mode ZIPs are git-efficient.** Unchanged image bytes produce near-zero deltas in git packfiles. A 20 MB file with 30 text-only commits stores ~21 MB packed, not 600 MB. Human-readable diffs are available via a `.gitattributes` textconv driver.
+- **Most of the implementation already exists.** Web already saves/reads ZIP. Desktop already reads ZIP. The Obsidian plugin refactor (TextFileView to FileView) is ~200 lines of lifecycle code -- real work but bounded and one-time.
+- **Industry precedent.** XMind, Sketch, and MindManager all use ZIP-of-JSON archives. This is a well-understood pattern.
+
+Options A (dual format) and D (sidecar with directory prompt) were the runners-up. A was rejected because format divergence is a long-term maintenance burden. D was rejected because fighting the sandbox with security-scoped bookmarks is fragile (bookmarks go stale, the UX of prompting for directory access is confusing). Options B, C, E, and G were eliminated for fundamental incompatibilities or disproportionate costs (see individual option analyses).
 
 ## Consequences
 
-(To be filled in after the decision is made.)
+**What becomes easier:**
+
+- Cross-platform file sharing. A `.limn` file created on any platform opens on any other platform without conversion.
+- Desktop image handling. No sidecar directories, no sandbox permission prompts, no security-scoped bookmark management for asset directories.
+- Auto-save on desktop. ZIP with STORE via fflate is fast (single-digit milliseconds for typical files). No need to manage sidecar writes separately from document writes.
+- New feature development. One serialization format to maintain, not two.
+
+**What becomes harder or changes:**
+
+- Inspecting `.limn` files with text tools. `cat`, `grep`, and `git diff` no longer work directly. A textconv driver or `unzip -p` is needed.
+- Obsidian vault search. `.limn` files are binary and won't be indexed by Obsidian's search. A future companion `.limn.md` file (see Option F notes) can mitigate this.
+- Obsidian Sync. Binary files use "last modified wins" conflict resolution instead of diff-match-patch merging. File size limits apply (5 MB standard, 200 MB Plus).
+- Migration. Existing plain-JSON `.limn` files in Obsidian vaults need migration. The app can auto-detect format by magic bytes (already implemented) and convert on save, but this is a breaking change that requires a version bump and user communication.
+- Obsidian plugin complexity. The plugin switches from TextFileView (managed I/O) to FileView (manual I/O), adding ~200 lines of lifecycle management code.
 
 ## References
 
