@@ -9,7 +9,7 @@ export interface ReadyMessage {
 
 export type SaveMessage = {
   type: "save";
-  payload: { json: string } | { data: string }; // json = plain text (.limn), data = base64 ZIP (.limnz)
+  payload: { data: string }; // base64-encoded ZIP
 };
 
 export interface RequestOpenMessage {
@@ -18,7 +18,7 @@ export interface RequestOpenMessage {
 
 export interface RequestSaveAsMessage {
   type: "requestSaveAs";
-  payload: { json: string }; // plain JSON text
+  payload: { data: string }; // base64-encoded ZIP
 }
 
 export interface ExportSvgMessage {
@@ -26,15 +26,9 @@ export interface ExportSvgMessage {
   payload: { data: string }; // base64-encoded SVG string
 }
 
-export interface SaveAssetMessage {
-  type: "saveAsset";
-  payload: { assetId: string; data: string }; // base64-encoded blob
-}
-
 export type OutgoingMessage =
   | ReadyMessage
   | SaveMessage
-  | SaveAssetMessage
   | RequestOpenMessage
   | RequestSaveAsMessage
   | ExportSvgMessage;

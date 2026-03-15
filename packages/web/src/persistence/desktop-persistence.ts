@@ -1,5 +1,5 @@
 // ABOUTME: PersistenceProvider for the Limn desktop app (macOS WKWebView).
-// ABOUTME: Delegates file I/O to Swift via the JS-Swift bridge; assets cached in memory.
+// ABOUTME: Always saves as ZIP via the JS-Swift bridge; assets cached in memory.
 
 import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
 import { migrateToLatest } from "@limn/core";
@@ -125,12 +125,6 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
       for (const [id, assetBlob] of result.assetBlobs) {
         getAssetCache().set(id, assetBlob);
       }
-      // Migrate ZIP assets to sidecar: send each asset to Swift so they
-      // get written to the .limn-assets/ directory. The next auto-save will
-      // write JSON (not ZIP), completing the migration.
-      for (const [id, assetBlob] of result.assetBlobs) {
-        void this.saveAsset(id, assetBlob);
-      }
     }
 
     setCurrentFilename(msg.payload.filename);
@@ -156,20 +150,14 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   }
 
   async save(data: MindMapFileFormat): Promise<void> {
-    if (getCurrentFilename()?.endsWith(".limnz")) {
-      // Preserve ZIP format for .limnz files
-      const assetBlobs = new Map<string, Blob>();
-      for (const asset of data.assets ?? []) {
-        const blob = getAssetCache().get(asset.id);
-        if (blob) assetBlobs.set(asset.id, blob);
-      }
-      const zipBlob = await buildLimnZip(data, assetBlobs);
-      const base64 = await blobToBase64(zipBlob);
-      postToSwift({ type: "save", payload: { data: base64 } });
-    } else {
-      const json = JSON.stringify(data, null, 2);
-      postToSwift({ type: "save", payload: { json } });
+    const assetBlobs = new Map<string, Blob>();
+    for (const asset of data.assets ?? []) {
+      const blob = getAssetCache().get(asset.id);
+      if (blob) assetBlobs.set(asset.id, blob);
     }
+    const zipBlob = await buildLimnZip(data, assetBlobs);
+    const base64 = await blobToBase64(zipBlob);
+    postToSwift({ type: "save", payload: { data: base64 } });
   }
 
   /** Request a file open dialog from Swift. Returns the loaded data or null if cancelled. */
@@ -191,10 +179,16 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 
   /** Request a save-as dialog from Swift. Returns the new filename. */
   async requestSaveAs(data: MindMapFileFormat): Promise<string | null> {
-    const json = JSON.stringify(data, null, 2);
+    const assetBlobs = new Map<string, Blob>();
+    for (const asset of data.assets ?? []) {
+      const blob = getAssetCache().get(asset.id);
+      if (blob) assetBlobs.set(asset.id, blob);
+    }
+    const zipBlob = await buildLimnZip(data, assetBlobs);
+    const base64 = await blobToBase64(zipBlob);
     return new Promise((resolve) => {
       setPendingSave({ resolve });
-      postToSwift({ type: "requestSaveAs", payload: { json } });
+      postToSwift({ type: "requestSaveAs", payload: { data: base64 } });
       setTimeout(() => {
         const p = getPendingSave();
         if (p) {
@@ -207,9 +201,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 
   async saveAsset(assetId: string, blob: Blob): Promise<void> {
     getAssetCache().set(assetId, blob);
-    // Write asset to sidecar directory via Swift bridge
-    const base64 = await blobToBase64(blob);
-    postToSwift({ type: "saveAsset", payload: { assetId, data: base64 } });
+    // Assets are bundled into the ZIP on save -- no sidecar bridge message needed.
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {

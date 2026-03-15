@@ -62,7 +62,7 @@ describe("DesktopPersistenceProvider", () => {
     expect(await provider.load()).toBeNull();
   });
 
-  it("save() sends plain JSON text to Swift", async () => {
+  it("save() always sends base64 ZIP to Swift", async () => {
     const postMessage = vi.fn();
     g.webkit = { messageHandlers: { limn: { postMessage } } };
 
@@ -72,11 +72,12 @@ describe("DesktopPersistenceProvider", () => {
     expect(postMessage).toHaveBeenCalledTimes(1);
     const msg = postMessage.mock.calls[0]![0];
     expect(msg.type).toBe("save");
-    expect(typeof msg.payload.json).toBe("string");
-    // Verify it's valid JSON containing the document data
-    const parsed = JSON.parse(msg.payload.json);
-    expect(parsed.meta.id).toBe("test-1");
-    expect(parsed.version).toBe(1);
+    expect(typeof msg.payload.data).toBe("string");
+    expect(msg.payload.json).toBeUndefined();
+    // Verify the base64 decodes to a valid ZIP (starts with PK)
+    const binary = atob(msg.payload.data);
+    expect(binary.charCodeAt(0)).toBe(0x50); // P
+    expect(binary.charCodeAt(1)).toBe(0x4b); // K
   });
 
   it("handles loadFile message and updates filename", async () => {
@@ -110,7 +111,7 @@ describe("DesktopPersistenceProvider", () => {
     expect(provider.filename).toBeNull();
   });
 
-  it("caches assets in memory and sends saveAsset to Swift", async () => {
+  it("caches assets in memory only (no saveAsset bridge message)", async () => {
     const postMessage = vi.fn();
     g.webkit = { messageHandlers: { limn: { postMessage } } };
 
@@ -123,13 +124,11 @@ describe("DesktopPersistenceProvider", () => {
     expect(loaded).toBeDefined();
     expect(loaded!.size).toBe(blob.size);
 
-    // Should also send saveAsset message to Swift
+    // Should NOT send saveAsset message to Swift (assets live in ZIP now)
     const assetMsg = postMessage.mock.calls.find(
       (c: unknown[]) => (c[0] as { type: string }).type === "saveAsset",
     );
-    expect(assetMsg).toBeDefined();
-    expect(assetMsg![0].payload.assetId).toBe("asset-1");
-    expect(typeof assetMsg![0].payload.data).toBe("string"); // base64
+    expect(assetMsg).toBeUndefined();
   });
 
   it("generates blob URLs for cached assets", async () => {
@@ -211,10 +210,7 @@ describe("DesktopPersistenceProvider", () => {
     });
   });
 
-  it("loading a ZIP file sends saveAsset messages to migrate assets to sidecar", async () => {
-    const postMessage = vi.fn();
-    g.webkit = { messageHandlers: { limn: { postMessage } } };
-
+  it("loading a ZIP file caches assets in memory (no sidecar migration)", async () => {
     provider = new DesktopPersistenceProvider();
     const dispatch = getDispatcher();
 
@@ -231,12 +227,9 @@ describe("DesktopPersistenceProvider", () => {
       expect(provider.filename).toBe("old.limn");
     });
 
-    // Should have sent a saveAsset message to migrate the asset to sidecar
-    const assetMsgs = postMessage.mock.calls.filter(
-      (c: unknown[]) => (c[0] as { type: string }).type === "saveAsset",
-    );
-    expect(assetMsgs).toHaveLength(1);
-    expect(assetMsgs[0]![0].payload.assetId).toBe("img1");
+    // Asset should be cached in memory
+    const loaded = await provider.loadAsset("img1");
+    expect(loaded).toBeDefined();
   });
 
   it("calls external change callback for loadFile without pending request", async () => {
@@ -298,47 +291,29 @@ describe("DesktopPersistenceProvider", () => {
     expect(result!.data.meta.id).toBe("test-1");
   });
 
-  it("save() sends base64 ZIP to Swift when filename is .limnz", async () => {
+  it("save() includes cached assets in the ZIP", async () => {
     const postMessage = vi.fn();
     g.webkit = { messageHandlers: { limn: { postMessage } } };
 
     provider = new DesktopPersistenceProvider();
-    const dispatch = getDispatcher();
 
-    // Set filename to .limnz via fileSaved message
-    dispatch({ type: "fileSaved", payload: { filename: "test.limnz" } });
+    // Cache an asset
+    const imgBlob = new Blob(["fake png data"], { type: "image/png" });
+    await provider.saveAsset("img1", imgBlob);
 
-    await provider.save(MINIMAL_MAP);
+    const mapWithAssets: MindMapFileFormat = {
+      ...MINIMAL_MAP,
+      assets: [{ id: "img1", filename: "photo.png", mimeType: "image/png", width: 100, height: 100 }],
+    };
+    await provider.save(mapWithAssets);
 
     const saveMsg = postMessage.mock.calls.find(
       (c: unknown[]) => (c[0] as { type: string }).type === "save",
     );
     expect(saveMsg).toBeDefined();
-    // Should send base64 ZIP data, not plain JSON
-    expect(saveMsg![0].payload.data).toBeDefined();
-    expect(saveMsg![0].payload.json).toBeUndefined();
     // Verify the base64 decodes to a valid ZIP (starts with PK)
     const binary = atob(saveMsg![0].payload.data);
     expect(binary.charCodeAt(0)).toBe(0x50); // P
     expect(binary.charCodeAt(1)).toBe(0x4b); // K
-  });
-
-  it("save() sends plain JSON when filename is .limn (not .limnz)", async () => {
-    const postMessage = vi.fn();
-    g.webkit = { messageHandlers: { limn: { postMessage } } };
-
-    provider = new DesktopPersistenceProvider();
-    const dispatch = getDispatcher();
-
-    dispatch({ type: "fileSaved", payload: { filename: "test.limn" } });
-
-    await provider.save(MINIMAL_MAP);
-
-    const saveMsg = postMessage.mock.calls.find(
-      (c: unknown[]) => (c[0] as { type: string }).type === "save",
-    );
-    expect(saveMsg).toBeDefined();
-    expect(saveMsg![0].payload.json).toBeDefined();
-    expect(saveMsg![0].payload.data).toBeUndefined();
   });
 });
