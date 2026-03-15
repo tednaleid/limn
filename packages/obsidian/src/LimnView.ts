@@ -27,12 +27,11 @@ import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 
 export const VIEW_TYPE_LIMN = "limn-view";
 
-const obsidianMenuItems: MenuItemDef[] = [
-  { label: "Export SVG", shortcut: "Shift+Cmd+E", onClick: () => exportSvg() },
-];
-
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
 function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HTMLElement }) {
+  const menuItems: MenuItemDef[] = [
+    { label: "Export SVG", shortcut: "Shift+Cmd+E", onClick: () => void exportSvg(editor.getContentBounds()) },
+  ];
   // Only handle keyboard events when this view is the active Obsidian leaf.
   // Obsidian adds .mod-active to the workspace-leaf containing the focused tab.
   const isActive = useCallback(
@@ -80,7 +79,7 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
     createElement("div", { style: { width: "100%", height: "100%", position: "relative" } },
       createElement(MindMapCanvas),
       createElement(ToolbarOverlay),
-      createElement(HamburgerMenu, { items: obsidianMenuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
+      createElement(HamburgerMenu, { items: menuItems, showTheme: true, aboutVariant: "obsidian", keystrokeOverlay: showKeystrokeOverlay }),
       createElement(KeystrokeOverlay, { enabled: showKeystrokeOverlay, isActive }),
     ),
   );
