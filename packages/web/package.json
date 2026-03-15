@@ -16,7 +16,8 @@
     "./components/ShortcutsDialog": "./src/components/ShortcutsDialog.tsx",
     "./export/svg": "./src/export/svg.ts",
     "./theme/themes": "./src/theme/themes.ts",
-    "./components/KeystrokeOverlay": "./src/components/KeystrokeOverlay.tsx"
+    "./components/KeystrokeOverlay": "./src/components/KeystrokeOverlay.tsx",
+    "./persistence/file": "./src/persistence/file.ts"
   },
   "scripts": {
     "dev": "vite",
