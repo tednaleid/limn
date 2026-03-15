@@ -93,10 +93,6 @@ struct WebViewBridge: NSViewRepresentable {
         /// True after the web view has sent the "ready" message.
         var isReady = false
 
-        /// Assets buffered before the document has a file path (untitled).
-        /// Flushed to the sidecar directory when the file is first saved.
-        var pendingAssets: [String: Data] = [:]
-
         /// Called when the file URL changes (open, save-as) so the window binding
         /// stays in sync with SwiftUI's WindowGroup dedup.
         var onFileURLChanged: ((URL) -> Void)?
@@ -126,10 +122,7 @@ struct WebViewBridge: NSViewRepresentable {
                 }
 
             case "save":
-                if let json = payload?["json"] as? String {
-                    handleSaveJSON(json: json)
-                } else if let base64 = payload?["data"] as? String {
-                    // Legacy: base64-encoded ZIP from older JS builds
+                if let base64 = payload?["data"] as? String {
                     handleSave(base64: base64)
                 }
 
@@ -137,17 +130,8 @@ struct WebViewBridge: NSViewRepresentable {
                 handleRequestOpen()
 
             case "requestSaveAs":
-                if let json = payload?["json"] as? String {
-                    handleRequestSaveAsJSON(json: json)
-                } else if let base64 = payload?["data"] as? String {
-                    // Legacy: base64-encoded ZIP from older JS builds
+                if let base64 = payload?["data"] as? String {
                     handleRequestSaveAs(base64: base64)
-                }
-
-            case "saveAsset":
-                if let assetId = payload?["assetId"] as? String,
-                   let base64 = payload?["data"] as? String {
-                    handleSaveAsset(assetId: assetId, base64: base64)
                 }
 
             case "exportSvg":
@@ -176,101 +160,13 @@ struct WebViewBridge: NSViewRepresentable {
             }
         }
 
-        /// Save plain JSON text to the current file (cross-platform compatible format).
-        private func handleSaveJSON(json: String) {
-            guard let data = json.data(using: .utf8) else {
-                print("[Limn] Save failed: could not encode JSON as UTF-8")
-                return
-            }
-            saveToCurrentFile(data)
-        }
-
-        /// Legacy: save base64-encoded ZIP data (for backward compatibility).
+        /// Save base64-encoded ZIP data to the current file.
         private func handleSave(base64: String) {
             guard let data = Data(base64Encoded: base64) else {
                 print("[Limn] Save failed: invalid base64")
                 return
             }
             saveToCurrentFile(data)
-        }
-
-        /// Write an asset to the sidecar directory, or buffer it if untitled.
-        private func handleSaveAsset(assetId: String, base64: String) {
-            guard let data = Data(base64Encoded: base64) else {
-                print("[Limn] SaveAsset failed: invalid base64")
-                return
-            }
-
-            guard let fileURL = currentFileURL else {
-                // Untitled document -- buffer until file is first saved
-                pendingAssets[assetId] = data
-                return
-            }
-
-            // Try to start directory access from a stored bookmark
-            SessionStore.startAccessingDirectory(for: fileURL)
-
-            let sidecarDir = sidecarAssetsURL(for: fileURL)
-            if writeSidecarAsset(assetId: assetId, data: data, sidecarDir: sidecarDir) {
-                return
-            }
-
-            // Write failed (sandbox permission) -- buffer and ask for access
-            pendingAssets[assetId] = data
-            requestDirectoryAccess(for: fileURL)
-        }
-
-        /// Try to write an asset file into the sidecar directory. Returns true on success.
-        private func writeSidecarAsset(assetId: String, data: Data, sidecarDir: URL) -> Bool {
-            do {
-                try FileManager.default.createDirectory(at: sidecarDir, withIntermediateDirectories: true)
-                let assetURL = sidecarDir.appendingPathComponent(assetId)
-                try data.write(to: assetURL, options: .atomic)
-                return true
-            } catch {
-                return false
-            }
-        }
-
-        /// Show an open panel asking the user to grant access to the folder
-        /// containing their .limn file. Bookmarks the directory so future
-        /// asset saves work without prompting again.
-        private func requestDirectoryAccess(for fileURL: URL) {
-            Task { @MainActor in
-                let parentDir = fileURL.deletingLastPathComponent()
-                let panel = NSOpenPanel()
-                panel.canChooseDirectories = true
-                panel.canChooseFiles = false
-                panel.allowsMultipleSelection = false
-                panel.prompt = "Grant Access"
-                panel.message = "Limn needs access to this folder to save images alongside your mind map."
-                panel.directoryURL = parentDir
-
-                let response = panel.runModal()
-                guard response == .OK, let dirURL = panel.url else { return }
-
-                // Bookmark the granted directory for future sessions
-                SessionStore.createAndStoreDirectoryBookmark(for: fileURL, directory: dirURL)
-
-                // Now flush all buffered assets
-                flushPendingAssets()
-            }
-        }
-
-        /// Write any pending assets to the sidecar directory after a file path is established.
-        private func flushPendingAssets() {
-            guard let fileURL = currentFileURL, !pendingAssets.isEmpty else { return }
-            let sidecarDir = sidecarAssetsURL(for: fileURL)
-            do {
-                try FileManager.default.createDirectory(at: sidecarDir, withIntermediateDirectories: true)
-                for (assetId, data) in pendingAssets {
-                    let assetURL = sidecarDir.appendingPathComponent(assetId)
-                    try data.write(to: assetURL, options: .atomic)
-                }
-                pendingAssets.removeAll()
-            } catch {
-                print("[Limn] Flush pending assets failed: \(error.localizedDescription)")
-            }
         }
 
         private func handleRequestOpen() {
@@ -372,8 +268,6 @@ struct WebViewBridge: NSViewRepresentable {
                 do {
                     try FileOperations.writeFile(data, to: url)
                     currentFileURL = url
-                    SessionStore.createAndStoreDirectoryBookmark(for: url)
-                    flushPendingAssets()
                     onFileURLChanged?(url)
                     updateWindowTitle(url.lastPathComponent)
                     NSDocumentController.shared.noteNewRecentDocumentURL(url)
@@ -386,16 +280,7 @@ struct WebViewBridge: NSViewRepresentable {
             }
         }
 
-        /// Save-as with plain JSON text (cross-platform compatible format).
-        private func handleRequestSaveAsJSON(json: String) {
-            guard let data = json.data(using: .utf8) else {
-                print("[Limn] SaveAs failed: could not encode JSON as UTF-8")
-                return
-            }
-            saveAsToNewFile(data)
-        }
-
-        /// Legacy: save-as with base64-encoded ZIP data (for backward compatibility).
+        /// Save-as with base64-encoded ZIP data.
         private func handleRequestSaveAs(base64: String) {
             guard let data = Data(base64Encoded: base64) else {
                 print("[Limn] SaveAs failed: invalid base64")
