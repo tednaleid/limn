@@ -184,10 +184,11 @@ desktop-verify:
     spctl -a -t open --context context:primary-signature {{desktop_build_dir}}/Limn-*.dmg
     codesign -dvv {{desktop_build_dir}}/Release/Limn.app
 
-# Clean desktop build artifacts (including Xcode DerivedData cache)
+# Clean desktop build artifacts (including Xcode DerivedData cache and dev UserDefaults)
 desktop-clean:
     rm -rf {{desktop_build_dir}} packages/desktop/Limn.xcodeproj ~/Applications/Limn.app
     rm -rf ~/Library/Developer/Xcode/DerivedData/Limn-*
+    defaults delete com.tednaleid.Limn 2>/dev/null || true
 
 # Reset desktop app preferences (session bookmarks, user defaults)
 desktop-reset:
