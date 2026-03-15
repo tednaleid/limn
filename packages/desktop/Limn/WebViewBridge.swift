@@ -118,6 +118,11 @@ struct WebViewBridge: NSViewRepresentable {
                 if let url = pendingFileURL {
                     pendingFileURL = nil
                     loadFileIntoWebView(url: url)
+                } else if let url = currentFileURL {
+                    // Web view reloaded (e.g., Cmd+R) while a file was open.
+                    // Re-load the file so auto-save doesn't overwrite it
+                    // with the default document.
+                    loadFileIntoWebView(url: url)
                 }
 
             case "save":
@@ -302,26 +307,30 @@ struct WebViewBridge: NSViewRepresentable {
 
         /// Read a file from disk and send it to the web view as a loadFile message.
         /// Detects whether the file is JSON or ZIP and loads sidecar assets if present.
+        ///
+        /// `currentFileURL` is set only AFTER JS confirms receipt of the data.
+        /// This prevents auto-save from writing stale data to the new file
+        /// during the window between sending and processing.
         func loadFileIntoWebView(url: URL) {
             do {
                 let data = try FileOperations.readFile(at: url)
-                currentFileURL = url
-                onFileURLChanged?(url)
+
+                // Set up window chrome and bookmarks immediately
                 updateWindowTitle(url.lastPathComponent)
                 NSDocumentController.shared.noteNewRecentDocumentURL(url)
                 SessionStore.createAndStoreBookmark(for: url)
                 SessionStore.createAndStoreDirectoryBookmark(for: url)
-                appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
 
                 // Detect format: ZIP starts with PK (0x50, 0x4B)
                 let isZip = data.count >= 2 && data[data.startIndex] == 0x50 && data[data.startIndex + 1] == 0x4B
 
+                let payload: [String: Any]
                 if isZip {
-                    sendToJS(type: "loadFile", payload: [
+                    payload = [
                         "data": data.base64EncodedString(),
                         "filename": url.lastPathComponent,
                         "format": "zip",
-                    ])
+                    ]
                 } else {
                     // Plain JSON -- also check for sidecar assets directory
                     guard let json = String(data: data, encoding: .utf8) else {
@@ -331,15 +340,24 @@ struct WebViewBridge: NSViewRepresentable {
                     let sidecarDir = sidecarAssetsURL(for: url)
                     let assets = readSidecarAssets(at: sidecarDir)
 
-                    var payload: [String: Any] = [
+                    var p: [String: Any] = [
                         "data": json,
                         "filename": url.lastPathComponent,
                         "format": "json",
                     ]
                     if !assets.isEmpty {
-                        payload["assets"] = assets
+                        p["assets"] = assets
                     }
-                    sendToJS(type: "loadFile", payload: payload)
+                    payload = p
+                }
+
+                // Send to JS, then set currentFileURL on success so auto-save
+                // cannot write stale data to the new file path.
+                sendToJS(type: "loadFile", payload: payload) { [weak self] success in
+                    guard success, let self = self else { return }
+                    self.currentFileURL = url
+                    self.onFileURLChanged?(url)
+                    self.appDelegate?.updateCoordinatorFileURL(ObjectIdentifier(self), fileURL: url)
                 }
             } catch {
                 print("[Limn] Open failed: \(error.localizedDescription)")
@@ -437,8 +455,12 @@ struct WebViewBridge: NSViewRepresentable {
         // MARK: - JS communication
 
         /// Send a message from Swift to JS via evaluateJavaScript.
-        func sendToJS(type: String, payload: [String: Any] = [:]) {
-            guard let webView = webView else { return }
+        /// The optional `completion` fires after JS has executed the handler.
+        func sendToJS(type: String, payload: [String: Any] = [:], completion: ((Bool) -> Void)? = nil) {
+            guard let webView = webView else {
+                completion?(false)
+                return
+            }
 
             // Serialize payload to JSON
             let payloadJSON: String
@@ -449,6 +471,7 @@ struct WebViewBridge: NSViewRepresentable {
                 payloadJSON = jsonString
             } else {
                 print("[Limn] Failed to serialize payload")
+                completion?(false)
                 return
             }
 
@@ -466,8 +489,12 @@ struct WebViewBridge: NSViewRepresentable {
             webView.evaluateJavaScript(js) { result, error in
                 if let error = error {
                     print("[Limn] JS eval error: \(error.localizedDescription)")
+                    completion?(false)
                 } else if let str = result as? String, str != "ok" {
                     print("[Limn] sendToJS(\(type)): \(str)")
+                    completion?(false)
+                } else {
+                    completion?(true)
                 }
             }
         }

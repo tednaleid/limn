@@ -47,9 +47,23 @@ function setCurrentFilename(f: string | null): void {
   if (g.limn?.desktop) g.limn.desktop._currentFilename = f;
 }
 
+// Asset caches must also live on globalThis so the instance that receives
+// bridge messages (instance B under StrictMode) and the instance React
+// keeps (instance A) share the same data.
+function getAssetCache(): Map<string, Blob> {
+  if (!g.limn?.desktop?._assetCache) {
+    if (g.limn?.desktop) g.limn.desktop._assetCache = new Map<string, Blob>();
+  }
+  return g.limn?.desktop?._assetCache ?? new Map<string, Blob>();
+}
+function getAssetUrls(): Map<string, string> {
+  if (!g.limn?.desktop?._assetUrls) {
+    if (g.limn?.desktop) g.limn.desktop._assetUrls = new Map<string, string>();
+  }
+  return g.limn?.desktop?._assetUrls ?? new Map<string, string>();
+}
+
 export class DesktopPersistenceProvider implements PersistenceProvider {
-  private assetCache = new Map<string, Blob>();
-  private assetUrls = new Map<string, string>();
   private unsubBridge: (() => void) | null = null;
 
   constructor() {
@@ -99,7 +113,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         for (const [assetId, base64] of Object.entries(msg.payload.assets)) {
           const bytes = base64ToBytes(base64);
           const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-          this.assetCache.set(assetId, new Blob([buf]));
+          getAssetCache().set(assetId, new Blob([buf]));
         }
       }
     } else {
@@ -109,7 +123,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
       const result = await parseLimnFile(blob);
       data = result.data;
       for (const [id, assetBlob] of result.assetBlobs) {
-        this.assetCache.set(id, assetBlob);
+        getAssetCache().set(id, assetBlob);
       }
       // Migrate ZIP assets to sidecar: send each asset to Swift so they
       // get written to the .limn-assets/ directory. The next auto-save will
@@ -146,7 +160,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
       // Preserve ZIP format for .limnz files
       const assetBlobs = new Map<string, Blob>();
       for (const asset of data.assets ?? []) {
-        const blob = this.assetCache.get(asset.id);
+        const blob = getAssetCache().get(asset.id);
         if (blob) assetBlobs.set(asset.id, blob);
       }
       const zipBlob = await buildLimnZip(data, assetBlobs);
@@ -192,29 +206,29 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
   }
 
   async saveAsset(assetId: string, blob: Blob): Promise<void> {
-    this.assetCache.set(assetId, blob);
+    getAssetCache().set(assetId, blob);
     // Write asset to sidecar directory via Swift bridge
     const base64 = await blobToBase64(blob);
     postToSwift({ type: "saveAsset", payload: { assetId, data: base64 } });
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {
-    return this.assetCache.get(assetId);
+    return getAssetCache().get(assetId);
   }
 
   async loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
     const result = new Map<string, string>();
     for (const id of assetIds) {
       // Reuse existing URL if available
-      const existing = this.assetUrls.get(id);
+      const existing = getAssetUrls().get(id);
       if (existing) {
         result.set(id, existing);
         continue;
       }
-      const blob = this.assetCache.get(id);
+      const blob = getAssetCache().get(id);
       if (blob) {
         const url = URL.createObjectURL(blob);
-        this.assetUrls.set(id, url);
+        getAssetUrls().set(id, url);
         result.set(id, url);
       }
     }
@@ -237,11 +251,11 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     this.unsubBridge?.();
     this.unsubBridge = null;
     // Revoke all blob URLs
-    for (const url of this.assetUrls.values()) {
+    for (const url of getAssetUrls().values()) {
       URL.revokeObjectURL(url);
     }
-    this.assetUrls.clear();
-    this.assetCache.clear();
+    getAssetUrls().clear();
+    getAssetCache().clear();
   }
 }
 

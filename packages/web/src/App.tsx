@@ -249,6 +249,13 @@ export function App({ docId, initialData }: AppProps) {
     const unsubExternal = provider.onExternalChange((data) => {
       editor.applyExternalUpdate(data);
       editor.remeasureAllNodes();
+      // Load asset blob URLs (e.g., images from sidecar on desktop session restore)
+      const assets = editor.getAssets();
+      if (assets.length > 0) {
+        void provider.loadAssetUrls(assets.map((a) => a.id)).then((urls) => {
+          if (urls.size > 0) setAssetUrls(urls);
+        });
+      }
     });
     // Tell Swift the web view is ready to receive files (cold-start buffering)
     if (desktop) {
