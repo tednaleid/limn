@@ -33,7 +33,7 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - **Core has zero browser dependencies.** Nothing in `packages/core/` imports React, DOM APIs, or browser globals. Text measurement uses a `TextMeasurer` interface (DI); web provides a DOM-based implementation, tests provide a stub.
 - **Diff-based undo.** Store captures diffs automatically. No Command classes.
 - **Positions are stored.** Layout engine computes initial positions; users can reposition nodes. File format includes x/y coordinates.
-- **Images use sidecar storage.** `file.limn` + `file.limn-assets/` directory. Never base64 in JSON.
+- **A `.limn` file is a ZIP (STORE) containing `data.json` + `assets/`.** Legacy JSON `.limn` files are auto-migrated on next save.
 - **TestEditor for logic tests.** Playwright is only for visual regression and browser-API integration. If it can be tested without a browser, it must be.
 - **Text editing uses positioned textarea.** Not SVG foreignObject (cross-browser issues). Textarea is absolutely positioned over the canvas with zoom-aware transforms.
 - **Multiple roots supported.** A mind map is a forest of trees. Roots can be created and deleted freely. Empty canvas is valid.
