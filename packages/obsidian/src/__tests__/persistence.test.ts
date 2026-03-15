@@ -1,5 +1,5 @@
-// ABOUTME: Tests for ObsidianPersistenceProvider vault-based persistence.
-// ABOUTME: Verifies save/load round-trips, asset storage, and asset path construction.
+// ABOUTME: Tests for ObsidianPersistenceProvider in-memory asset caching.
+// ABOUTME: Verifies save triggers ZIP write, asset cache operations, and cleanup.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObsidianPersistenceProvider } from "../ObsidianPersistenceProvider";
@@ -11,7 +11,7 @@ function createMockView(filePath: string) {
   const view = {
     file,
     app: { vault },
-    requestSave: vi.fn(),
+    saveToDisk: vi.fn().mockResolvedValue(undefined),
   };
   return { view, vault };
 }
@@ -23,27 +23,26 @@ describe("ObsidianPersistenceProvider", () => {
 
   beforeEach(() => {
     ({ view, vault } = createMockView("notes/My Map.limn"));
-    // Cast is safe because tests only exercise the fields/methods we mock
     provider = new ObsidianPersistenceProvider(view as never);
   });
 
   describe("load", () => {
-    it("returns null (TextFileView handles loading)", async () => {
+    it("returns null (FileView handles loading)", async () => {
       const result = await provider.load();
       expect(result).toBeNull();
     });
   });
 
   describe("save", () => {
-    it("calls requestSave on the view", async () => {
+    it("calls saveToDisk on the view", async () => {
       const data = createTestMap();
       await provider.save(data);
-      expect(view.requestSave).toHaveBeenCalledOnce();
+      expect(view.saveToDisk).toHaveBeenCalledOnce();
     });
   });
 
-  describe("asset storage", () => {
-    it("saves and loads a binary asset", async () => {
+  describe("asset storage (in-memory cache)", () => {
+    it("saves and loads a binary asset from cache", async () => {
       const content = new TextEncoder().encode("image data").buffer;
       const blob = new Blob([content], { type: "image/png" });
 
@@ -55,20 +54,13 @@ describe("ObsidianPersistenceProvider", () => {
       expect(new Uint8Array(loadedBuffer)).toEqual(new Uint8Array(content as ArrayBuffer));
     });
 
-    it("stores assets in the sidecar .limn-assets/ folder", async () => {
+    it("does not write assets to the vault adapter", async () => {
       const blob = new Blob(["data"]);
       await provider.saveAsset("img1", blob);
 
+      // Assets live in memory, not on disk
       const files = vault.adapter.getFiles();
-      expect(files.has("notes/My Map.limn-assets/img1")).toBe(true);
-    });
-
-    it("creates the assets folder if it does not exist", async () => {
-      const blob = new Blob(["data"]);
-      await provider.saveAsset("img1", blob);
-
-      // Verify the folder was created in the vault
-      expect(vault.getAbstractFileByPath("notes/My Map.limn-assets")).not.toBeNull();
+      expect(files.size).toBe(0);
     });
 
     it("returns undefined for missing assets", async () => {
@@ -86,31 +78,26 @@ describe("ObsidianPersistenceProvider", () => {
       expect(urls.has("img1")).toBe(true);
       expect(urls.has("img2")).toBe(true);
       expect(urls.has("missing")).toBe(false);
-      // blob: URLs start with "blob:"
       expect(urls.get("img1")!.startsWith("blob:")).toBe(true);
     });
   });
 
-  describe("asset path construction", () => {
-    it("uses file basename for the sidecar folder", async () => {
-      const { view: v } = createMockView("docs/project/design.limn");
-      const p = new ObsidianPersistenceProvider(v as never);
-      const blob = new Blob(["x"]);
-      await p.saveAsset("a1", blob);
-      const files = (v.app.vault as MockVault).adapter.getFiles();
-      expect(files.has("docs/project/design.limn-assets/a1")).toBe(true);
+  describe("bulk asset operations", () => {
+    it("setAssetBlobs populates the cache", async () => {
+      const blobs = new Map([
+        ["a1", new Blob(["img1"])],
+        ["a2", new Blob(["img2"])],
+      ]);
+      provider.setAssetBlobs(blobs);
+
+      expect(await provider.loadAsset("a1")).toBeDefined();
+      expect(await provider.loadAsset("a2")).toBeDefined();
     });
 
-    it("handles root-level files (no parent directory)", () => {
-      const { view: v, vault: vlt } = createMockView("notes.limn");
-      // Root-level file has parent.path = ""
-      v.file.parent = { path: "" };
-      const p = new ObsidianPersistenceProvider(v as never);
-      const blob = new Blob(["x"]);
-      return p.saveAsset("a1", blob).then(() => {
-        const files = vlt.adapter.getFiles();
-        expect(files.has("notes.limn-assets/a1")).toBe(true);
-      });
+    it("getAssetBlobs returns the cache", async () => {
+      await provider.saveAsset("a1", new Blob(["test"]));
+      const cache = provider.getAssetBlobs();
+      expect(cache.has("a1")).toBe(true);
     });
   });
 
@@ -124,6 +111,12 @@ describe("ObsidianPersistenceProvider", () => {
   });
 
   describe("dispose", () => {
+    it("clears asset cache", () => {
+      provider.saveAsset("a1", new Blob(["test"]));
+      provider.dispose();
+      expect(provider.getAssetBlobs().size).toBe(0);
+    });
+
     it("does not throw", () => {
       expect(() => provider.dispose()).not.toThrow();
     });

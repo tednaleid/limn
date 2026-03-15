@@ -1,13 +1,13 @@
-// ABOUTME: TextFileView subclass that renders .limn files as interactive mind maps.
+// ABOUTME: FileView subclass that renders .limn files as interactive mind maps.
 // ABOUTME: Mounts React into Obsidian's view container with an isolated React instance.
 
-import { TextFileView, type WorkspaceLeaf } from "obsidian";
+import { FileView, type WorkspaceLeaf, type TFile, type EventRef } from "obsidian";
 import type LimnPlugin from "./main";
 import {
-  Editor, migrateToLatest, AutoSaveController,
+  Editor, AutoSaveController,
   resolveTheme, deriveThemeVars, THEME_CSS_VARS,
 } from "@limn/core";
-import type { MindMapFileFormat } from "@limn/core";
+import { parseLimnFile, buildLimnZip } from "@limn/web/persistence/file";
 import { ObsidianPersistenceProvider } from "./ObsidianPersistenceProvider";
 import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
 import { createRoot, type Root } from "react-dom/client";
@@ -26,14 +26,6 @@ import { KeystrokeOverlay } from "@limn/web/components/KeystrokeOverlay";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 
 export const VIEW_TYPE_LIMN = "limn-view";
-
-const DEFAULT_MAP: MindMapFileFormat = {
-  version: 1,
-  meta: { id: crypto.randomUUID(), mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" },
-  camera: { x: 200, y: 200, zoom: 1 },
-  roots: [],
-  assets: [],
-};
 
 const obsidianMenuItems: MenuItemDef[] = [
   { label: "Export SVG", shortcut: "Shift+Cmd+E", onClick: () => exportSvg() },
@@ -94,11 +86,14 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
   );
 }
 
-export class LimnView extends TextFileView {
-  private editor!: Editor;
-  private provider!: ObsidianPersistenceProvider;
+export class LimnView extends FileView {
+  editor!: Editor;
+  provider!: ObsidianPersistenceProvider;
   private autoSave: AutoSaveController | null = null;
   private reactRoot: Root | null = null;
+  /** Guard to ignore vault 'modify' events triggered by our own writes. */
+  private isSaving = false;
+  private vaultModifyRef: EventRef | null = null;
 
   constructor(leaf: WorkspaceLeaf, _plugin: LimnPlugin) {
     super(leaf);
@@ -116,6 +111,10 @@ export class LimnView extends TextFileView {
     return "git-branch";
   }
 
+  canAcceptExtension(ext: string): boolean {
+    return ext === "limn";
+  }
+
   async onOpen(): Promise<void> {
     await super.onOpen();
     this.contentEl.addClass("limn-view");
@@ -129,6 +128,14 @@ export class LimnView extends TextFileView {
     // Apply or clear inline theme CSS when user changes theme via the picker
     this.editor.onThemeChange(() => {
       this.applyThemeToContainer();
+    });
+
+    // Listen for external changes to the file (e.g., sync)
+    this.vaultModifyRef = this.app.vault.on("modify", (file) => {
+      if (this.isSaving) return;
+      if (file === this.file) {
+        void this.onLoadFile(file as TFile);
+      }
     });
   }
 
@@ -165,19 +172,40 @@ export class LimnView extends TextFileView {
 
   async onClose(): Promise<void> {
     await super.onClose();
+    if (this.vaultModifyRef) {
+      this.app.vault.offref(this.vaultModifyRef);
+      this.vaultModifyRef = null;
+    }
     this.autoSave?.dispose();
     this.provider?.dispose();
     this.reactRoot?.unmount();
     this.reactRoot = null;
   }
 
-  setViewData(data: string, clear: boolean): void {
-    if (clear) {
-      this.clear();
+  async onLoadFile(file: TFile): Promise<void> {
+    const buf = await this.app.vault.readBinary(file);
+    const blob = new Blob([buf]);
+    const { data, assetBlobs } = await parseLimnFile(blob);
+
+    // For legacy JSON files with assets, try to load from sidecar directory
+    if ((data.assets?.length ?? 0) > 0 && assetBlobs.size === 0) {
+      for (const asset of data.assets ?? []) {
+        const dir = file.parent?.path ?? "";
+        const prefix = dir ? `${dir}/` : "";
+        const assetPath = `${prefix}${file.basename}.limn-assets/${asset.id}`;
+        try {
+          const assetBuf = await this.app.vault.adapter.readBinary(assetPath);
+          assetBlobs.set(asset.id, new Blob([assetBuf]));
+        } catch {
+          // Sidecar asset not found -- skip
+        }
+      }
     }
-    const parsed: MindMapFileFormat = data ? JSON.parse(data) : DEFAULT_MAP;
-    const migrated = migrateToLatest(parsed);
-    this.editor.loadJSON(migrated);
+
+    // Populate provider's in-memory asset cache
+    this.provider.setAssetBlobs(assetBlobs);
+
+    this.editor.loadJSON(data);
     this.editor.remeasureAllNodes();
     this.applyThemeToContainer();
     if (!this.reactRoot) {
@@ -185,12 +213,25 @@ export class LimnView extends TextFileView {
     }
   }
 
-  getViewData(): string {
-    return JSON.stringify(this.editor.toJSON(), null, 2);
+  async onUnloadFile(file: TFile): Promise<void> {
+    // Flush any pending auto-save before unloading
+    await this.autoSave?.flush();
+    await super.onUnloadFile(file);
   }
 
-  clear(): void {
-    this.editor.loadJSON(DEFAULT_MAP);
+  /** Save the current document as a ZIP to the vault. */
+  async saveToDisk(): Promise<void> {
+    if (!this.file) return;
+    const data = this.editor.toJSON();
+    const assetBlobs = this.provider.getAssetBlobs();
+    const zipBlob = await buildLimnZip(data, assetBlobs);
+    const arrayBuf = await zipBlob.arrayBuffer();
+    this.isSaving = true;
+    try {
+      await this.app.vault.modifyBinary(this.file, arrayBuf);
+    } finally {
+      this.isSaving = false;
+    }
   }
 
   private mountReact(): void {

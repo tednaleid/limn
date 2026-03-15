@@ -55,6 +55,7 @@ export class MockTFile {
 export class MockVault {
   adapter = new MockVaultAdapter();
   private abstractFiles = new Map<string, unknown>();
+  private eventHandlers = new Map<string, Array<(...args: unknown[]) => void>>();
 
   getRoot() {
     return { path: "" };
@@ -77,6 +78,35 @@ export class MockVault {
 
   async modify(file: MockTFile, data: string): Promise<void> {
     await this.adapter.write(file.path, data);
+  }
+
+  async readBinary(file: MockTFile): Promise<ArrayBuffer> {
+    return this.adapter.readBinary(file.path);
+  }
+
+  async modifyBinary(file: MockTFile, data: ArrayBuffer): Promise<void> {
+    await this.adapter.writeBinary(file.path, data);
+  }
+
+  on(event: string, callback: (...args: unknown[]) => void): { unload: () => void } {
+    const handlers = this.eventHandlers.get(event) ?? [];
+    handlers.push(callback);
+    this.eventHandlers.set(event, handlers);
+    return {
+      unload: () => {
+        const h = this.eventHandlers.get(event);
+        if (h) {
+          const idx = h.indexOf(callback);
+          if (idx >= 0) h.splice(idx, 1);
+        }
+      },
+    };
+  }
+
+  /** Emit an event for testing external change detection. */
+  emit(event: string, ...args: unknown[]): void {
+    const handlers = this.eventHandlers.get(event) ?? [];
+    for (const h of handlers) h(...args);
   }
 }
 

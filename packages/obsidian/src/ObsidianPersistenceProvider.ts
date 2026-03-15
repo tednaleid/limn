@@ -1,68 +1,56 @@
 // ABOUTME: PersistenceProvider backed by the Obsidian vault API.
-// ABOUTME: Assets stored as sidecar files in a .limn-assets/ folder next to the .limn file.
+// ABOUTME: Assets cached in memory and bundled into the ZIP on save.
 
 import type { PersistenceProvider, MindMapFileFormat } from "@limn/core";
 import type { LimnView } from "./LimnView";
 
 export class ObsidianPersistenceProvider implements PersistenceProvider {
+  private assetCache = new Map<string, Blob>();
+
   constructor(private view: LimnView) {}
 
   load(): Promise<MindMapFileFormat | null> {
-    // TextFileView handles loading via setViewData -- return null
+    // FileView handles loading via onLoadFile -- return null
     return Promise.resolve(null);
   }
 
-  save(_data: MindMapFileFormat): Promise<void> {
-    // Trigger TextFileView's save mechanism
-    this.view.requestSave();
-    return Promise.resolve();
+  async save(_data: MindMapFileFormat): Promise<void> {
+    await this.view.saveToDisk();
   }
 
   async saveAsset(assetId: string, blob: Blob): Promise<void> {
-    const buffer = await blob.arrayBuffer();
-    const path = this.assetPath(assetId);
-    // Ensure the assets directory exists
-    const dir = path.substring(0, path.lastIndexOf("/"));
-    if (!this.view.app.vault.getAbstractFileByPath(dir)) {
-      await this.view.app.vault.createFolder(dir);
-    }
-    await this.view.app.vault.adapter.writeBinary(path, buffer);
+    this.assetCache.set(assetId, blob);
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {
-    const path = this.assetPath(assetId);
-    try {
-      const buffer = await this.view.app.vault.adapter.readBinary(path);
-      return new Blob([buffer]);
-    } catch {
-      return undefined;
-    }
+    return this.assetCache.get(assetId);
   }
 
   async loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     for (const id of assetIds) {
-      const blob = await this.loadAsset(id);
+      const blob = this.assetCache.get(id);
       if (blob) map.set(id, URL.createObjectURL(blob));
     }
     return map;
   }
 
+  /** Get all cached asset blobs (needed by the view for ZIP building). */
+  getAssetBlobs(): Map<string, Blob> {
+    return this.assetCache;
+  }
+
+  /** Bulk-set asset blobs from a parsed ZIP. */
+  setAssetBlobs(blobs: Map<string, Blob>): void {
+    this.assetCache = new Map(blobs);
+  }
+
   onExternalChange(_callback: (data: MindMapFileFormat) => void): () => void {
-    // TextFileView handles external changes via setViewData -- no-op
+    // External changes handled by vault.on('modify') in LimnView -- no-op
     return () => {};
   }
 
   dispose(): void {
-    // No resources to clean up
-  }
-
-  private assetPath(assetId: string): string {
-    const file = this.view.file;
-    if (!file) throw new Error("No file associated with view");
-    const dir = file.parent?.path ?? "";
-    const base = file.basename;
-    const prefix = dir ? `${dir}/` : "";
-    return `${prefix}${base}.limn-assets/${assetId}`;
+    this.assetCache.clear();
   }
 }
