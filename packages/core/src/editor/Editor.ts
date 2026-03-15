@@ -144,6 +144,7 @@ export class Editor {
 
   // Change notification for reactive UI (useSyncExternalStore)
   private version = 0;
+  private savedVersion = 0;
   private listeners: Set<() => void> = new Set();
 
   constructor(textMeasurer: TextMeasurer = stubTextMeasurer) {
@@ -298,6 +299,16 @@ export class Editor {
 
   get nodeCount(): number {
     return this.store.nodeCount;
+  }
+
+  /** True when the document has been modified since the last save/load and has content. */
+  hasUnsavedChanges(): boolean {
+    return this.version !== this.savedVersion && this.nodeCount > 0;
+  }
+
+  /** Mark the current state as saved (resets the unsaved-changes flag). */
+  markSaved(): void {
+    this.savedVersion = this.version;
   }
 
   getCamera(): Camera {
@@ -691,6 +702,7 @@ export class Editor {
     this.editing = false;
     this.clearCallback?.();
     this.notify();
+    this.savedVersion = this.version;
   }
 
   addRoot(text = "", x = 0, y = 0): string {
@@ -1348,6 +1360,7 @@ export class Editor {
     // Auto-assign branch colors to roots that lack them (old files)
     this.assignMissingRootColors();
     this.notify();
+    this.savedVersion = this.version;
   }
 
   /**
@@ -1372,6 +1385,7 @@ export class Editor {
     this._isExternalUpdate = true;
     this.notify();
     this._isExternalUpdate = false;
+    this.savedVersion = this.version;
   }
 
   /**

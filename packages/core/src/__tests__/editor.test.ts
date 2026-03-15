@@ -1469,4 +1469,62 @@ describe("Editor", () => {
       expect(editor.isExternalUpdate).toBe(false);
     });
   });
+
+  describe("save tracking", () => {
+    test("hasUnsavedChanges() returns false on a fresh editor", () => {
+      const fresh = new TestEditor();
+      expect(fresh.hasUnsavedChanges()).toBe(false);
+    });
+
+    test("hasUnsavedChanges() returns false after loadJSON()", () => {
+      expect(editor.hasUnsavedChanges()).toBe(false);
+    });
+
+    test("hasUnsavedChanges() returns true after adding a root", () => {
+      editor.addRoot("New", 0, 0);
+      editor.exitEditMode();
+      expect(editor.hasUnsavedChanges()).toBe(true);
+    });
+
+    test("hasUnsavedChanges() returns true after editing text", () => {
+      editor.setText("n0", "Updated");
+      expect(editor.hasUnsavedChanges()).toBe(true);
+    });
+
+    test("hasUnsavedChanges() returns false after markSaved()", () => {
+      editor.setText("n0", "Updated");
+      expect(editor.hasUnsavedChanges()).toBe(true);
+      editor.markSaved();
+      expect(editor.hasUnsavedChanges()).toBe(false);
+    });
+
+    test("hasUnsavedChanges() returns true after markSaved() then edit", () => {
+      editor.setText("n0", "Updated");
+      editor.markSaved();
+      editor.setText("n0", "Changed again");
+      expect(editor.hasUnsavedChanges()).toBe(true);
+    });
+
+    test("hasUnsavedChanges() stays true after undo (version keeps incrementing)", () => {
+      editor.markSaved();
+      editor.setText("n0", "Updated");
+      expect(editor.hasUnsavedChanges()).toBe(true);
+      editor.undo();
+      // Undo increments version too, so we can't detect "back to saved state"
+      // via version comparison alone. This is a safe false positive.
+      expect(editor.hasUnsavedChanges()).toBe(true);
+    });
+
+    test("hasUnsavedChanges() returns false after clear()", () => {
+      editor.clear();
+      expect(editor.hasUnsavedChanges()).toBe(false);
+    });
+
+    test("hasUnsavedChanges() returns false after applyExternalUpdate()", () => {
+      editor.setText("n0", "local change");
+      expect(editor.hasUnsavedChanges()).toBe(true);
+      editor.applyExternalUpdate(sampleMap);
+      expect(editor.hasUnsavedChanges()).toBe(false);
+    });
+  });
 });
