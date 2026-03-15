@@ -63,7 +63,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // after .onDisappear has already unregistered all coordinators.
         sessionFileURLs = coordinatorEntries.values.compactMap(\.fileURL).filter { $0.isFileURL }
         SessionStore.saveSession(fileURLs: sessionFileURLs)
-        return .terminateNow
+
+        // Collect live coordinators and flush all pending auto-saves
+        let liveEntries = coordinatorEntries.values.filter { $0.coordinator != nil }
+        let untitledEntries = liveEntries.filter { $0.fileURL == nil }
+
+        let group = DispatchGroup()
+        var anyUnsaved = false
+
+        // Flush all coordinators (saved and untitled) to prevent 500ms data loss
+        for entry in liveEntries {
+            guard let coord = entry.coordinator else { continue }
+            group.enter()
+            coord.flushAutoSave { group.leave() }
+        }
+
+        // Also check untitled coordinators for unsaved changes
+        for entry in untitledEntries {
+            guard let coord = entry.coordinator else { continue }
+            group.enter()
+            coord.checkUnsavedNewDocument { unsaved in
+                if unsaved { anyUnsaved = true }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            guard anyUnsaved else {
+                NSApp.reply(toApplicationShouldTerminate: true)
+                return
+            }
+
+            let alert = NSAlert()
+            alert.messageText = "You have unsaved documents"
+            alert.informativeText = "Do you want to save your changes before quitting?"
+            alert.addButton(withTitle: "Save")
+            alert.addButton(withTitle: "Don't Save")
+            alert.addButton(withTitle: "Cancel")
+
+            let response = alert.runModal()
+            switch response {
+            case .alertFirstButtonReturn:
+                // Trigger save on all unsaved untitled coordinators
+                for entry in untitledEntries {
+                    entry.coordinator?.triggerKeyboardShortcut(key: "s", meta: true)
+                }
+                // Don't terminate yet -- user needs to complete save dialogs
+                NSApp.reply(toApplicationShouldTerminate: false)
+            case .alertSecondButtonReturn:
+                NSApp.reply(toApplicationShouldTerminate: true)
+            default:
+                NSApp.reply(toApplicationShouldTerminate: false)
+            }
+        }
+
+        return .terminateLater
     }
 
     func applicationWillTerminate(_ notification: Notification) {

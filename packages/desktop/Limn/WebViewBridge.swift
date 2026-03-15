@@ -81,7 +81,7 @@ struct WebViewBridge: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, NSWindowDelegate {
         weak var webView: WKWebView?
 
         /// Path to the currently open file (nil for unsaved documents).
@@ -97,6 +97,12 @@ struct WebViewBridge: NSViewRepresentable {
         /// stays in sync with SwiftUI's WindowGroup dedup.
         var onFileURLChanged: ((URL) -> Void)?
 
+        /// SwiftUI's original window delegate, preserved for message forwarding.
+        private weak var originalWindowDelegate: NSWindowDelegate?
+        private var isInstalledAsWindowDelegate = false
+        /// Set to true when we've decided to allow the close (breaks recursion).
+        private var allowClose = false
+
         // WKScriptMessageHandler: receives messages from JS
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -111,6 +117,7 @@ struct WebViewBridge: NSViewRepresentable {
             switch type {
             case "ready":
                 isReady = true
+                installAsWindowDelegate()
                 if let url = pendingFileURL {
                     pendingFileURL = nil
                     loadFileIntoWebView(url: url)
@@ -382,6 +389,99 @@ struct WebViewBridge: NSViewRepresentable {
                     completion?(true)
                 }
             }
+        }
+
+        // MARK: - Window delegate (unsaved-changes prompt on close)
+
+        /// Install self as the window's delegate, preserving SwiftUI's original
+        /// delegate via message forwarding so its window management stays intact.
+        private func installAsWindowDelegate() {
+            guard !isInstalledAsWindowDelegate, let window = webView?.window else { return }
+            isInstalledAsWindowDelegate = true
+            originalWindowDelegate = window.delegate
+            window.delegate = self
+        }
+
+        /// Flush pending auto-save in the web view.
+        func flushAutoSave(completion: @escaping () -> Void) {
+            guard let webView else { completion(); return }
+            webView.evaluateJavaScript(
+                "(async () => { if (window.limn?.flush) await window.limn.flush(); })()"
+            ) { _, _ in completion() }
+        }
+
+        /// Check if the web view has unsaved changes in a new (untitled) document.
+        func checkUnsavedNewDocument(completion: @escaping (Bool) -> Void) {
+            guard currentFileURL == nil, let webView else {
+                completion(false)
+                return
+            }
+            webView.evaluateJavaScript(
+                "Boolean(window.limn?.hasUnsavedChanges && window.limn.hasUnsavedChanges())"
+            ) { result, _ in
+                completion((result as? Bool) ?? false)
+            }
+        }
+
+        func windowShouldClose(_ sender: NSWindow) -> Bool {
+            if allowClose {
+                allowClose = false
+                return true
+            }
+
+            // For saved documents, flush and allow close
+            if currentFileURL != nil {
+                flushAutoSave {}
+                return true
+            }
+
+            // For untitled documents, check for unsaved changes
+            checkUnsavedNewDocument { [weak self] hasUnsaved in
+                guard hasUnsaved else {
+                    self?.allowClose = true
+                    sender.performClose(nil)
+                    return
+                }
+
+                let alert = NSAlert()
+                alert.messageText = "Do you want to save the changes to this document?"
+                alert.informativeText = "Your changes will be lost if you don't save them."
+                alert.addButton(withTitle: "Save")
+                alert.addButton(withTitle: "Don't Save")
+                alert.addButton(withTitle: "Cancel")
+
+                alert.beginSheetModal(for: sender) { response in
+                    switch response {
+                    case .alertFirstButtonReturn:
+                        // Trigger Cmd+S to show the save panel
+                        self?.triggerKeyboardShortcut(key: "s", meta: true)
+                    case .alertSecondButtonReturn:
+                        self?.allowClose = true
+                        sender.performClose(nil)
+                    default:
+                        break // Cancel
+                    }
+                }
+            }
+            return false
+        }
+
+        // Forward unhandled delegate methods to SwiftUI's original window delegate
+        override func responds(to aSelector: Selector!) -> Bool {
+            if aSelector == #selector(NSWindowDelegate.windowShouldClose(_:)) {
+                return true
+            }
+            if let original = originalWindowDelegate, original.responds(to: aSelector) {
+                return true
+            }
+            return super.responds(to: aSelector)
+        }
+
+        override func forwardingTarget(for aSelector: Selector!) -> Any? {
+            if let original = originalWindowDelegate, original.responds(to: aSelector) {
+                return original
+            }
+            return super.forwardingTarget(for: aSelector)
         }
 
         // MARK: - WKNavigationDelegate
