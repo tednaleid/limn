@@ -1,7 +1,7 @@
 // ABOUTME: Root React component for Limn.
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Editor, AutoSaveController, compressToUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 import { EditorContext } from "./hooks/useEditor";
@@ -187,13 +187,14 @@ export function App({ docId, initialData }: AppProps) {
   const editor = useMemo(() => new Editor(domTextMeasurer), []);
   const desktop = useMemo(() => isDesktop(), []);
 
-  // Expose editor.toJSON() on window.limn for debug inspection
+  // Expose editor helpers on window.limn for debug inspection and Swift bridge
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const g = globalThis as any;
     if (!g.limn) g.limn = {};
     g.limn.toJSON = () => editor.toJSON();
-    return () => { delete g.limn.toJSON; };
+    g.limn.hasUnsavedChanges = () => editor.hasUnsavedChanges();
+    return () => { delete g.limn.toJSON; delete g.limn.hasUnsavedChanges; };
   }, [editor]);
   const provider = useMemo(
     () => desktop ? new DesktopPersistenceProvider() : new WebPersistenceProvider(docId),
@@ -243,9 +244,15 @@ export function App({ docId, initialData }: AppProps) {
   }, [editor, loaded]);
 
   // Set up auto-save and cross-tab sync after initial load
+  const autoSaveRef = useRef<AutoSaveController | null>(null);
   useEffect(() => {
     if (!loaded) return;
     const autoSave = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
+    autoSaveRef.current = autoSave;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const g = globalThis as any;
+    if (!g.limn) g.limn = {};
+    g.limn.flush = () => autoSave.flush();
     const unsubExternal = provider.onExternalChange((data) => {
       editor.applyExternalUpdate(data);
       editor.remeasureAllNodes();
@@ -262,6 +269,8 @@ export function App({ docId, initialData }: AppProps) {
       (provider as DesktopPersistenceProvider).signalReady();
     }
     return () => {
+      autoSaveRef.current = null;
+      delete g.limn.flush;
       autoSave.dispose();
       unsubExternal();
     };
@@ -278,6 +287,7 @@ export function App({ docId, initialData }: AppProps) {
       editor.onSave(() => {
         if (dp.filename) {
           void dp.save(editor.toJSON()).then(() => {
+            editor.markSaved();
             setFilename(dp.filename);
             setFlash({ message: "Saved" });
           });
@@ -285,6 +295,7 @@ export function App({ docId, initialData }: AppProps) {
           // Untitled document -- Cmd-S triggers Save As dialog
           void dp.requestSaveAs(editor.toJSON()).then((name) => {
             if (name) {
+              editor.markSaved();
               setFilename(name);
               setFlash({ message: "Saved" });
             }
@@ -294,6 +305,7 @@ export function App({ docId, initialData }: AppProps) {
       editor.onSaveAs(() => {
         void dp.requestSaveAs(editor.toJSON()).then((name) => {
           if (name) {
+            editor.markSaved();
             setFilename(name);
             setFlash({ message: "Saved" });
           }
@@ -317,6 +329,7 @@ export function App({ docId, initialData }: AppProps) {
         void (async () => {
           try {
             const name = await saveToFile(editor, provider);
+            editor.markSaved();
             setFilename(name);
             setFlash({ message: "Saved" });
           } catch (err) {
@@ -332,6 +345,7 @@ export function App({ docId, initialData }: AppProps) {
         void (async () => {
           try {
             const name = await saveAsToFile(editor, provider);
+            editor.markSaved();
             setFilename(name);
             setFlash({ message: "Saved" });
           } catch (err) {
@@ -410,6 +424,25 @@ export function App({ docId, initialData }: AppProps) {
       setFilename(getCurrentFilename());
     }
   }, [loaded, desktop, provider]);
+
+  // Flush pending auto-save and warn about unsaved new documents on close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Flush any debounced auto-save so the last 500ms of edits aren't lost
+      void autoSaveRef.current?.flush();
+
+      // Warn about unsaved new (untitled) documents
+      const hasFile = desktop
+        ? (provider as DesktopPersistenceProvider).filename !== null
+        : getCurrentFilename() !== null;
+      if (!hasFile && editor.hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [editor, provider, desktop]);
 
   const clearFlash = useCallback(() => setFlash(null), []);
 
