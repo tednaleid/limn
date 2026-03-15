@@ -100,8 +100,6 @@ struct WebViewBridge: NSViewRepresentable {
         /// SwiftUI's original window delegate, preserved for message forwarding.
         private weak var originalWindowDelegate: NSWindowDelegate?
         private var isInstalledAsWindowDelegate = false
-        /// Set to true when we've decided to allow the close (breaks recursion).
-        private var allowClose = false
 
         // WKScriptMessageHandler: receives messages from JS
         func userContentController(
@@ -424,11 +422,6 @@ struct WebViewBridge: NSViewRepresentable {
         }
 
         func windowShouldClose(_ sender: NSWindow) -> Bool {
-            if allowClose {
-                allowClose = false
-                return true
-            }
-
             // For saved documents, flush and allow close
             if currentFileURL != nil {
                 flushAutoSave {}
@@ -438,8 +431,8 @@ struct WebViewBridge: NSViewRepresentable {
             // For untitled documents, check for unsaved changes
             checkUnsavedNewDocument { [weak self] hasUnsaved in
                 guard hasUnsaved else {
-                    self?.allowClose = true
-                    sender.performClose(nil)
+                    // No unsaved changes -- close directly
+                    sender.close()
                     return
                 }
 
@@ -456,8 +449,9 @@ struct WebViewBridge: NSViewRepresentable {
                         // Trigger Cmd+S to show the save panel
                         self?.triggerKeyboardShortcut(key: "s", meta: true)
                     case .alertSecondButtonReturn:
-                        self?.allowClose = true
-                        sender.performClose(nil)
+                        // Close without saving -- use close() directly since
+                        // performClose() doesn't work from sheet completion handlers
+                        sender.close()
                     default:
                         break // Cancel
                     }
