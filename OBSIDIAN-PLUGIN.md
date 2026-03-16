@@ -16,21 +16,22 @@ packages/obsidian/   # Obsidian plugin (esbuild entry point)
 
 Key classes:
 
-- **LimnView** extends Obsidian's `TextFileView`. Receives file content via `setViewData()`,
-  returns it via `getViewData()`. Mounts an isolated React tree into the view container.
+- **LimnView** extends Obsidian's `FileView`. Receives file content via `onLoadFile()`,
+  which reads binary data from the vault. Mounts an isolated React tree into the view container.
 - **ObsidianPersistenceProvider** implements `PersistenceProvider` using Obsidian's vault API.
-  Triggers saves via `TextFileView.requestSave()`. Stores image assets as sidecar files in
-  a `.limn-assets/` folder next to the `.limn` file.
+  Triggers saves via `LimnView.saveToDisk()` which writes ZIP bundles to the vault. Image
+  assets are stored in a sidecar `.limn-assets/` folder next to the `.limn` file for
+  legacy compatibility and are loaded on file open if present.
 - **DomTextMeasurer** is shared with the web app. The `createDomTextMeasurer(container)`
   factory appends the measurement element to the view container instead of `document.body`.
 
 ## File format
 
-`.limn` files in Obsidian contain plain JSON (the `MindMapFileFormat` structure from
-`@limn/core`) without ZIP wrapping, since Obsidian handles binary assets as separate
-vault files. The web app stores `.limn` files as ZIP bundles.
+`.limn` files are ZIP bundles containing `data.json` and an `assets/` directory, matching
+the web app format. Legacy plain-JSON `.limn` files are auto-migrated to ZIP on next save.
 
-Image assets are stored in a sidecar folder: `MyMap.limn-assets/` alongside `MyMap.limn`.
+Image assets from legacy files may also exist in a sidecar folder (`MyMap.limn-assets/`
+alongside `MyMap.limn`), which is loaded on file open if present.
 
 ## Local development setup
 

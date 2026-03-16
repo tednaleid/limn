@@ -62,7 +62,7 @@ bun run build      # production build
 - Diff-based undo/redo (snapshot capture, no Command classes)
 - SVG rendering with pan/zoom viewport
 - IndexedDB auto-save with cross-tab sync
-- Sidecar asset storage for images (`file.limn` + `file.limn-assets/`)
+- ZIP file format with embedded assets (`data.json` + `assets/`)
 
 ## Storage
 
@@ -106,6 +106,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Shift+Enter | Create sibling node |
 | Backspace | Delete node |
 | Space | Toggle collapse |
+| c / Shift+c | Cycle branch color forward / backward |
 
 **Structure:**
 
@@ -146,6 +147,8 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Cmd+1 | Zoom to selected node |
 | Shift+Arrows / Shift+hjkl | Pan canvas |
 | Shift+Alt+Arrows / Shift+Alt+hjkl | Pan canvas (fine) |
+| m | Open menu |
+| ? | Show keyboard shortcuts |
 | Ctrl+Shift+K | Toggle keystroke overlay (for demos) |
 
 **Mouse:**

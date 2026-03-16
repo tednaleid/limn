@@ -13,9 +13,13 @@ For this project, you are allowed to commit, and are actually REQUIRED to commit
 ```
 README.md           # description of the app, keyboard shortcuts
 TODO.md             # initial ideas that contain possible future work, must be planned before implementing
-OBSIDIAN_PLUGIN.md  # details about how limn is used as a plugin within the Obsidian markdown editor
+OBSIDIAN-PLUGIN.md  # details about how limn is used as a plugin within the Obsidian markdown editor
+DESKTOP-APP.md      # desktop app build, signing, distribution, debug server
+TESTING.md          # testing philosophy, commands, debug server usage
 packages/core/      # Framework-agnostic TS library — NO React, NO browser APIs
 packages/web/       # React web app — rendering, input handling, persistence
+packages/obsidian/  # Obsidian plugin — opens .limn files inside Obsidian
+packages/desktop/   # Native macOS app — Swift/SwiftUI wrapping WKWebView
 ```
 
 ## Commands
