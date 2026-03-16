@@ -111,11 +111,10 @@ desktop-build: desktop-gen
     /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted ~/Applications/Limn.app
 
 # Build and run the desktop app in dev mode (loads from Vite dev server)
-desktop-dev: desktop-gen
-    cd packages/desktop && xcodebuild -project Limn.xcodeproj -scheme Limn -configuration Debug build SYMROOT={{desktop_build_dir}}
+desktop-dev: desktop-build
     @echo "Launching Limn in dev mode (loading from localhost:5173)..."
     @echo "Make sure 'just serve' is running in another terminal."
-    LIMN_DEV_URL="http://localhost:5173/limn/" {{desktop_build_dir}}/Debug/Limn.app/Contents/MacOS/Limn
+    LIMN_DEV_URL="http://localhost:5173/limn/" ~/Applications/Limn.app/Contents/MacOS/Limn
 
 # Open a .limn file in the running desktop app (sends via Apple Events)
 desktop-open file:
