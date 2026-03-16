@@ -125,9 +125,13 @@ jobs:
 
       # -- Upload --
 
+      - name: Extract release notes from tag
+        run: git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > /tmp/release-notes.txt
+
       - name: Upload DMG to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: /tmp/release-notes.txt
           files: ${{ env.DMG_PATH }}
 
       # -- Cleanup --
