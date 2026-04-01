@@ -14,8 +14,9 @@ jobs:
     env:
       # Job-level so `if: env.APPLE_CERTIFICATE != ''` gates signing steps
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -135,6 +136,45 @@ jobs:
         with:
           body_path: /tmp/release-notes.txt
           files: ${{ env.DMG_PATH }}
+
+      # -- Update Homebrew cask --
+
+      - name: Update Homebrew cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/tednaleid/homebrew-limn.git" /tmp/homebrew-limn
+          cd /tmp/homebrew-limn
+
+          mkdir -p Casks
+          cat > Casks/limn.rb << CASK
+          cask "limn" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/tednaleid/limn/releases/download/#{version}/Limn-#{version}.dmg"
+            name "Limn"
+            desc "Keyboard-first, offline-capable mind map app"
+            homepage "https://github.com/tednaleid/limn"
+
+            depends_on macos: ">= :sonoma"
+
+            app "Limn.app"
+
+            zap trash: [
+              "~/Library/Preferences/com.tednaleid.Limn.plist",
+            ]
+          end
+          CASK
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/limn.rb
+          git diff --cached --quiet && echo "No cask changes" && exit 0
+          git commit -m "Update limn to ${VERSION}"
+          git push
 
       # -- Cleanup --
 

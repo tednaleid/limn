@@ -31,6 +31,16 @@ A `justfile` should be used for common commands (`just check` runs tests + lint 
 - `just serve` already uses `tee` for output redirection. Do not add shell redirect operators (`2>&1 &`) when invoking it.
 - NEVER use command substitution when committing, Ted will never approve this, always use a heredoc
 
+## Build and Release
+
+- `just check` -- run all tests (with coverage), linting, type checking, and Obsidian build (used by CI and pre-commit)
+- `just test` -- run tests only
+- `just lint` -- run linter only
+- `just fmt` -- auto-fix lint issues
+- `just clean` -- remove build artifacts and caches
+- `just bump` -- bump version across all packages, generate release notes, tag, and push
+- `just retag` -- re-trigger release workflow for an existing version (preserves tag annotation)
+
 ## Architecture invariants
 
 - **Editor is the sole source of truth.** All mutations go through Editor methods. DOM renders from Editor state, never writes to it.

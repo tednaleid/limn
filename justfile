@@ -83,12 +83,31 @@ release: obsidian-build
 bump version="":
     bun run scripts/bump-version.ts {{version}}
 
-# Delete a GitHub release and re-tag the current commit to re-trigger release workflows
-retag tag:
-    gh release delete {{tag}} --yes || true
-    git push origin :refs/tags/{{tag}} || true
-    git tag -f {{tag}}
+# Delete a GitHub release and re-tag to re-trigger release workflow.
+# Preserves the annotated tag message (release notes).
+# Usage: just retag 0.9.9
+retag version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tag="{{version}}"
+    # Save existing tag annotation before deleting
+    notes=$(git tag -l --format='%(contents)' "$tag" 2>/dev/null || echo "$tag")
+    notes_file=$(mktemp)
+    trap 'rm -f "$notes_file"' EXIT
+    echo "$notes" > "$notes_file"
+    gh release delete "$tag" --yes || true
+    git push origin ":refs/tags/$tag" || true
+    git tag -d "$tag" || true
+    git tag -a "$tag" -F "$notes_file"
     git push && git push --tags
+
+# Remove build artifacts and caches
+clean:
+    rm -rf coverage/ release/ packages/web/dist/ packages/obsidian/dist/
+
+# Auto-fix lint issues
+fmt:
+    bun run lint -- --fix
 
 # Clean and reinstall node_modules (fixes esbuild EPIPE errors after bun add)
 clean-install:

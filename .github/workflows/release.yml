@@ -12,7 +12,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -22,9 +22,6 @@ jobs:
 
       - name: Install dependencies
         run: just install
-
-      - name: Run checks
-        run: just check
 
       - name: Build release assets
         run: just release
