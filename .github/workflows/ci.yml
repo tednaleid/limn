@@ -14,7 +14,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Install dependencies
         run: just install
@@ -31,7 +31,7 @@ jobs:
 
       - name: Update coverage badge
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 41b99760446766c22cc7143632db43c6

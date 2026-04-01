@@ -22,7 +22,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Install xcodegen
         run: brew install xcodegen
@@ -132,10 +132,16 @@ jobs:
         run: git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > /tmp/release-notes.txt
 
       - name: Upload DMG to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: /tmp/release-notes.txt
-          files: ${{ env.DMG_PATH }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file /tmp/release-notes.txt \
+            "$DMG_PATH" \
+          || gh release upload "$GITHUB_REF_NAME" \
+            "$DMG_PATH" \
+            --clobber
 
       # -- Update Homebrew cask --
 

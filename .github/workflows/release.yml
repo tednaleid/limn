@@ -18,7 +18,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
 
       - name: Install dependencies
         run: just install
@@ -29,11 +29,14 @@ jobs:
       - name: Extract release notes from tag
         run: git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > /tmp/release-notes.txt
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: /tmp/release-notes.txt
-          files: |
-            release/main.js
-            release/manifest.json
-            release/styles.css
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file /tmp/release-notes.txt \
+            release/main.js release/manifest.json release/styles.css \
+          || gh release upload "$GITHUB_REF_NAME" \
+            release/main.js release/manifest.json release/styles.css \
+            --clobber
