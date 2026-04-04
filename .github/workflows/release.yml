@@ -18,7 +18,9 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: extractions/setup-just@v3
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
 
       - name: Install dependencies
         run: just install
