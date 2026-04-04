@@ -13,6 +13,11 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  # Force Node 24 for all actions (upload-pages-artifact's internal
+  # upload-artifact@v4 still targets Node 20; upstream fix pending)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
