@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Force Node 24 for all actions (upload-pages-artifact's internal
-  # upload-artifact@v4 still targets Node 20; upstream fix pending)
+  # Remove this block when upload-pages-artifact bumps to v5+
+  # (its internal upload-artifact@v4 still targets Node 20)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -36,6 +36,8 @@ jobs:
       - name: Build
         run: just build
 
+      # TODO: bump to v5+ when released (fixes Node 20 warning)
+      # Track: https://github.com/actions/upload-pages-artifact/pull/139
       - uses: actions/upload-pages-artifact@v4
         with:
           path: packages/web/dist
