@@ -1,0 +1,148 @@
+# veer rules - evaluated in order, first match wins.
+# Run 'veer list' to see active rules, 'veer test "<cmd>"' to preview behavior.
+# See .claude/skills/veer/SKILL.md for a guide on adding rules.
+
+# -- Safety --
+
+[[rule]]
+id = "no-curl-pipe-shell"
+name = "Block curl piped to a shell"
+action = "reject"
+message = "Don't pipe curl to bash/sh -- download, inspect, then execute."
+[rule.match]
+command_all = ["curl", "bash"]
+
+# -- npx → bunx --
+
+[[rule]]
+id = "use-bunx"
+name = "Block npx"
+action = "reject"
+message = "This is a Bun project. Use 'bunx' instead of 'npx'."
+[rule.match]
+command = "npx"
+
+# -- Test runner --
+
+[[rule]]
+id = "use-just-test-vitest"
+name = "Block vitest"
+action = "reject"
+message = "Use 'just test' to run all tests, 'just test-file <name>' for a single file, 'just coverage' for coverage, or 'just test-watch' for watch mode."
+[rule.match]
+command = "vitest"
+
+[[rule]]
+id = "use-just-coverage-bun"
+name = "Block bun run test:coverage"
+action = "reject"
+message = "Use 'just coverage' to run tests with coverage."
+[rule.match]
+command = "bun"
+arg_all = ["run", "test:coverage"]
+
+[[rule]]
+id = "use-just-test-watch-bun"
+name = "Block bun run test:watch"
+action = "reject"
+message = "Use 'just test-watch' to run tests in watch mode."
+[rule.match]
+command = "bun"
+arg_all = ["run", "test:watch"]
+
+[[rule]]
+id = "use-just-test-bun-run"
+name = "Block bun run test"
+action = "reject"
+message = "Use 'just test' to run all tests, 'just test-file <name>' for a single file, or 'just coverage' for coverage."
+[rule.match]
+command = "bun"
+arg_all = ["run", "test"]
+
+[[rule]]
+id = "use-just-test-bun"
+name = "Block bun test"
+action = "reject"
+message = "Use 'just test' to run all tests, 'just test-file <name>' for a single file, or 'just coverage' for coverage."
+[rule.match]
+command = "bun"
+arg = "test"
+
+# -- Linter --
+
+[[rule]]
+id = "use-just-lint-eslint"
+name = "Block eslint"
+action = "reject"
+message = "Use 'just lint' to check for lint issues, or 'just fmt' to auto-fix them."
+[rule.match]
+command = "eslint"
+
+[[rule]]
+id = "use-just-lint-bun"
+name = "Block bun run lint"
+action = "reject"
+message = "Use 'just lint' to check for lint issues, or 'just fmt' to auto-fix them."
+[rule.match]
+command = "bun"
+arg_all = ["run", "lint"]
+
+# -- TypeScript --
+
+[[rule]]
+id = "use-just-typecheck-tsc"
+name = "Block tsc"
+action = "reject"
+message = "Use 'just typecheck' to type-check the project."
+[rule.match]
+command = "tsc"
+
+[[rule]]
+id = "use-just-typecheck-bunx-tsc"
+name = "Block bunx tsc"
+action = "reject"
+message = "Use 'just typecheck' to type-check the project."
+[rule.match]
+command = "bunx"
+arg = "tsc"
+
+# -- Dev server --
+
+[[rule]]
+id = "use-just-serve-vite"
+name = "Block vite"
+action = "reject"
+message = "Use 'just serve' which checks if the dev server is already running on :5173 before starting."
+[rule.match]
+command = "vite"
+
+[[rule]]
+id = "use-just-serve-bun"
+name = "Block bun run dev"
+action = "reject"
+message = "Use 'just serve' which checks if the dev server is already running on :5173 before starting."
+[rule.match]
+command = "bun"
+arg_all = ["run", "dev"]
+
+# -- Build --
+
+[[rule]]
+id = "use-just-build-bun"
+name = "Block bun run build"
+action = "reject"
+message = "Use 'just build' to build the project."
+[rule.match]
+command = "bun"
+arg_all = ["run", "build"]
+
+# -- Install --
+
+[[rule]]
+id = "use-just-install"
+name = "Block bun install"
+action = "reject"
+message = "Use 'just install' to install dependencies."
+[rule.match]
+command = "bun"
+arg = "install"
