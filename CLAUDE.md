@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Limn — keyboard-first, offline-capable mind map progressive web app and Obsidian plugin.
+Limn -- keyboard-first, offline-capable mind map progressive web app and Obsidian plugin.
+
+For project orientation (stack, build/test commands, architecture, entry points), see [ONBOARDING.md](./ONBOARDING.md).
 
 ## Development Methodology
 
@@ -8,38 +10,12 @@ Testing is a first-class citizen. We are using red/green development practices. 
 
 For this project, you are allowed to commit, and are actually REQUIRED to commit your progress after every significant change. Commits should only happen when tests and linting are green.
 
-## Structure
-
-```
-README.md           # description of the app, keyboard shortcuts
-TODO.md             # initial ideas that contain possible future work, must be planned before implementing
-OBSIDIAN-PLUGIN.md  # details about how limn is used as a plugin within the Obsidian markdown editor
-DESKTOP-APP.md      # desktop app build, signing, distribution, debug server
-TESTING.md          # testing philosophy, commands, debug server usage
-packages/core/      # Framework-agnostic TS library — NO React, NO browser APIs
-packages/web/       # React web app — rendering, input handling, persistence
-packages/obsidian/  # Obsidian plugin — opens .limn files inside Obsidian
-packages/desktop/   # Native macOS app — Swift/SwiftUI wrapping WKWebView
-```
-
-## Commands
-
-A `justfile` should be used for common commands (`just check` runs tests + lint + typecheck, `just test-file <name>` runs a single test file, `just install` runs `bun install`).
+## Command rules
 
 - Use `bunx` instead of `npx` for running package binaries (this is a Bun project).
 - Save Playwright MCP screenshots to `/tmp`, not the project directory.
 - `just serve` already uses `tee` for output redirection. Do not add shell redirect operators (`2>&1 &`) when invoking it.
-- NEVER use command substitution when committing, Ted will never approve this, always use a heredoc
-
-## Build and Release
-
-- `just check` -- run all tests (with coverage), linting, type checking, and Obsidian build (used by CI and pre-commit)
-- `just test` -- run tests only
-- `just lint` -- run linter only
-- `just fmt` -- auto-fix lint issues
-- `just clean` -- remove build artifacts and caches
-- `just bump` -- bump version across all packages, generate release notes, tag, and push
-- `just retag` -- re-trigger release workflow for an existing version (preserves tag annotation)
+- NEVER use command substitution when committing, Ted will never approve this, always use a heredoc.
 
 ## Architecture invariants
 
