@@ -119,23 +119,10 @@ export function setPlatform(p: Platform): void { current = p; }
 
 > **Open question:** Does anything in `@limn/web` import `PLATFORM` as a value rather than a function? Grep first; the answer determines whether to make it a getter or keep as const.
 
-#### 3c. `element.style.cssText` in `DomTextMeasurer.ts:89`
+#### 3c. `element.style.cssText` in `DomTextMeasurer.ts:89` ✓
 
-```ts
-el.style.cssText += ";white-space:pre;width:auto";
-```
-
-- [ ] Replace with individual property assignments:
-
-```ts
-el.style.whiteSpace = "pre";
-el.style.width = "auto";
-```
-
-Or, if the surrounding `applyStyle` already sets many CSS props, fold these into it.
-
-- [ ] Run the text-measurement tests.
-- [ ] Commit.
+- [x] Replaced all four `el.style.cssText = …` / `+=` sites (`createMeasureElement`, `applyStyle`, `measure`, `reflow`) with individual property assignments. `applyStyle` now explicitly clears `whiteSpace`/`width`/`wordBreak` so a reused element starts clean before `measure`/`reflow` set their own values.
+- [ ] Visual verification deferred (no in-session browser control); dev server starts clean, lint/typecheck/Obsidian build all green.
 
 ### 4. Cut the re-submission release
 

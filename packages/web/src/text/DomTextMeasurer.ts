@@ -20,17 +20,14 @@ function getMeasureElement(): HTMLDivElement {
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "limn-measure";
-  // Inject default styles directly so the element works regardless of stylesheet context
-  el.style.cssText = [
-    "position:absolute",
-    "visibility:hidden",
-    "white-space:pre",
-    `font-size:${FONT_SIZE}px`,
-    `font-family:${FONT_FAMILY}`,
-    `line-height:${LINE_HEIGHT}px`,
-    `padding:${PADDING_Y}px ${PADDING_X}px`,
-    "box-sizing:border-box",
-  ].join(";");
+  el.style.position = "absolute";
+  el.style.visibility = "hidden";
+  el.style.whiteSpace = "pre";
+  el.style.fontSize = `${FONT_SIZE}px`;
+  el.style.fontFamily = FONT_FAMILY;
+  el.style.lineHeight = `${LINE_HEIGHT}px`;
+  el.style.padding = `${PADDING_Y}px ${PADDING_X}px`;
+  el.style.boxSizing = "border-box";
   container.appendChild(el);
   return el;
 }
@@ -39,16 +36,18 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
   const fontSize = style?.fontSize ?? FONT_SIZE;
   const lineHeight = Math.round(fontSize * (LINE_HEIGHT / FONT_SIZE));
   const paddingY = Math.round(fontSize * (PADDING_Y / FONT_SIZE));
-  el.style.cssText = [
-    "position:absolute",
-    "visibility:hidden",
-    "box-sizing:border-box",
-    `font-size:${fontSize}px`,
-    `font-weight:${style?.fontWeight ?? 400}`,
-    `font-family:${FONT_FAMILY}`,
-    `line-height:${lineHeight}px`,
-    `padding:${paddingY}px ${PADDING_X}px`,
-  ].join(";");
+  el.style.position = "absolute";
+  el.style.visibility = "hidden";
+  el.style.boxSizing = "border-box";
+  el.style.fontSize = `${fontSize}px`;
+  el.style.fontWeight = String(style?.fontWeight ?? 400);
+  el.style.fontFamily = FONT_FAMILY;
+  el.style.lineHeight = `${lineHeight}px`;
+  el.style.padding = `${paddingY}px ${PADDING_X}px`;
+  // Clear measure/reflow-only props so a reused element starts clean.
+  el.style.whiteSpace = "";
+  el.style.width = "";
+  el.style.wordBreak = "";
 }
 
 /** Populate an element with styled DOM nodes from markdown text. */
@@ -86,7 +85,8 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     measure(text: string, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.cssText += ";white-space:pre;width:auto";
+      el.style.whiteSpace = "pre";
+      el.style.width = "auto";
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
@@ -105,7 +105,9 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.cssText += `;white-space:pre-wrap;word-break:break-word;width:${maxWidth}px`;
+      el.style.whiteSpace = "pre-wrap";
+      el.style.wordBreak = "break-word";
+      el.style.width = `${maxWidth}px`;
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
