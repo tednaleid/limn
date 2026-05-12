@@ -217,31 +217,15 @@ After 3a the App.tsx/desktop-bridge/desktop-persistence ones should be gone. Rem
 
 These items target the scorecard panels that currently show "not available" or are flagged as Recommendations rather than Errors/Warnings. Doing them is what flips the scorecard from "Risks" to a higher tier.
 
-### 10. GitHub artifact attestations on release assets
+### 10. GitHub artifact attestations on release assets ✓
 
 Currently flagged on both `main.js` and `styles.css`. Likely also gates the "Malware scan not available" panel from running.
 
-- [ ] In `.github/workflows/release.yml`, add an `actions/attest-build-provenance@v2` step **before** the `gh release create` step. The step needs `id-token: write` and `attestations: write` permissions on the job.
-
-```yaml
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
-
-# ... after building release assets:
-- name: Attest release assets
-  uses: actions/attest-build-provenance@v2
-  with:
-    subject-path: |
-      release/main.js
-      release/styles.css
-```
+- [x] Added `actions/attest-build-provenance@v2` step in `.github/workflows/release.yml` between the build step and the `gh release create` step, with `id-token: write` + `attestations: write` permissions at the workflow level.
+- [ ] Cut a release, verify the attestation shows up: `gh attestation list --repo tednaleid/limn`.
+- [ ] Refresh the Obsidian scorecard and check whether "Malware scan" flips from "not available" to either "clean" or a specific finding.
 
 Reference: <https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds>.
-
-- [ ] Cut a release, verify the attestation shows up on the GitHub release page (`gh attestation list`).
-- [ ] Refresh the Obsidian scorecard and check whether "Malware scan" flips from "not available" to either "clean" or a specific finding.
 
 ### 11. Hygiene gap: missing contributing guide ✓
 

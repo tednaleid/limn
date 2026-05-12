@@ -7,6 +7,11 @@ on:
 
 permissions:
   contents: write
+  # Required for actions/attest-build-provenance to mint Sigstore-signed
+  # provenance attestations for the release assets. Surfaces in the
+  # Obsidian community-plugin scorecard.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -27,6 +32,13 @@ jobs:
 
       - name: Build release assets
         run: just release
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            release/main.js
+            release/styles.css
 
       - name: Extract release notes from tag
         run: git tag -l --format='%(contents)' "$GITHUB_REF_NAME" > /tmp/release-notes.txt
