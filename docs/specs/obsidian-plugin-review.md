@@ -243,11 +243,11 @@ Reference: <https://docs.github.com/en/actions/security-for-github-actions/using
 - [ ] Cut a release, verify the attestation shows up on the GitHub release page (`gh attestation list`).
 - [ ] Refresh the Obsidian scorecard and check whether "Malware scan" flips from "not available" to either "clean" or a specific finding.
 
-### 11. Hygiene gap: missing contributing guide
+### 11. Hygiene gap: missing contributing guide ✓
 
 The Health panel says "Has readme, license, description. Missing contributing guide." This is the only hygiene point losing us Health credit (currently Excellent anyway).
 
-- [ ] Add a `CONTRIBUTING.md` at the repo root covering: how to build, how to run tests, how to submit changes, code-of-conduct pointer.
+- [x] Add `CONTRIBUTING.md` at the repo root covering: bug reporting, dev setup, branching/PR conventions, architectural invariants, license.
 - [ ] Confirm scorecard reflects it on next refresh.
 
 ### 12. Disclosures audit
