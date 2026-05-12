@@ -16,6 +16,7 @@
     "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^10.0.2",
+    "eslint-plugin-obsidianmd": "^0.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"

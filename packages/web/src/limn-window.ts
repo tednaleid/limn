@@ -36,4 +36,4 @@ export interface LimnWindow {
   webkit?: { messageHandlers?: { limn?: WebkitMessageHandler } };
 }
 
-export const limnWindow = globalThis as unknown as LimnWindow;
+export const limnWindow = window as unknown as LimnWindow;

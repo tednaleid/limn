@@ -90,10 +90,12 @@ export function setPlatform(p: Platform): void { current = p; }
 
 > **Open question:** Does anything in `@limn/web` import `PLATFORM` as a value rather than a function? Grep first; the answer determines whether to make it a getter or keep as const.
 
-#### 3c. `element.style.cssText` in `DomTextMeasurer.ts:89` ✓
+#### 3c. `element.style.cssText` in `DomTextMeasurer.ts:89` ✓ (with caveat)
 
 - [x] Replaced all four `el.style.cssText = …` / `+=` sites (`createMeasureElement`, `applyStyle`, `measure`, `reflow`) with individual property assignments. `applyStyle` now explicitly clears `whiteSpace`/`width`/`wordBreak` so a reused element starts clean before `measure`/`reflow` set their own values.
 - [ ] Visual verification deferred (no in-session browser control); dev server starts clean, lint/typecheck/Obsidian build all green.
+
+> **Caveat — discovered after Task 14:** `eslint-plugin-obsidianmd` v0.3.0's `no-static-styles-assignment` rule flags **any** `element.style.<prop> = ...` assignment, not just `cssText`. So our refactor traded one cssText violation for 14 individual style.<prop> violations under the stricter local rule. The current Obsidian scanner only reported the `cssText` site, so we are fine for the immediate re-scan — but Phase 2 should include "move DomTextMeasurer base styles to a CSS class in `styles.css`" so the local rule (and any future scanner version) is satisfied.
 
 ### 4. Cut the re-submission release
 
@@ -208,7 +210,30 @@ The Scorecard lists 8 disclosures (these are informational, not findings, but wo
 ### 13. Architectural follow-up (optional, after scorecard is green)
 
 - [ ] Audit whether `@limn/web` should be split into `@limn/render` (DOM rendering, host-agnostic) and `@limn/web-app` (the PWA shell, navigator/fetch/window-level concerns). The Obsidian plugin would only depend on `@limn/render`.
-- [ ] Add CI step that runs Obsidian's lint rules (`eslint-plugin-obsidianmd` if available, or curate a subset) against `packages/obsidian` + the bundled `main.js` to catch regressions before re-submission.
+
+### 14. Install eslint-plugin-obsidianmd ✓
+
+Local regression net so Obsidian-scanner findings surface at `just lint` time, not 10 days later on the scorecard.
+
+- [x] Installed `eslint-plugin-obsidianmd@0.3.0` as a workspace dev dep.
+- [x] Added `eslint.obsidian.config.js` with manual rule selection (skips the heavyweight `recommended` preset which pulls in `tseslint.configs.recommendedTypeChecked` + Microsoft SDL + import/depend/no-unsanitized + parser-service setup).
+- [x] Six scorecard-matching rules enabled: `no-global-this`, `no-static-styles-assignment`, `no-tfile-tfolder-cast`, `platform`, `prefer-active-doc`, `prefer-window-timers`.
+- [x] Added `just lint-obsidian` recipe (informational; not part of `just check`).
+- [x] Promoted `obsidianmd/no-global-this` into the main `eslint.config.js` as **error** since it has zero current violations. Any new `globalThis` access now blocks at `just lint` / `just check` / pre-commit. Required switching `limn-window.ts` from `globalThis as unknown as LimnWindow` to `window as unknown as LimnWindow`.
+- [ ] After Phase 2 closes the remaining warnings, promote the rest of the obsidianmd rules into the main config and remove `eslint.obsidian.config.js`.
+
+Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
+
+| Rule                              | Severity | Count |
+|-----------------------------------|----------|-------|
+| obsidianmd/no-static-styles-assignment | error    | 14    |
+| obsidianmd/prefer-active-doc           | warn     | 20    |
+| obsidianmd/prefer-window-timers        | warn     | 14    |
+| obsidianmd/no-tfile-tfolder-cast       | warn     | 1     |
+| obsidianmd/platform                    | warn     | 1     |
+| **Total**                              |          | **50** |
+
+> The 14 `no-static-styles-assignment` errors are all in `DomTextMeasurer.ts` — see the Task 3c caveat. Move those styles to a CSS class as part of Phase 2.
 
 ---
 

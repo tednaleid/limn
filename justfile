@@ -28,6 +28,13 @@ test-file name:
 lint:
     bun run lint
 
+# Run the Obsidian-community-plugin lint rules (eslint-plugin-obsidianmd)
+# against the bundled plugin source. Informational: shows scorecard-aligned
+# findings locally. Not part of `just check` until Phase 2 of the scorecard
+# cleanup lands (see docs/specs/obsidian-plugin-review.md).
+lint-obsidian:
+    bunx eslint --config eslint.obsidian.config.js packages/obsidian/src packages/web/src
+
 # Start the Vite dev server (skips if already running on :5173)
 serve:
     @if lsof -i :5173 -sTCP:LISTEN >/dev/null 2>&1; then \
