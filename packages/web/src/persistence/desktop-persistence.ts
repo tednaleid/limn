@@ -6,14 +6,13 @@ import { migrateToLatest } from "@limn/core";
 import { postToSwift, onSwiftMessage } from "./desktop-bridge";
 import type { IncomingMessage, LoadFileMessage } from "./desktop-bridge";
 import { parseLimnFile, buildLimnZip } from "./file";
+import { limnWindow } from "../limn-window";
 
 // Pending request state is stored on the global object so it survives
 // React StrictMode double-invoking useMemo (which creates two instances,
 // but the global handler ends up pointing to the second while React keeps
 // the first). By sharing pending state globally, both instances resolve
 // correctly.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const g = globalThis as any;
 
 interface PendingLoad {
   resolve: (result: { data: MindMapFileFormat; filename: string } | null) => void;
@@ -23,44 +22,44 @@ interface PendingSave {
 }
 
 function getPendingLoad(): PendingLoad | null {
-  return g.limn?.desktop?._pendingLoad ?? null;
+  return limnWindow.limn?.desktop?._pendingLoad ?? null;
 }
 function setPendingLoad(p: PendingLoad | null): void {
-  if (g.limn?.desktop) g.limn.desktop._pendingLoad = p;
+  if (limnWindow.limn?.desktop) limnWindow.limn.desktop._pendingLoad = p;
 }
 function getPendingSave(): PendingSave | null {
-  return g.limn?.desktop?._pendingSave ?? null;
+  return limnWindow.limn?.desktop?._pendingSave ?? null;
 }
 function setPendingSave(p: PendingSave | null): void {
-  if (g.limn?.desktop) g.limn.desktop._pendingSave = p;
+  if (limnWindow.limn?.desktop) limnWindow.limn.desktop._pendingSave = p;
 }
 function getExternalChangeCb(): ((data: MindMapFileFormat) => void) | null {
-  return g.limn?.desktop?._externalChangeCb ?? null;
+  return limnWindow.limn?.desktop?._externalChangeCb ?? null;
 }
 function setExternalChangeCb(cb: ((data: MindMapFileFormat) => void) | null): void {
-  if (g.limn?.desktop) g.limn.desktop._externalChangeCb = cb;
+  if (limnWindow.limn?.desktop) limnWindow.limn.desktop._externalChangeCb = cb;
 }
 function getCurrentFilename(): string | null {
-  return g.limn?.desktop?._currentFilename ?? null;
+  return limnWindow.limn?.desktop?._currentFilename ?? null;
 }
 function setCurrentFilename(f: string | null): void {
-  if (g.limn?.desktop) g.limn.desktop._currentFilename = f;
+  if (limnWindow.limn?.desktop) limnWindow.limn.desktop._currentFilename = f;
 }
 
 // Asset caches must also live on globalThis so the instance that receives
 // bridge messages (instance B under StrictMode) and the instance React
 // keeps (instance A) share the same data.
 function getAssetCache(): Map<string, Blob> {
-  if (!g.limn?.desktop?._assetCache) {
-    if (g.limn?.desktop) g.limn.desktop._assetCache = new Map<string, Blob>();
+  if (!limnWindow.limn?.desktop?._assetCache) {
+    if (limnWindow.limn?.desktop) limnWindow.limn.desktop._assetCache = new Map<string, Blob>();
   }
-  return g.limn?.desktop?._assetCache ?? new Map<string, Blob>();
+  return limnWindow.limn?.desktop?._assetCache ?? new Map<string, Blob>();
 }
 function getAssetUrls(): Map<string, string> {
-  if (!g.limn?.desktop?._assetUrls) {
-    if (g.limn?.desktop) g.limn.desktop._assetUrls = new Map<string, string>();
+  if (!limnWindow.limn?.desktop?._assetUrls) {
+    if (limnWindow.limn?.desktop) limnWindow.limn.desktop._assetUrls = new Map<string, string>();
   }
-  return g.limn?.desktop?._assetUrls ?? new Map<string, string>();
+  return limnWindow.limn?.desktop?._assetUrls ?? new Map<string, string>();
 }
 
 export class DesktopPersistenceProvider implements PersistenceProvider {

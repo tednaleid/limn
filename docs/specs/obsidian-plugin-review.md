@@ -49,43 +49,14 @@ False positive — the `setInterval` is the auto-save timer and the `fetch` is u
 
 These are the ones the reviewer treats as must-fix (vs. recommendations).
 
-#### 3a. `eslint-disable` comments without descriptions
+#### 3a. `eslint-disable` comments without descriptions ✓
 
 Sites: `packages/web/src/App.tsx:225`, `packages/web/src/App.tsx:285`, `packages/web/src/persistence/desktop-bridge.ts:65`, `packages/web/src/persistence/desktop-persistence.ts:15`.
 
-- [ ] At each site, replace the bare `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a typed alternative OR add a description: `// eslint-disable-next-line @typescript-eslint/no-explicit-any -- <why>`.
-- [ ] Better: fix the underlying typing so the disable is unnecessary. The four sites all stash things on `globalThis`/`window` (debug bridge for Swift). Define a typed `LimnWindow` interface and cast once at module scope instead of inline-disabling per use.
-
-Suggested shared type (drop in `packages/web/src/desktop-window.ts` or similar):
-
-```ts
-interface LimnDebugBridge {
-  toJSON?: () => unknown;
-  hasUnsavedChanges?: () => boolean;
-  tabId?: string;
-  docId?: string;
-  revision?: number;
-}
-interface LimnWindow extends Window {
-  limn?: LimnDebugBridge;
-  webkit?: { messageHandlers?: Record<string, { postMessage: (msg: unknown) => void }> };
-}
-export const limnWindow = globalThis as unknown as LimnWindow;
-```
-
-Then `App.tsx:225-230` becomes:
-
-```ts
-if (!limnWindow.limn) limnWindow.limn = {};
-limnWindow.limn.toJSON = () => editor.toJSON();
-limnWindow.limn.hasUnsavedChanges = () => editor.hasUnsavedChanges();
-```
-
-No `any`, no eslint-disable.
-
-- [ ] Apply the same pattern to `App.tsx:285`, `desktop-bridge.ts:65`, `desktop-persistence.ts:15`.
-- [ ] Run `bunx eslint packages/web/src` and confirm zero `no-explicit-any` findings in those files.
-- [ ] Commit.
+- [x] Added `packages/web/src/limn-window.ts` defining `LimnDebugAPI`, `LimnDesktopState`, `LimnWindow`, and the shared `limnWindow` cast. `LimnDesktopState._handler` and `_pendingLoad/_pendingSave/_externalChangeCb` are strongly typed via `import type` from `desktop-bridge.ts` and `@limn/core`.
+- [x] Replaced all four `globalThis as any` casts in `App.tsx` (2), `desktop-bridge.ts`, and `desktop-persistence.ts` with imports of `limnWindow`. All four error-flagged `eslint-disable-next-line @typescript-eslint/no-explicit-any` comments are gone.
+- [x] `bunx eslint packages/web/src` and `bunx tsc -b` both clean. 742 unit tests still pass.
+- [x] Test files still use the old `globalThis as any` pattern (`__tests__/desktop-bridge.test.ts`, `__tests__/desktop-persistence.test.ts`); those are not part of the released bundle so the Obsidian scanner doesn't see them.
 
 #### 3b. `navigator.platform` in `packages/web/src/platform.ts:10`
 

@@ -61,9 +61,7 @@ export type IncomingMessage =
 
 // -- Bridge API --
 
-// Access the WKWebView bridge objects via globalThis to avoid strict-mode type issues.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const g = globalThis as any;
+import { limnWindow } from "../limn-window";
 
 type MessageHandler = (msg: IncomingMessage) => void;
 
@@ -72,20 +70,20 @@ type MessageHandler = (msg: IncomingMessage) => void;
 // but the DesktopPersistenceProvider instance (cached by React useMemo) still
 // expects its callback to be reachable.
 function getHandler(): MessageHandler | null {
-  return g.limn?.desktop?._handler ?? null;
+  return limnWindow.limn?.desktop?._handler ?? null;
 }
 function setHandler(cb: MessageHandler | null): void {
-  if (g.limn?.desktop) g.limn.desktop._handler = cb;
+  if (limnWindow.limn?.desktop) limnWindow.limn.desktop._handler = cb;
 }
 
 /** Returns true if running inside the Limn desktop WKWebView shell. */
 export function isDesktop(): boolean {
-  return !!g.webkit?.messageHandlers?.limn;
+  return !!limnWindow.webkit?.messageHandlers?.limn;
 }
 
 /** Send a typed message from JS to Swift. */
 export function postToSwift(msg: OutgoingMessage): void {
-  g.webkit?.messageHandlers?.limn?.postMessage(msg);
+  limnWindow.webkit?.messageHandlers?.limn?.postMessage(msg);
 }
 
 /** Register a handler for messages from Swift. Only one handler at a time. */
@@ -107,7 +105,7 @@ function handleSwiftMessage(msg: IncomingMessage): void {
 
 // Install the global callback for Swift -> JS communication
 if (typeof globalThis !== "undefined") {
-  if (!g.limn) g.limn = {};
-  if (!g.limn.desktop) g.limn.desktop = {};
-  g.limn.desktop.onMessage = handleSwiftMessage;
+  if (!limnWindow.limn) limnWindow.limn = {};
+  if (!limnWindow.limn.desktop) limnWindow.limn.desktop = {};
+  limnWindow.limn.desktop.onMessage = handleSwiftMessage;
 }

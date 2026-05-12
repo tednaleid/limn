@@ -21,6 +21,7 @@ import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename
 import { exportSvg, serializeSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
+import { limnWindow } from "./limn-window";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -222,12 +223,11 @@ export function App({ docId, initialData }: AppProps) {
 
   // Expose editor helpers on window.limn for debug inspection and Swift bridge
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const g = globalThis as any;
-    if (!g.limn) g.limn = {};
-    g.limn.toJSON = () => editor.toJSON();
-    g.limn.hasUnsavedChanges = () => editor.hasUnsavedChanges();
-    return () => { delete g.limn.toJSON; delete g.limn.hasUnsavedChanges; };
+    if (!limnWindow.limn) limnWindow.limn = {};
+    const api = limnWindow.limn;
+    api.toJSON = () => editor.toJSON();
+    api.hasUnsavedChanges = () => editor.hasUnsavedChanges();
+    return () => { delete api.toJSON; delete api.hasUnsavedChanges; };
   }, [editor]);
   const provider = useMemo(
     () => desktop ? new DesktopPersistenceProvider() : new WebPersistenceProvider(docId),
@@ -282,10 +282,9 @@ export function App({ docId, initialData }: AppProps) {
     if (!loaded) return;
     const autoSave = new AutoSaveController(editor, provider, { mode: "debounce", delayMs: 500 });
     autoSaveRef.current = autoSave;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const g = globalThis as any;
-    if (!g.limn) g.limn = {};
-    g.limn.flush = () => autoSave.flush();
+    if (!limnWindow.limn) limnWindow.limn = {};
+    const api = limnWindow.limn;
+    api.flush = () => autoSave.flush();
     const unsubExternal = provider.onExternalChange((data) => {
       editor.applyExternalUpdate(data);
       editor.remeasureAllNodes();
@@ -303,7 +302,7 @@ export function App({ docId, initialData }: AppProps) {
     }
     return () => {
       autoSaveRef.current = null;
-      delete g.limn.flush;
+      delete api.flush;
       autoSave.dispose();
       unsubExternal();
     };
