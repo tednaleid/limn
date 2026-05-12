@@ -21,19 +21,19 @@ After each phase, bump the plugin version, push a fresh tag, then re-check both 
 
 ## Phase 1 — Highest-impact: the explicit Errors + the DMG contamination + the suspicious-behavior flag
 
-### 1. Stop shipping the desktop DMG in the plugin release
+### 1. Stop shipping the desktop DMG in the plugin release ✓
 
 The current `release.yml` and `release-desktop.yml` both trigger on tags matching `[0-9]*`, so they upload to the same GitHub release. The reviewer sees `Limn-0.9.11.dmg` alongside `main.js` and flags it.
 
-- [ ] Decide on a desktop-only tag pattern (suggested: `desktop-[0-9]*`).
-- [ ] Update `.github/workflows/release-desktop.yml`:
-  - Change `on.push.tags` to the new pattern.
-  - In the "Create or update GitHub Release" step, use a release name derived from the new tag (e.g. strip the `desktop-` prefix for the display title).
-- [ ] Update `bump.sh` (or whatever script pushes tags — check `just`/`scripts/`) so it pushes **both** `0.9.12` and `desktop-0.9.12`. They can share a version, just live on different tags.
-- [ ] Locally re-run the dry-run of the bump to confirm two tags get created.
-- [ ] After the next release runs, manually `gh release view 0.9.12` and verify only three assets: `main.js`, `manifest.json`, `styles.css`.
+- [x] Decide on a desktop-only tag pattern: `desktop-[0-9]*`.
+- [x] Update `.github/workflows/release-desktop.yml`:
+  - Trigger pattern changed to `desktop-[0-9]*`.
+  - Version extraction now strips the `desktop-` prefix: `version=${GITHUB_REF_NAME#desktop-}`.
+  - Homebrew cask URL updated to `https://github.com/tednaleid/limn/releases/download/desktop-#{version}/Limn-#{version}.dmg`.
+- [x] Update `scripts/bump-version.ts` to push **both** `${newVersion}` and `desktop-${newVersion}` at the same commit.
+- [ ] After the next release runs, manually `gh release view 0.9.12` and verify only three assets: `main.js`, `manifest.json`, `styles.css`. Verify `gh release view desktop-0.9.12` has only the DMG.
 
-> **Note:** The Obsidian community plugin manifest still uses the plain `0.9.11`-style tag for downloads (Obsidian reads `manifest.json#version` and pulls assets from a release of that exact name), so the plugin tag MUST stay as the bare version. The desktop tag is the one that needs to move.
+> **Note:** The Obsidian community plugin manifest still uses the plain `0.9.11`-style tag for downloads (Obsidian reads `manifest.json#version` and pulls assets from a release of that exact name), so the plugin tag MUST stay as the bare version. The desktop tag is the one that moved.
 
 ### 2. Resolve the "suspicious behaviors" flag (setInterval + network)
 

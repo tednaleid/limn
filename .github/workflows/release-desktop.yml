@@ -3,7 +3,9 @@ name: Release Desktop App
 on:
   push:
     tags:
-      - "[0-9]*"
+      # Desktop releases use a `desktop-` prefix so the Obsidian plugin
+      # release tag (bare semver) stays clean of macOS DMG assets.
+      - "desktop-[0-9]*"
 
 permissions:
   contents: write
@@ -37,7 +39,10 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        # Strip the "desktop-" prefix so the bare semver is used for the
+        # DMG filename, Homebrew cask version, etc. The full tag name
+        # ($GITHUB_REF_NAME) is still used for the GitHub release.
+        run: echo "version=${GITHUB_REF_NAME#desktop-}" >> "$GITHUB_OUTPUT"
 
       # -- Conditional signing (only when Apple Developer secrets are configured) --
 
@@ -162,7 +167,7 @@ jobs:
             version "${VERSION}"
             sha256 "${SHA256}"
 
-            url "https://github.com/tednaleid/limn/releases/download/#{version}/Limn-#{version}.dmg"
+            url "https://github.com/tednaleid/limn/releases/download/desktop-#{version}/Limn-#{version}.dmg"
             name "Limn"
             desc "Keyboard-first, offline-capable mind map app"
             homepage "https://github.com/tednaleid/limn"

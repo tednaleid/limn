@@ -119,11 +119,16 @@ try {
 }
 console.log(releaseNotes);
 
-// Create annotated tag with release notes
+// Create two annotated tags at the same commit:
+//   ${newVersion}            -> triggers the Obsidian plugin release (main.js / manifest.json / styles.css only)
+//   desktop-${newVersion}    -> triggers the macOS desktop release (DMG)
+// Splitting the tags keeps the Obsidian plugin release free of the DMG, which the
+// Obsidian community-plugin scanner flags as an extraneous asset.
 const notesFile = join(tmpdir(), `limn-release-notes-${newVersion}.txt`);
 writeFileSync(notesFile, releaseNotes);
 try {
   run(`git tag -a ${newVersion} -F ${notesFile}`);
+  run(`git tag -a desktop-${newVersion} -F ${notesFile}`);
 } finally {
   unlinkSync(notesFile);
 }
