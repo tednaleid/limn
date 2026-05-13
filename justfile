@@ -67,8 +67,13 @@ obsidian-build:
 obsidian-dev:
     cd packages/obsidian && bun run dev
 
-# Install plugin into an Obsidian vault via symlink
-obsidian-install vault_path:
+# Remove any Limn plugin install from an Obsidian vault (current id + legacy ids)
+obsidian-clean vault_path:
+    rm -rf "{{vault_path}}/.obsidian/plugins/limn" "{{vault_path}}/.obsidian/plugins/obsidian-limn"
+    @echo "Removed Limn plugin from {{vault_path}}/.obsidian/plugins/."
+
+# Install plugin into an Obsidian vault via symlink (cleans any prior install first)
+obsidian-install vault_path: (obsidian-clean vault_path)
     just obsidian-build
     mkdir -p "{{vault_path}}/.obsidian/plugins"
     ln -sfn "$(pwd)/packages/obsidian/dist" "{{vault_path}}/.obsidian/plugins/limn"
