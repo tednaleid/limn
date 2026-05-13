@@ -99,8 +99,8 @@ function parseZipLimn(bytes: Uint8Array): {
     const filename = path.slice("assets/".length);
     const assetId = filenameToAssetId.get(filename);
     if (assetId) {
-      const buf = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer;
-      assetBlobs.set(assetId, new Blob([buf]));
+      const fresh = new Uint8Array(content);
+      assetBlobs.set(assetId, new Blob([fresh.buffer]));
     }
   }
 
@@ -133,8 +133,8 @@ export async function buildLimnZip(
   }
 
   const zipped = zipSync(zipFiles);
-  const zipBuf = zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
-  return new Blob([zipBuf], { type: LIMN_MIME });
+  const fresh = new Uint8Array(zipped);
+  return new Blob([fresh.buffer], { type: LIMN_MIME });
 }
 
 /**

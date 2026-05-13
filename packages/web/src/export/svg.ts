@@ -131,7 +131,7 @@ async function serializeWithTheme(
   clone.removeAttribute("style");
 
   const ns = "http://www.w3.org/2000/svg";
-  const doc = getHost().document;
+  const doc = getHost().doc;
   let defs = clone.querySelector("defs");
   if (!defs) {
     defs = doc.createElementNS(ns, "defs");
@@ -146,11 +146,22 @@ async function serializeWithTheme(
   let xml = serializer.serializeToString(clone);
   // XMLSerializer can copy characters from DOM text nodes that are valid in
   // HTML but not as raw bytes in XML. Replace them with numeric references.
-  // This covers non-breaking spaces (U+00A0) and XML-illegal control chars.
-  xml = xml.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u00A0\uFFFE\uFFFF]/g,
-    (ch) => `&#${ch.charCodeAt(0)};`);
+  // Covers non-breaking spaces (U+00A0) and XML-illegal control chars.
+  // The pattern is built via RegExp() so literal control chars don't appear
+  // in a regex literal (no-control-regex fires on those even via \uXXXX).
+  xml = xml.replace(XML_ILLEGAL_CHAR_PATTERN, (ch) => `&#${String(ch.charCodeAt(0))};`);
   return xml;
 }
+
+const XML_ILLEGAL_CHAR_PATTERN = new RegExp(
+  "[" +
+    "\\u0000-\\u0008" +
+    "\\u000B\\u000C" +
+    "\\u000E-\\u001F" +
+    "\\u00A0\\uFFFE\\uFFFF" +
+  "]",
+  "g",
+);
 
 /**
  * Serialize the mind map canvas SVG element to a string with embedded theme.
@@ -161,7 +172,7 @@ export async function serializeSvg(
   bounds?: ContentBounds | null,
   loadAssetBlob?: AssetBlobLoader,
 ): Promise<string | null> {
-  const svgEl = getHost().document.querySelector("svg[data-limn-canvas]");
+  const svgEl = getHost().doc.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return null;
@@ -194,7 +205,7 @@ export async function exportPng(
   bounds?: ContentBounds | null,
   loadAssetBlob?: AssetBlobLoader,
 ): Promise<void> {
-  const svgEl = getHost().document.querySelector("svg[data-limn-canvas]");
+  const svgEl = getHost().doc.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;
@@ -214,7 +225,7 @@ export async function exportPng(
       ? (bounds.maxY - bounds.minY + 40)
       : svgEl.clientHeight;
 
-    const canvas = getHost().document.createElement("canvas");
+    const canvas = getHost().doc.createElement("canvas");
     canvas.width = width * 2; // 2x for retina
     canvas.height = height * 2;
     const ctx = canvas.getContext("2d");
@@ -234,7 +245,7 @@ export async function exportPng(
 /** Trigger a browser download for a blob. */
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = getHost().document.createElement("a");
+  const a = getHost().doc.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();

@@ -472,8 +472,9 @@ export function App({ docId, initialData }: AppProps) {
         ? (provider as DesktopPersistenceProvider).filename !== null
         : getCurrentFilename() !== null;
       if (!hasFile && editor.hasUnsavedChanges()) {
+        // preventDefault() is the modern way to trigger the browser's
+        // beforeunload confirmation dialog; e.returnValue is deprecated.
         e.preventDefault();
-        e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);

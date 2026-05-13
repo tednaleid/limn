@@ -1,17 +1,10 @@
 // ABOUTME: Configurable auto-save controller with debounce and interval modes.
 // ABOUTME: Subscribes to Editor changes and delegates saves to a PersistenceProvider.
 
-// Bare `setTimeout`/`setInterval` are intentional here. AutoSaveController lives
-// in @limn/core and runs both in the browser (via @limn/web and the Obsidian
-// plugin, where `window` is the active window) and in vitest's `environment:
-// "node"` where `window` doesn't exist. Hard-coding `window.setTimeout` would
-// break the test suite. The obsidianmd/prefer-window-timers rule's intent
-// (popout-window safety) is satisfied at consumer call sites in @limn/web,
-// which use `window.setTimeout` directly.
-/* eslint-disable obsidianmd/prefer-window-timers */
-
 import type { Editor } from "../editor/Editor";
 import type { PersistenceProvider } from "./types";
+import { getHost } from "../host/Host";
+import type { TimerHandle } from "../host/Host";
 
 export interface AutoSaveOptions {
   /** "debounce": save after delayMs idle. "interval": save every delayMs if dirty. */
@@ -20,7 +13,7 @@ export interface AutoSaveOptions {
 }
 
 export class AutoSaveController {
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: TimerHandle | null = null;
   private dirty = false;
   private disposed = false;
   private unsubscribe: () => void;
@@ -32,10 +25,10 @@ export class AutoSaveController {
     private options: AutoSaveOptions,
   ) {
     if (options.mode === "debounce") {
-      this.unsubscribe = editor.subscribe(() => this.onChangeDebounce());
+      this.unsubscribe = editor.subscribe(() => { this.onChangeDebounce(); });
     } else {
-      this.unsubscribe = editor.subscribe(() => this.onChangeInterval());
-      this.timer = setInterval(() => this.intervalTick(), options.delayMs);
+      this.unsubscribe = editor.subscribe(() => { this.onChangeInterval(); });
+      this.timer = getHost().setInterval(() => { this.intervalTick(); }, options.delayMs);
     }
   }
 
@@ -43,9 +36,9 @@ export class AutoSaveController {
     if (this.disposed) return;
     if (this.editor.isExternalUpdate) return;
     if (this.timer !== null) {
-      clearTimeout(this.timer);
+      getHost().clearTimeout(this.timer);
     }
-    this.timer = setTimeout(() => {
+    this.timer = getHost().setTimeout(() => {
       this.timer = null;
       this.save();
     }, this.options.delayMs);
@@ -73,7 +66,7 @@ export class AutoSaveController {
     if (this.disposed) return;
     if (this.timer !== null) {
       if (this.options.mode === "debounce") {
-        clearTimeout(this.timer);
+        getHost().clearTimeout(this.timer);
       }
       this.timer = null;
     }
@@ -89,9 +82,9 @@ export class AutoSaveController {
     this.unsubscribe();
     if (this.timer !== null) {
       if (this.options.mode === "debounce") {
-        clearTimeout(this.timer);
+        getHost().clearTimeout(this.timer);
       } else {
-        clearInterval(this.timer);
+        getHost().clearInterval(this.timer);
       }
       this.timer = null;
     }

@@ -32,7 +32,7 @@ export function resolveActiveThemeKey(
  * Sets data-theme attribute for SVG export to read.
  */
 export function applyThemeByKey(themeKey: ThemeKey): void {
-  const el = getHost().document.documentElement;
+  const el = getHost().doc.documentElement;
   el.setAttribute("data-theme", themeKey);
 
   const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";

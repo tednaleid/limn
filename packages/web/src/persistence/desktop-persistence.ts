@@ -111,8 +111,11 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
       if (msg.payload.assets) {
         for (const [assetId, base64] of Object.entries(msg.payload.assets)) {
           const bytes = base64ToBytes(base64);
-          const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-          getAssetCache().set(assetId, new Blob([buf]));
+          // Copy into a fresh Uint8Array so the underlying buffer is a definite
+          // ArrayBuffer (not the ArrayBufferLike union that .buffer returns in
+          // newer TS lib versions).
+          const fresh = new Uint8Array(bytes);
+          getAssetCache().set(assetId, new Blob([fresh.buffer]));
         }
       }
     } else {

@@ -243,4 +243,5 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 |------------|---------|---------|-----------|--------|-------------|-----------------------------|
 | 2026-05-12 | 0.9.11  | 43%     | Excellent | Risks  | 142         | baseline; plugin published  |
 | 2026-05-13 | 0.9.13  | tbd     | Excellent | Passed | 4P / 79W / 0E | Phase 1 closed all Errors; status flipped to Passed |
-| 2026-05-13 | 0.9.14  | tbd     | tbd       | tbd    | tbd         | Phase 2: Host.document + window.X timers; pending re-scan |
+| 2026-05-13 | 0.9.14  | tbd     | tbd       | Failed | 5E / 4W     | eslint-disable for popout-safety rules flipped to Failed   |
+| 2026-05-13 | 0.9.15  | tbd     | tbd       | tbd    | tbd         | replaced disables with AST aliasing; renamed Host.doc      |

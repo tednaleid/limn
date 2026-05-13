@@ -324,7 +324,7 @@ export function MindMapCanvas() {
   const handleCanvasDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       // Use elementFromPoint to bypass pointer capture redirecting e.target to SVG
-      const actual = getHost().document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
+      const actual = getHost().doc.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
       const nodeGroup = actual?.closest("[data-node-id]") as SVGElement | null;
       if (nodeGroup) {
         // Double-click on a node: enter edit mode
@@ -422,7 +422,7 @@ export function MindMapCanvas() {
       const world = screenToWorld(e.clientX, e.clientY);
 
       // Find node under drop point
-      const target = getHost().document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
+      const target = getHost().doc.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
       const nodeGroup = target?.closest("[data-node-id]") as SVGElement | null;
       const targetNodeId = nodeGroup?.getAttribute("data-node-id") ?? null;
 

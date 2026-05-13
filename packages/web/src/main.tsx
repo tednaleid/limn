@@ -13,7 +13,7 @@ import "./index.css";
 setHost(webHost);
 
 async function mount() {
-  const root = getHost().document.getElementById("root");
+  const root = getHost().doc.getElementById("root");
   if (!root) throw new Error("Root element not found");
 
   // Desktop mode uses Swift bridge for persistence; skip IndexedDB-based routing

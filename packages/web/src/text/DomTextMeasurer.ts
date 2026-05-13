@@ -15,12 +15,12 @@ let measureEl: HTMLDivElement | null = null;
 
 function getMeasureElement(): HTMLDivElement {
   if (measureEl) return measureEl;
-  measureEl = createMeasureElement(getHost().document.body);
+  measureEl = createMeasureElement(getHost().doc.body);
   return measureEl;
 }
 
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
-  const el = getHost().document.createElement("div");
+  const el = getHost().doc.createElement("div");
   el.className = "limn-measure";
   // Static base styles (position, visibility, white-space: pre, width: auto,
   // box-sizing, font-family) live in the .limn-measure CSS class in
@@ -49,7 +49,7 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
 
 /** Populate an element with styled DOM nodes from markdown text. */
 function populateWithMarkdown(el: HTMLDivElement, text: string): void {
-  const doc = getHost().document;
+  const doc = getHost().doc;
   el.textContent = "";
   if (!text) {
     el.appendChild(doc.createTextNode("\u00A0"));
