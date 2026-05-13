@@ -119,7 +119,7 @@ retag version:
 
 # Remove build artifacts and caches
 clean:
-    rm -rf coverage/ release/ packages/web/dist/ packages/obsidian/dist/
+    rm -rf coverage/ release/ dist/ packages/web/dist/ packages/obsidian/dist/
 
 # Auto-fix lint issues
 fmt:
