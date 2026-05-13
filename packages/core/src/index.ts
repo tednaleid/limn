@@ -82,3 +82,6 @@ export type { ShortcutEntry, ShortcutGroup } from "./keybindings/shortcutHelp";
 export type { PersistenceProvider } from "./persistence/types";
 export { AutoSaveController } from "./persistence/AutoSaveController";
 export type { AutoSaveOptions } from "./persistence/AutoSaveController";
+
+export type { Host } from "./host/Host";
+export { setHost, getHost } from "./host/Host";

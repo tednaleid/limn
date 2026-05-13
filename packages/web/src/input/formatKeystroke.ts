@@ -1,9 +1,8 @@
 // ABOUTME: Pure formatting logic for keystroke overlay display.
 // ABOUTME: Converts raw key names to presentable badge parts with consistent modifier ordering.
 
-import { displayKey } from "@limn/core";
+import { displayKey, getHost } from "@limn/core";
 import type { Platform } from "@limn/core";
-import { PLATFORM } from "../platform";
 
 const MODIFIER_ORDER = ["Control", "Alt", "Shift", "Meta"] as const;
 const MODIFIER_SET = new Set<string>(MODIFIER_ORDER);
@@ -19,7 +18,7 @@ const MODIFIER_SET = new Set<string>(MODIFIER_ORDER);
  */
 export function formatKeystrokeParts(
   held: Set<string>,
-  platform: Platform = PLATFORM,
+  platform: Platform = getHost().platform,
 ): string[] {
   if (held.size === 0) return [];
 

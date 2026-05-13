@@ -3,10 +3,14 @@
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { setHost } from "@limn/core";
 import { App } from "./App";
 import { isDesktop } from "./persistence/desktop-bridge";
 import { resolveDocId } from "./persistence/docRouting";
+import { webHost } from "./host/webHost";
 import "./index.css";
+
+setHost(webHost);
 
 async function mount() {
   const root = document.getElementById("root");

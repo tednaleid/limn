@@ -58,37 +58,19 @@ Sites: `packages/web/src/App.tsx:225`, `packages/web/src/App.tsx:285`, `packages
 - [x] `bunx eslint packages/web/src` and `bunx tsc -b` both clean. 742 unit tests still pass.
 - [x] Test files still use the old `globalThis as any` pattern (`__tests__/desktop-bridge.test.ts`, `__tests__/desktop-persistence.test.ts`); those are not part of the released bundle so the Obsidian scanner doesn't see them.
 
-#### 3b. `navigator.platform` in `packages/web/src/platform.ts:10`
+#### 3b. `navigator.platform` in `packages/web/src/platform.ts:10` ✓
 
-Currently uses `navigator.userAgentData?.platform ?? navigator.platform`. The reviewer wants Obsidian's `Platform` API when running in Obsidian.
+Implemented via a hexagonal `Host` port instead of a one-off platform setter — this lays the groundwork Phase 2 will extend (timers, document access, fetch).
 
-- [ ] Add a `Platform` injection seam so the web build keeps `navigator`-based detection but the Obsidian build uses Obsidian's API.
-
-Proposed file restructure:
-
-```ts
-// packages/web/src/platform.ts
-import type { Platform } from "@limn/core";
-
-export function detectPlatformFromNavigator(): Platform {
-  if (typeof navigator === "undefined") return "other";
-  const ua = (navigator as { userAgentData?: { platform?: string } }).userAgentData?.platform
-    ?? navigator.platform
-    ?? "";
-  return /mac/i.test(ua) ? "mac" : "other";
-}
-
-// Module-level default; tests and Obsidian can override via setPlatform()
-let current: Platform = detectPlatformFromNavigator();
-export const PLATFORM: () => Platform = () => current;
-export function setPlatform(p: Platform): void { current = p; }
-```
-
-- [ ] Update `LimnView.ts` (Obsidian plugin) to call `setPlatform(Platform.isMacOS ? "mac" : "other")` during `onOpen`.
-- [ ] Audit existing call sites that import `PLATFORM` as a constant — they need to call `PLATFORM()` now, OR keep the const and add `setPlatform` that mutates a wrapper object. Pick whichever is less invasive.
-- [ ] Run tests, commit.
-
-> **Open question:** Does anything in `@limn/web` import `PLATFORM` as a value rather than a function? Grep first; the answer determines whether to make it a getter or keep as const.
+- [x] Added `packages/core/src/host/Host.ts` defining the `Host` port with `platform` (will grow to cover more host services in Phase 2). Exports `setHost(host)` / `getHost()`.
+- [x] Added `packages/web/src/host/webHost.ts` — adapter that uses navigator.
+- [x] Added `packages/obsidian/src/host/obsidianHost.ts` — adapter that uses `Platform.isMacOS` from Obsidian's API.
+- [x] Wired `setHost(webHost)` in `packages/web/src/main.tsx` before mount.
+- [x] Wired `setHost(obsidianHost)` in `LimnPlugin.onload`.
+- [x] Replaced `PLATFORM` constant with `getHost().platform` reads in `formatKeystroke.ts` (function default) and `ShortcutsDialog.tsx` (read inside `ShortcutRow` so the value is observed after `setHost` ran).
+- [x] Deleted `packages/web/src/platform.ts`.
+- [x] `webHost.ts` is excluded from `eslint.obsidian.config.js` since it's the deliberate web-only adapter; verified `webHost`/`detectPlatform`/`userAgentData` are not in `packages/obsidian/dist/main.js`.
+- [x] 742 tests, lint, typecheck all green.
 
 #### 3c. `element.style.cssText` in `DomTextMeasurer.ts:89` ✓ (with caveat)
 

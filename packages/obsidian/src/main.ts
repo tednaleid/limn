@@ -2,10 +2,13 @@
 // ABOUTME: Registers the .limn file extension and LimnView for viewing/editing.
 
 import { Plugin } from "obsidian";
+import { setHost } from "@limn/core";
 import { LimnView, VIEW_TYPE_LIMN } from "./LimnView";
+import { obsidianHost } from "./host/obsidianHost";
 
 export default class LimnPlugin extends Plugin {
   onload(): void {
+    setHost(obsidianHost);
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
 

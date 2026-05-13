@@ -2,9 +2,8 @@
 // ABOUTME: Shows all shortcuts grouped by category with kbd-style key badges.
 
 import { useEffect, useCallback, useRef } from "react";
-import { SHORTCUT_GROUPS, displayKey } from "@limn/core";
+import { SHORTCUT_GROUPS, displayKey, getHost } from "@limn/core";
 import type { ShortcutEntry, ShortcutGroup } from "@limn/core";
-import { PLATFORM } from "../platform";
 
 export interface ShortcutsDialogProps {
   onClose: () => void;
@@ -157,6 +156,7 @@ function ShortcutSection({ group }: { group: ShortcutGroup }) {
 }
 
 function ShortcutRow({ entry, isMouse }: { entry: ShortcutEntry; isMouse: boolean }) {
+  const PLATFORM = getHost().platform;
   return (
     <div
       style={{
