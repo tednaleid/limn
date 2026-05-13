@@ -88,6 +88,7 @@ export default defineConfig(
       "obsidianmd/prefer-window-timers": "warn",
       "obsidianmd/regex-lookbehind": "warn",
       "obsidianmd/sample-names": "warn",
+      "obsidianmd/ui/sentence-case": ["warn", { enforceCamelCaseLower: true }],
       // obsidianmd typed rules (require parserServices)
       "obsidianmd/no-plugin-as-component": "warn",
       "obsidianmd/no-unsupported-api": "warn",
