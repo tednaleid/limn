@@ -40,19 +40,33 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Replace blob: URLs in <image> elements with embedded data: URIs. */
-async function embedImages(clone: Element): Promise<void> {
+/** Loader that returns the original Blob for a given asset id. */
+export type AssetBlobLoader = (assetId: string) => Promise<Blob | undefined>;
+
+/**
+ * Replace blob: URLs in <image> elements with embedded data: URIs.
+ *
+ * Looks up the original Blob via the supplied loader using the
+ * `data-asset-id` attribute set by `NodeView`. If no loader is
+ * provided (or an image has no asset id), the image element is
+ * removed rather than left as a broken reference.
+ *
+ * Avoids `fetch(blob:...)` so we don't trip the Obsidian
+ * community-plugin scanner's "fetch + setInterval" suspicious-
+ * pattern heuristic.
+ */
+async function embedImages(clone: Element, loadAssetBlob?: AssetBlobLoader): Promise<void> {
   const images = clone.querySelectorAll("image[href]");
   for (const img of images) {
     const href = img.getAttribute("href");
     if (!href || !href.startsWith("blob:")) continue;
-    try {
-      const response = await fetch(href);
-      const blob = await response.blob();
+    const assetId = img.getAttribute("data-asset-id");
+    const blob = assetId && loadAssetBlob ? await loadAssetBlob(assetId) : undefined;
+    if (blob) {
       const dataUrl = await blobToDataUrl(blob);
       img.setAttribute("href", dataUrl);
-    } catch {
-      // Remove broken image elements rather than leaving broken refs
+      img.removeAttribute("data-asset-id");
+    } else {
       img.remove();
     }
   }
@@ -89,13 +103,17 @@ function cleanCloneForExport(clone: Element, bounds: ContentBounds | null): void
  * Clone an SVG element, clean it for export, embed images, set viewBox,
  * and inject theme CSS variables.
  */
-async function serializeWithTheme(svgEl: Element, bounds: ContentBounds | null): Promise<string> {
+async function serializeWithTheme(
+  svgEl: Element,
+  bounds: ContentBounds | null,
+  loadAssetBlob?: AssetBlobLoader,
+): Promise<string> {
   const clone = svgEl.cloneNode(true) as Element;
   const vars = readComputedThemeVars(svgEl);
   const css = buildThemeStyleBlock(vars);
 
   cleanCloneForExport(clone, bounds);
-  await embedImages(clone);
+  await embedImages(clone, loadAssetBlob);
 
   // Set viewBox and explicit dimensions so the SVG displays correctly standalone
   if (bounds) {
@@ -138,13 +156,16 @@ async function serializeWithTheme(svgEl: Element, bounds: ContentBounds | null):
  * Returns null if no canvas element is found.
  * @param bounds - Content bounding box for viewBox calculation. If null, no viewBox is set.
  */
-export async function serializeSvg(bounds?: ContentBounds | null): Promise<string | null> {
+export async function serializeSvg(
+  bounds?: ContentBounds | null,
+  loadAssetBlob?: AssetBlobLoader,
+): Promise<string | null> {
   const svgEl = document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return null;
   }
-  return serializeWithTheme(svgEl, bounds ?? null);
+  return serializeWithTheme(svgEl, bounds ?? null, loadAssetBlob);
 }
 
 /**
@@ -152,8 +173,11 @@ export async function serializeSvg(bounds?: ContentBounds | null): Promise<strin
  * Finds the main SVG element in the DOM and serializes it.
  * @param bounds - Content bounding box for viewBox calculation.
  */
-export async function exportSvg(bounds?: ContentBounds | null): Promise<void> {
-  const svgString = await serializeSvg(bounds);
+export async function exportSvg(
+  bounds?: ContentBounds | null,
+  loadAssetBlob?: AssetBlobLoader,
+): Promise<void> {
+  const svgString = await serializeSvg(bounds, loadAssetBlob);
   if (!svgString) return;
 
   const blob = new Blob([svgString], { type: "image/svg+xml" });
@@ -165,14 +189,17 @@ export async function exportSvg(bounds?: ContentBounds | null): Promise<void> {
  * Renders the SVG to a canvas element, then converts to PNG.
  * @param bounds - Content bounding box for viewBox calculation.
  */
-export async function exportPng(bounds?: ContentBounds | null): Promise<void> {
+export async function exportPng(
+  bounds?: ContentBounds | null,
+  loadAssetBlob?: AssetBlobLoader,
+): Promise<void> {
   const svgEl = document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;
   }
 
-  const svgString = await serializeWithTheme(svgEl, bounds ?? null);
+  const svgString = await serializeWithTheme(svgEl, bounds ?? null, loadAssetBlob);
   const blob = new Blob([svgString], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
 

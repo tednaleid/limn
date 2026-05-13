@@ -64,6 +64,7 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
         <g className="node-image-group">
           <image
             href={imageUrl}
+            data-asset-id={node.image.assetId}
             x={PADDING_X}
             y={textHeight}
             width={node.image.width}

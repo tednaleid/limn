@@ -408,15 +408,16 @@ export function App({ docId, initialData }: AppProps) {
     }
     editor.onExport(() => {
       const bounds = editor.getContentBounds();
+      const loadAssetBlob = (id: string) => provider.loadAsset(id);
       if (desktop) {
         void (async () => {
-          const svgString = await serializeSvg(bounds);
+          const svgString = await serializeSvg(bounds, loadAssetBlob);
           if (svgString) {
             postToSwift({ type: "exportSvg", payload: { data: btoa(svgString) } });
           }
         })();
       } else {
-        void exportSvg(bounds);
+        void exportSvg(bounds, loadAssetBlob);
       }
     });
     editor.onThemeChange(() => {

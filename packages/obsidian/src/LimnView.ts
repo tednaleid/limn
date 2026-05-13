@@ -29,8 +29,13 @@ export const VIEW_TYPE_LIMN = "limn-view";
 
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
 function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HTMLElement }) {
+  const provider = usePersistence();
   const menuItems: MenuItemDef[] = [
-    { label: "Export SVG", shortcut: "Shift+Cmd+E", onClick: () => void exportSvg(editor.getContentBounds()) },
+    {
+      label: "Export SVG",
+      shortcut: "Shift+Cmd+E",
+      onClick: () => void exportSvg(editor.getContentBounds(), (id) => provider.loadAsset(id)),
+    },
   ];
   // Only handle keyboard events when this view is the active Obsidian leaf.
   // Obsidian adds .mod-active to the workspace-leaf containing the focused tab.
@@ -49,7 +54,6 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
   }, []);
 
   // Asset URL management: load existing assets and listen for new drops
-  const provider = usePersistence();
   const [assetUrls, setAssetUrls] = useState<AssetUrlMap>(new Map());
 
   useEffect(() => {

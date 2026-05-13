@@ -35,15 +35,15 @@ The current `release.yml` and `release-desktop.yml` both trigger on tags matchin
 
 > **Note:** The Obsidian community plugin manifest still uses the plain `0.9.11`-style tag for downloads (Obsidian reads `manifest.json#version` and pulls assets from a release of that exact name), so the plugin tag MUST stay as the bare version. The desktop tag is the one that moved.
 
-### 2. Resolve the "suspicious behaviors" flag (setInterval + network)
+### 2. Resolve the "suspicious behaviors" flag (setInterval + network) ✓
 
-False positive — the `setInterval` is the auto-save timer and the `fetch` is unrelated SVG export image embedding. Easiest defuse is to swap the raw `fetch` for Obsidian's `requestUrl` so the scanner can't pair them. This also satisfies the matching Warning in the source-code section.
+False positive — the `setInterval` is the auto-save timer and the `fetch` is unrelated SVG export image embedding. Took the "bypass fetch entirely" path discussed in the open questions: the `<image>` elements already know which asset they belong to, so resolving the blob via the persistence provider is more direct than minting a fresh blob URL and round-tripping through `fetch`.
 
-- [ ] In `packages/web/src/export/svg.ts:50`, replace `fetch(href)` with platform-injected loader so the Obsidian build can route through `requestUrl`.
-  - **Simplest approach:** add a `imageLoader?: (url: string) => Promise<Blob>` optional parameter to the SVG export entry point. Default impl uses `fetch`. Obsidian's `LimnView` passes a version that uses `requestUrl`.
-  - **Alternative:** since the only `blob:` URLs being loaded here come from the in-memory asset cache, consider bypassing `fetch` entirely and resolving from `AssetUrlContext` directly. Worth investigating — likely makes the call unnecessary in both web and Obsidian builds.
-- [ ] Verify the existing SVG-export test still passes (or add one if missing).
-- [ ] Commit.
+- [x] Added `data-asset-id={node.image.assetId}` to the `<image>` element in `NodeView.tsx`.
+- [x] Added `AssetBlobLoader` type and optional `loadAssetBlob` parameter to `embedImages`, `serializeWithTheme`, `serializeSvg`, `exportSvg`, `exportPng` in `packages/web/src/export/svg.ts`. The loader is called with the asset id read off the `<image>` element; the returned Blob is converted to a data URI and the `data-asset-id` attribute is stripped from the exported SVG.
+- [x] `App.tsx` and `LimnView.ts` callers pass `(id) => provider.loadAsset(id)` — the existing `PersistenceProvider.loadAsset(assetId): Promise<Blob | undefined>` port method is reused as-is.
+- [x] `grep -c '\.fetch(\|fetch([\\'\"]' packages/obsidian/dist/main.js` → 0. The bundle is fetch-free.
+- [x] 742 tests, lint, typecheck, Obsidian build all green.
 
 ### 3. Fix the four "Error"-level source-code findings
 
