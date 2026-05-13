@@ -49,9 +49,6 @@ export default defineConfig(
     },
   },
   {
-    // webHost.ts is the explicit standalone-web adapter; it has license to
-    // use navigator (the Obsidian build uses obsidianHost.ts and never
-    // bundles webHost.ts -- verified by inspecting dist/main.js).
-    ignores: ["**/dist/**", "**/node_modules/**", "*.config.*", "packages/web/src/host/webHost.ts"],
+    ignores: ["**/dist/**", "**/node_modules/**", "*.config.*"],
   },
 );

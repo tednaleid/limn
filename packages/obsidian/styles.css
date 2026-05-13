@@ -31,11 +31,23 @@
   height: 100%;
 }
 
-/* Hide the off-screen text measurement element */
+/* Off-screen text measurement element. Static styles live in CSS so the
+   no-static-styles-assignment lint rule isn't tripped by JS-side literal
+   assignments. Dynamic per-call values (font-size, font-weight, etc.) are
+   still set inline via template literals in DomTextMeasurer.ts. */
 .limn-view .limn-measure {
   position: absolute;
   visibility: hidden;
   pointer-events: none;
+  box-sizing: border-box;
+  white-space: pre;
+  width: auto;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.limn-view .limn-measure.limn-measure-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Prevent Obsidian theme CSS from altering textarea font rendering.

@@ -5,10 +5,12 @@ import type { TextMeasurer, NodeStyle } from "@limn/core";
 import { parseMarkdownLines } from "@limn/core";
 
 const FONT_SIZE = 14;
-const FONT_FAMILY = "system-ui, -apple-system, sans-serif";
 const LINE_HEIGHT = 20;
 const PADDING_X = 10;
 const PADDING_Y = 6;
+// CSS class applied to the off-screen element to switch from single-line
+// measure mode (default: white-space: pre) to wrapped reflow mode.
+const WRAP_CLASS = "limn-measure-wrap";
 let measureEl: HTMLDivElement | null = null;
 
 function getMeasureElement(): HTMLDivElement {
@@ -20,14 +22,14 @@ function getMeasureElement(): HTMLDivElement {
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "limn-measure";
-  el.style.position = "absolute";
-  el.style.visibility = "hidden";
-  el.style.whiteSpace = "pre";
+  // Static base styles (position, visibility, white-space: pre, width: auto,
+  // box-sizing, font-family) live in the .limn-measure CSS class in
+  // packages/web/src/index.css and packages/obsidian/styles.css. Only the
+  // font-size-dependent values are set here, via template literals (which the
+  // no-static-styles-assignment rule deliberately ignores per its source).
   el.style.fontSize = `${FONT_SIZE}px`;
-  el.style.fontFamily = FONT_FAMILY;
   el.style.lineHeight = `${LINE_HEIGHT}px`;
   el.style.padding = `${PADDING_Y}px ${PADDING_X}px`;
-  el.style.boxSizing = "border-box";
   container.appendChild(el);
   return el;
 }
@@ -36,18 +38,13 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
   const fontSize = style?.fontSize ?? FONT_SIZE;
   const lineHeight = Math.round(fontSize * (LINE_HEIGHT / FONT_SIZE));
   const paddingY = Math.round(fontSize * (PADDING_Y / FONT_SIZE));
-  el.style.position = "absolute";
-  el.style.visibility = "hidden";
-  el.style.boxSizing = "border-box";
+  // Per-call dynamic values. All right-hand sides are expressions
+  // (template literals or function calls) so the static-styles rule does
+  // not fire.
   el.style.fontSize = `${fontSize}px`;
   el.style.fontWeight = String(style?.fontWeight ?? 400);
-  el.style.fontFamily = FONT_FAMILY;
   el.style.lineHeight = `${lineHeight}px`;
   el.style.padding = `${paddingY}px ${PADDING_X}px`;
-  // Clear measure/reflow-only props so a reused element starts clean.
-  el.style.whiteSpace = "";
-  el.style.width = "";
-  el.style.wordBreak = "";
 }
 
 /** Populate an element with styled DOM nodes from markdown text. */
@@ -85,8 +82,10 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     measure(text: string, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.whiteSpace = "pre";
-      el.style.width = "auto";
+      // Reset to single-line mode: drop wrap class (so white-space falls back
+      // to `pre` from CSS) and clear any inline width set by a prior reflow.
+      el.classList.remove(WRAP_CLASS);
+      el.style.removeProperty("width");
       if (literal) {
         el.textContent = text || "\u00A0";
       } else {
@@ -105,8 +104,9 @@ function buildMeasurer(getEl: () => HTMLDivElement): TextMeasurer {
     reflow(text: string, maxWidth: number, style?: NodeStyle, literal?: boolean) {
       const el = getEl();
       applyStyle(el, style);
-      el.style.whiteSpace = "pre-wrap";
-      el.style.wordBreak = "break-word";
+      // Switch to wrapped mode via class (white-space: pre-wrap; word-break:
+      // break-word). Width is dynamic and uses a template literal.
+      el.classList.add(WRAP_CLASS);
       el.style.width = `${maxWidth}px`;
       if (literal) {
         el.textContent = text || "\u00A0";
