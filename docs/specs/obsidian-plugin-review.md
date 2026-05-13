@@ -245,4 +245,5 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 | 2026-05-13 | 0.9.13  | tbd     | Excellent | Passed | 4P / 79W / 0E | Phase 1 closed all Errors; status flipped to Passed |
 | 2026-05-13 | 0.9.14  | tbd     | tbd       | Failed | 5E / 4W     | eslint-disable for popout-safety rules flipped to Failed   |
 | 2026-05-13 | 0.9.15  | tbd     | tbd       | Completed | 0E / 4W   | replaced disables with AST aliasing; renamed Host.doc      |
-| 2026-05-13 | 0.9.16  | tbd     | tbd       | tbd       | tbd       | root build → Obsidian plugin (fixes scanner build verification); !important removed via `.limn-view.limn-view` specificity boost; dropped `text-indent` override |
+| 2026-05-13 | 0.9.16  | tbd     | tbd       | Completed | 2W        | root build → Obsidian plugin; !important removed via `.limn-view.limn-view`; dropped `text-indent` override. CSS warnings cleared; build still fails (esbuild needs git) |
+| 2026-05-13 | 0.9.17  | tbd     | tbd       | tbd       | tbd       | esbuild config falls back to gitSha="unknown" when `.git` is absent (scanner builds from a snapshot) |

@@ -10,7 +10,15 @@ const watch = process.argv.includes("--watch");
 
 mkdirSync("dist", { recursive: true });
 
-const gitSha = execSync("git rev-parse --short HEAD").toString().trim();
+// The Obsidian community-plugin scanner runs `bun run build` from a
+// repo snapshot with no `.git` directory, so a failing git invocation
+// would abort the build. Fall back to "unknown" when git isn't usable.
+let gitSha = "unknown";
+try {
+  gitSha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+} catch {
+  // Not in a git checkout (e.g. scanner build) — leave gitSha = "unknown".
+}
 const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
 const version = pkg.version ?? "dev";
 
