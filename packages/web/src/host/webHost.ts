@@ -1,5 +1,5 @@
 // ABOUTME: Host adapter for the standalone web PWA build.
-// ABOUTME: Uses navigator for platform detection; called once from main.tsx at startup.
+// ABOUTME: Uses navigator for platform detection and window.document for DOM; called once from main.tsx at startup.
 
 import type { Host, Platform } from "@limn/core";
 
@@ -20,4 +20,10 @@ function detectPlatform(): Platform {
 
 export const webHost: Host = {
   platform: detectPlatform(),
+  // `window.document` is a MemberExpression where `document` is the property,
+  // which the obsidianmd/prefer-active-doc rule explicitly skips. In the
+  // standalone web PWA there's a single window, so this is the right document.
+  get document() {
+    return window.document;
+  },
 };

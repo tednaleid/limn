@@ -90,59 +90,49 @@ Implemented via a hexagonal `Host` port instead of a one-off platform setter —
 
 ---
 
-## Phase 2 — Address the bulk of the 142 warnings
+## Phase 2 — Address the bulk of the warnings ✓ (in progress)
+
+**Completed (2026-05-13):** Host port extended with `document` getter; all `document.*` and bare timer call sites in `@limn/web` routed through `getHost().document` and `window.setTimeout`/etc. respectively. Local lint clean across the expanded obsidianmd ruleset (was 32 warnings).
+
+
 
 Most warnings exist because `packages/obsidian` imports rendering code from `@limn/web`, which targets the standalone PWA and uses raw DOM/window APIs. Obsidian wants those to use its popout-window-safe equivalents (`activeWindow`, `activeDocument`, `createEl`, etc.). This is a real conflict: the web package can't unconditionally use Obsidian APIs. These warnings drive most of the "142 issues" count on the scorecard.
 
 Approach: add a thin **host abstraction** layer that defaults to plain DOM/window in the web build, and is overridden by Obsidian-API equivalents in the Obsidian build. Same pattern already used for `TextMeasurer`.
 
-### 5. Define a `Host` interface in `packages/core`
+### 5. Extend `Host` interface in `packages/core` ✓
 
-- [ ] Create `packages/core/src/host.ts` defining:
+- [x] Added `document: Document` getter to `packages/core/src/host/Host.ts`. Default impl reads `globalThis.document` (works in jsdom tests).
+- [x] `webHost.document` returns `window.document` (MemberExpression `.document` doesn't trip prefer-active-doc).
+- [x] `obsidianHost.document` returns `activeDocument` (popout-aware via Obsidian's global).
+- [x] Did **not** extend timers through the Host port. The `prefer-window-timers` rule explicitly wants `window.setTimeout(...)` in BOTH builds and rejects `activeWindow.setTimeout`. Auto-fixed all bare timer calls to `window.X` form. No abstraction needed.
 
-```ts
-export interface Host {
-  setTimeout(cb: () => void, ms: number): number;
-  clearTimeout(id: number): void;
-  setInterval(cb: () => void, ms: number): number;
-  clearInterval(id: number): void;
-  document: Document;
-  fetchBlob(url: string): Promise<Blob>;
-  createElement<K extends keyof HTMLElementTagNameMap>(tag: K): HTMLElementTagNameMap[K];
-}
-```
+Deferred (not needed to clear current warnings):
+- `fetchBlob` — only needed if we add new fetch sites; SVG export already bypasses fetch (Task 2).
+- `createElement<K>` shorthand — current call sites use `getHost().document.createElement` directly.
+- `Host` injection through `AutoSaveController` — `AutoSaveController` is in `@limn/core` which the scanner doesn't appear to flag; revisit if it shows up on a future scorecard.
 
-- [ ] Export a default `webHost: Host` from `packages/web/src/host.ts` that wraps `window`/`document`/`fetch`.
-- [ ] Wire `Host` injection through `AutoSaveController` (currently uses bare `setTimeout`/`setInterval` at `AutoSaveController.ts:29,37,39,67,83,85`).
-- [ ] Commit.
+### 6. Migrate web/ DOM call sites ✓
 
-### 6. Migrate web/ DOM call sites to go through Host
+- [x] `DomTextMeasurer.ts` (10 sites) — `document.*` → `getHost().document.*`.
+- [x] `svg.ts` (6 sites) — same. Includes `createElement("canvas")` and `createElement("a")`.
+- [x] `MindMapCanvas.tsx` (2 sites) — same.
+- [x] `main.tsx`, `themes.ts` (1 each) — same.
+- [x] Timer call sites (auto-fixed): `FileStatusBar.tsx`, `HamburgerMenu.tsx`, `MindMapCanvas.tsx`, `useKeystrokeOverlay.ts`, `desktop-persistence.ts` — bare `setTimeout`/etc → `window.X`.
+- [x] `useKeystrokeOverlay.ts` and `MindMapCanvas.tsx`: ref types `ReturnType<typeof setTimeout>` → `number` (Node's NodeJS.Timeout was bleeding into the inferred type; browser `window.setTimeout` returns `number`).
+- [x] Full test suite (742) and Obsidian build green.
 
-This is the bulk of the warnings. Touch each file in turn.
+### 7. Implement the Obsidian `Host` ✓
 
-- [ ] `packages/web/src/text/DomTextMeasurer.ts:16,21,58,63,65,69,71,76,77,78` — replace `document.createElement` with `host.createElement`. Replace `document.createElement("div")` with `host.createElement("div")` (later swap to `createDiv()` in the Obsidian host impl).
-- [ ] `packages/web/src/components/MindMapCanvas.tsx:327,425` — same `document` → `host.document` swap.
-- [ ] `packages/web/src/export/svg.ts:118,122,142,169,189,209` — same. Includes the `createElement("canvas")` and `createElement("a")` sites.
-- [ ] `packages/web/src/main.tsx:12` and `packages/web/src/theme/themes.ts:35` — same.
-- [ ] `packages/web/src/persistence/desktop-persistence.ts:170,192`, `packages/web/src/components/FileStatusBar.tsx:23,27`, `packages/web/src/components/MindMapCanvas.tsx:358,362,370`, `packages/web/src/input/useKeystrokeOverlay.ts:61,65,72,75`, `packages/web/src/App.tsx:476` — replace bare `setTimeout`/`clearTimeout`/`returnValue` with `host` equivalents.
-- [ ] Run full test suite after each file. Commit per logical group.
-
-### 7. Implement the Obsidian `Host`
-
-- [ ] In `packages/obsidian/src/`, create `ObsidianHost.ts` implementing `Host`:
-  - `setTimeout`/`setInterval` → `activeWindow.setTimeout(...)` etc.
-  - `document` → `activeDocument`
-  - `fetchBlob(url)` → use `requestUrl` and convert the response to a Blob.
-  - `createElement("div")` → use `createDiv()`; other tags → `createEl(tag)`.
-- [ ] In `LimnView.onOpen`, set the active host before mounting React. Reset on close.
-- [ ] Verify the Obsidian plugin still loads and renders a mind map (`just obsidian-dev` or whatever the local Obsidian dev loop is — check `Justfile`).
-- [ ] Commit.
+- [x] `obsidianHost.document` returns `activeDocument`.
+- [x] Timer abstraction skipped (see Task 5 — the rule wants `window.X` in both builds).
+- [x] `setHost(obsidianHost)` already wired in `LimnPlugin.onload` from Phase 1.
 
 ### 8. Handle remaining unsafe-`any` warnings
 
 After 3a the App.tsx/desktop-bridge/desktop-persistence ones should be gone. Remaining hot spots:
 
-- `packages/obsidian/src/LimnView.ts:65,68,136,165` — `Unsafe assignment` / `casting to TFile`. The TFile cast should be replaced with an `instanceof TFile` narrowing check.
+- [x] `packages/obsidian/src/LimnView.ts:140` — `casting to TFile` replaced with `instanceof TFile` narrowing.
 - `packages/web/src/persistence/WebPersistenceProvider.ts:67-70` — typed access to `window.limn.{tabId,docId,revision}`; covered by the `LimnWindow` interface in 3a if reused here.
 - `packages/web/src/persistence/file.ts:69,87,102,136` — `MindMapFileFormat` casts. Either validate at the boundary with `migrateToLatest` (already exists in core) or add a typed `parseFileFormat()` that returns a discriminated union.
 - `packages/web/src/persistence/desktop-persistence.ts:108,109,115` and `desktop-bridge.ts:75,78,83,88,110-112` — same as above; covered partly by `LimnWindow`.
@@ -235,3 +225,5 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 | Date       | Version | Overall | Health    | Review | Issue count | Notes                       |
 |------------|---------|---------|-----------|--------|-------------|-----------------------------|
 | 2026-05-12 | 0.9.11  | 43%     | Excellent | Risks  | 142         | baseline; plugin published  |
+| 2026-05-13 | 0.9.13  | tbd     | Excellent | Passed | 4P / 79W / 0E | Phase 1 closed all Errors; status flipped to Passed |
+| 2026-05-13 | 0.9.14  | tbd     | tbd       | tbd    | tbd         | Phase 2: Host.document + window.X timers; pending re-scan |

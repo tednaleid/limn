@@ -3,7 +3,7 @@
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { setHost } from "@limn/core";
+import { setHost, getHost } from "@limn/core";
 import { App } from "./App";
 import { isDesktop } from "./persistence/desktop-bridge";
 import { resolveDocId } from "./persistence/docRouting";
@@ -13,7 +13,7 @@ import "./index.css";
 setHost(webHost);
 
 async function mount() {
-  const root = document.getElementById("root");
+  const root = getHost().document.getElementById("root");
   if (!root) throw new Error("Root element not found");
 
   // Desktop mode uses Swift bridge for persistence; skip IndexedDB-based routing

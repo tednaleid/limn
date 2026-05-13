@@ -1,7 +1,7 @@
 // ABOUTME: FileView subclass that renders .limn files as interactive mind maps.
 // ABOUTME: Mounts React into Obsidian's view container with an isolated React instance.
 
-import { FileView, type WorkspaceLeaf, type TFile, type EventRef } from "obsidian";
+import { FileView, TFile, type WorkspaceLeaf, type EventRef } from "obsidian";
 import type LimnPlugin from "./main";
 import {
   Editor, AutoSaveController,
@@ -136,8 +136,8 @@ export class LimnView extends FileView {
     // Listen for external changes to the file (e.g., sync)
     this.vaultModifyRef = this.app.vault.on("modify", (file) => {
       if (this.isSaving) return;
-      if (file === this.file) {
-        void this.onLoadFile(file as TFile);
+      if (file === this.file && file instanceof TFile) {
+        void this.onLoadFile(file);
       }
     });
   }

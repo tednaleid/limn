@@ -3,7 +3,7 @@
 
 import { useCallback, useRef, useState, useEffect } from "react";
 import type { MindMapNode } from "@limn/core";
-import { stripMarkdown } from "@limn/core";
+import { stripMarkdown, getHost } from "@limn/core";
 import { useEditor } from "../hooks/useEditor";
 import { useAssetUrls } from "../hooks/useAssetUrls";
 import { NodeView } from "./NodeView";
@@ -43,7 +43,7 @@ export function MindMapCanvas() {
 
   // Link hover tooltip state
   const [linkTooltip, setLinkTooltip] = useState<{ x: number; y: number; url: string } | null>(null);
-  const linkTooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkTooltipTimer = useRef<number | null>(null);
   const camera = editor.getCamera();
   const allVisibleNodes = editor.getVisibleNodes();
   const selectedId = editor.getSelectedId();
@@ -324,7 +324,7 @@ export function MindMapCanvas() {
   const handleCanvasDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       // Use elementFromPoint to bypass pointer capture redirecting e.target to SVG
-      const actual = document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
+      const actual = getHost().document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
       const nodeGroup = actual?.closest("[data-node-id]") as SVGElement | null;
       if (nodeGroup) {
         // Double-click on a node: enter edit mode
@@ -355,11 +355,11 @@ export function MindMapCanvas() {
         const href = linkEl.getAttribute("href");
         if (href) {
           // Clear any pending timer and start a new one
-          if (linkTooltipTimer.current) clearTimeout(linkTooltipTimer.current);
+          if (linkTooltipTimer.current) window.clearTimeout(linkTooltipTimer.current);
           const rect = (e.currentTarget as Element).getBoundingClientRect();
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
-          linkTooltipTimer.current = setTimeout(() => {
+          linkTooltipTimer.current = window.setTimeout(() => {
             setLinkTooltip({ x, y, url: href });
           }, 300);
           return;
@@ -367,7 +367,7 @@ export function MindMapCanvas() {
       }
       // Not over a link: clear tooltip and timer
       if (linkTooltipTimer.current) {
-        clearTimeout(linkTooltipTimer.current);
+        window.clearTimeout(linkTooltipTimer.current);
         linkTooltipTimer.current = null;
       }
       if (linkTooltip) setLinkTooltip(null);
@@ -422,7 +422,7 @@ export function MindMapCanvas() {
       const world = screenToWorld(e.clientX, e.clientY);
 
       // Find node under drop point
-      const target = document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
+      const target = getHost().document.elementFromPoint(e.clientX, e.clientY) as SVGElement | null;
       const nodeGroup = target?.closest("[data-node-id]") as SVGElement | null;
       const targetNodeId = nodeGroup?.getAttribute("data-node-id") ?? null;
 

@@ -228,7 +228,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
       }
     };
     // Defer to avoid closing immediately from the open click
-    requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
       window.addEventListener("pointerdown", handleClick);
     });
     return () => window.removeEventListener("pointerdown", handleClick);

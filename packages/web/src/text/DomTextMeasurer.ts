@@ -2,7 +2,7 @@
 // ABOUTME: Measures actual text dimensions for accurate node sizing.
 
 import type { TextMeasurer, NodeStyle } from "@limn/core";
-import { parseMarkdownLines } from "@limn/core";
+import { parseMarkdownLines, getHost } from "@limn/core";
 
 const FONT_SIZE = 14;
 const LINE_HEIGHT = 20;
@@ -15,12 +15,12 @@ let measureEl: HTMLDivElement | null = null;
 
 function getMeasureElement(): HTMLDivElement {
   if (measureEl) return measureEl;
-  measureEl = createMeasureElement(document.body);
+  measureEl = createMeasureElement(getHost().document.body);
   return measureEl;
 }
 
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
-  const el = document.createElement("div");
+  const el = getHost().document.createElement("div");
   el.className = "limn-measure";
   // Static base styles (position, visibility, white-space: pre, width: auto,
   // box-sizing, font-family) live in the .limn-measure CSS class in
@@ -49,29 +49,30 @@ function applyStyle(el: HTMLDivElement, style?: NodeStyle): void {
 
 /** Populate an element with styled DOM nodes from markdown text. */
 function populateWithMarkdown(el: HTMLDivElement, text: string): void {
+  const doc = getHost().document;
   el.textContent = "";
   if (!text) {
-    el.appendChild(document.createTextNode("\u00A0"));
+    el.appendChild(doc.createTextNode("\u00A0"));
     return;
   }
   const lines = parseMarkdownLines(text);
   lines.forEach((segments, i) => {
-    if (i > 0) el.appendChild(document.createTextNode("\n"));
+    if (i > 0) el.appendChild(doc.createTextNode("\n"));
     if (segments.length === 0) {
-      el.appendChild(document.createTextNode("\u00A0"));
+      el.appendChild(doc.createTextNode("\u00A0"));
       return;
     }
     for (const seg of segments) {
-      let node: Node = document.createTextNode(seg.text);
+      let node: Node = doc.createTextNode(seg.text);
       if (seg.style.code) {
-        const code = document.createElement("code");
+        const code = doc.createElement("code");
         code.className = "limn-code";
         code.appendChild(node);
         node = code;
       }
-      if (seg.style.bold) { const b = document.createElement("b"); b.appendChild(node); node = b; }
-      if (seg.style.italic) { const em = document.createElement("i"); em.appendChild(node); node = em; }
-      if (seg.style.strikethrough) { const s = document.createElement("s"); s.appendChild(node); node = s; }
+      if (seg.style.bold) { const b = doc.createElement("b"); b.appendChild(node); node = b; }
+      if (seg.style.italic) { const em = doc.createElement("i"); em.appendChild(node); node = em; }
+      if (seg.style.strikethrough) { const s = doc.createElement("s"); s.appendChild(node); node = s; }
       el.appendChild(node);
     }
   });

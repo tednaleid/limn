@@ -11,13 +11,9 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 // to read a plugin manifest from cwd. We just want the Obsidian-specific rules
 // that map to the community scorecard findings.
 //
-// Rules enabled below correspond 1:1 to scorecard warning categories:
-//   no-global-this              -> "Avoid using 'globalThis'"
-//   no-static-styles-assignment -> "Avoid element.style.cssText"
-//   no-tfile-tfolder-cast       -> "Avoid casting to TFile"
-//   platform                    -> "Use Platform API, not navigator"
-//   prefer-active-doc           -> "Use activeDocument, not document"
-//   prefer-window-timers        -> "Use activeWindow.setTimeout, not setTimeout"
+// All obsidianmd rules with code-style implications are enabled. The scorecard
+// scanner runs the full recommended preset; mirroring it locally surfaces
+// regressions at `just lint-obsidian` time, not 10 days later on the scorecard.
 export default defineConfig(
   ...tseslint.configs.strict,
   {
@@ -33,12 +29,22 @@ export default defineConfig(
     files: ["packages/obsidian/**/*.{ts,tsx}", "packages/web/**/*.{ts,tsx}"],
     plugins: { obsidianmd },
     rules: {
+      "obsidianmd/detach-leaves": "warn",
+      "obsidianmd/editor-drop-paste": "warn",
+      "obsidianmd/hardcoded-config-path": "warn",
+      "obsidianmd/no-forbidden-elements": "warn",
       "obsidianmd/no-global-this": "warn",
+      "obsidianmd/no-sample-code": "warn",
       "obsidianmd/no-static-styles-assignment": "error",
       "obsidianmd/no-tfile-tfolder-cast": "warn",
+      "obsidianmd/object-assign": "warn",
       "obsidianmd/platform": "warn",
+      "obsidianmd/prefer-abstract-input-suggest": "warn",
       "obsidianmd/prefer-active-doc": "warn",
+      "obsidianmd/prefer-get-language": "warn",
       "obsidianmd/prefer-window-timers": "warn",
+      "obsidianmd/regex-lookbehind": "warn",
+      "obsidianmd/sample-names": "warn",
     },
   },
   {
@@ -46,6 +52,7 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
       "obsidianmd/no-global-this": "off",
+      "obsidianmd/prefer-window-timers": "off",
     },
   },
   {

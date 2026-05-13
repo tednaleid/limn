@@ -53,26 +53,26 @@ export function useKeystrokeOverlay(enabled: boolean, isActive?: () => boolean):
   // e.key differs between keydown/keyup due to modifier state changes.
   const heldRef = useRef<Map<string, string>>(new Map());
   const stableRef = useRef<string[]>([]);
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimerRef = useRef<number | null>(null);
+  const cleanupTimerRef = useRef<number | null>(null);
 
   const cancelTimers = useCallback(() => {
     if (fadeTimerRef.current !== null) {
-      clearTimeout(fadeTimerRef.current);
+      window.clearTimeout(fadeTimerRef.current);
       fadeTimerRef.current = null;
     }
     if (cleanupTimerRef.current !== null) {
-      clearTimeout(cleanupTimerRef.current);
+      window.clearTimeout(cleanupTimerRef.current);
       cleanupTimerRef.current = null;
     }
   }, []);
 
   const startFade = useCallback(() => {
     cancelTimers();
-    fadeTimerRef.current = setTimeout(() => {
+    fadeTimerRef.current = window.setTimeout(() => {
       setTransientOpacity(0);
       // Remove transient parts from DOM after CSS transition completes
-      cleanupTimerRef.current = setTimeout(() => {
+      cleanupTimerRef.current = window.setTimeout(() => {
         setTransientParts([]);
       }, FADE_DURATION_MS);
     }, FADE_DELAY_MS);

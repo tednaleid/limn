@@ -1,7 +1,7 @@
 // ABOUTME: SVG export using XMLSerializer on the rendered SVG element.
 // ABOUTME: Triggers a download of the serialized SVG file.
 
-import { THEME_CSS_VARS } from "@limn/core";
+import { THEME_CSS_VARS, getHost } from "@limn/core";
 import type { DerivedThemeVars } from "@limn/core";
 
 /** Bounding box of content in world coordinates. */
@@ -131,13 +131,14 @@ async function serializeWithTheme(
   clone.removeAttribute("style");
 
   const ns = "http://www.w3.org/2000/svg";
+  const doc = getHost().document;
   let defs = clone.querySelector("defs");
   if (!defs) {
-    defs = document.createElementNS(ns, "defs");
+    defs = doc.createElementNS(ns, "defs");
     clone.insertBefore(defs, clone.firstChild);
   }
 
-  const style = document.createElementNS(ns, "style");
+  const style = doc.createElementNS(ns, "style");
   style.textContent = css;
   defs.insertBefore(style, defs.firstChild);
 
@@ -160,7 +161,7 @@ export async function serializeSvg(
   bounds?: ContentBounds | null,
   loadAssetBlob?: AssetBlobLoader,
 ): Promise<string | null> {
-  const svgEl = document.querySelector("svg[data-limn-canvas]");
+  const svgEl = getHost().document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return null;
@@ -193,7 +194,7 @@ export async function exportPng(
   bounds?: ContentBounds | null,
   loadAssetBlob?: AssetBlobLoader,
 ): Promise<void> {
-  const svgEl = document.querySelector("svg[data-limn-canvas]");
+  const svgEl = getHost().document.querySelector("svg[data-limn-canvas]");
   if (!svgEl) {
     console.error("No SVG canvas found for export");
     return;
@@ -213,7 +214,7 @@ export async function exportPng(
       ? (bounds.maxY - bounds.minY + 40)
       : svgEl.clientHeight;
 
-    const canvas = document.createElement("canvas");
+    const canvas = getHost().document.createElement("canvas");
     canvas.width = width * 2; // 2x for retina
     canvas.height = height * 2;
     const ctx = canvas.getContext("2d");
@@ -233,7 +234,7 @@ export async function exportPng(
 /** Trigger a browser download for a blob. */
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = getHost().document.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();

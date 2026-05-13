@@ -166,7 +166,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
       postToSwift({ type: "requestOpen" });
       // If Swift doesn't respond (user cancelled), we need a timeout
       // to resolve null so the UI doesn't hang. 60s is generous.
-      setTimeout(() => {
+      window.setTimeout(() => {
         const p = getPendingLoad();
         if (p) {
           p.resolve(null);
@@ -188,7 +188,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     return new Promise((resolve) => {
       setPendingSave({ resolve });
       postToSwift({ type: "requestSaveAs", payload: { data: base64 } });
-      setTimeout(() => {
+      window.setTimeout(() => {
         const p = getPendingSave();
         if (p) {
           p.resolve(null);

@@ -20,11 +20,11 @@ export function FileStatusBar({ filename, flash, onFlashDone }: FileStatusBarPro
   useEffect(() => {
     if (!flash) return;
     setVisible(flash);
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setVisible(null);
       onFlashDone();
     }, 2000);
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [flash, onFlashDone]);
 
   if (!filename && !visible) return null;

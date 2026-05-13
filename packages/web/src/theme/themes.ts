@@ -5,7 +5,7 @@ import {
   resolveTheme,
 } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
-import { deriveThemeVars } from "@limn/core";
+import { deriveThemeVars, getHost } from "@limn/core";
 
 /**
  * Resolve the OS color scheme preference to "light" or "dark".
@@ -32,7 +32,7 @@ export function resolveActiveThemeKey(
  * Sets data-theme attribute for SVG export to read.
  */
 export function applyThemeByKey(themeKey: ThemeKey): void {
-  const el = document.documentElement;
+  const el = getHost().document.documentElement;
   el.setAttribute("data-theme", themeKey);
 
   const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
