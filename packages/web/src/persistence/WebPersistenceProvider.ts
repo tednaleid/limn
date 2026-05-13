@@ -14,6 +14,12 @@ interface StoredDocument {
   savedAt: number;
 }
 
+interface SyncMessage {
+  docId: string;
+  revision: number;
+  tabId: string;
+}
+
 export class WebPersistenceProvider implements PersistenceProvider {
   private channel: BroadcastChannel | null = null;
   private revision = 0;
@@ -63,7 +69,7 @@ export class WebPersistenceProvider implements PersistenceProvider {
   onExternalChange(callback: (data: MindMapFileFormat) => void): () => void {
     try {
       this.channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-      this.channel.onmessage = async (event) => {
+      this.channel.onmessage = async (event: MessageEvent<SyncMessage>) => {
         const msg = event.data;
         if (msg.tabId === this.tabId) return;
         if (msg.docId === this.docId && msg.revision > this.revision) {

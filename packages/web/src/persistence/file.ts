@@ -66,8 +66,8 @@ export async function parseLimnFile(file: File | Blob): Promise<{
 
   // Legacy: plain JSON
   const text = new TextDecoder().decode(bytes);
-  const raw = JSON.parse(text);
-  const data: MindMapFileFormat = migrateToLatest(raw);
+  const raw: unknown = JSON.parse(text);
+  const data: MindMapFileFormat = migrateToLatest(raw as MindMapFileFormat);
   return { data, assetBlobs: new Map() };
 }
 
@@ -84,8 +84,8 @@ function parseZipLimn(bytes: Uint8Array): {
   if (!dataJsonBytes) {
     throw new Error("Invalid .limn file: missing data.json");
   }
-  const raw = JSON.parse(strFromU8(dataJsonBytes));
-  const data: MindMapFileFormat = migrateToLatest(raw);
+  const raw: unknown = JSON.parse(strFromU8(dataJsonBytes));
+  const data: MindMapFileFormat = migrateToLatest(raw as MindMapFileFormat);
 
   // Build filename -> assetId lookup from asset metadata
   const filenameToAssetId = new Map<string, string>();

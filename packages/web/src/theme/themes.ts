@@ -5,7 +5,7 @@ import {
   resolveTheme,
 } from "@limn/core";
 import type { ThemeKey } from "@limn/core";
-import { deriveThemeVars, getHost } from "@limn/core";
+import { deriveThemeVars, getHost, THEME_CSS_VARS } from "@limn/core";
 
 /**
  * Resolve the OS color scheme preference to "light" or "dark".
@@ -38,8 +38,8 @@ export function applyThemeByKey(themeKey: ThemeKey): void {
   const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
   const theme = resolveTheme(themeKey, effective);
   const vars = deriveThemeVars(theme);
-  for (const [key, value] of Object.entries(vars)) {
-    el.style.setProperty(key, value);
+  for (const key of THEME_CSS_VARS) {
+    el.style.setProperty(key, vars[key]);
   }
 }
 

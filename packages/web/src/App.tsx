@@ -21,7 +21,7 @@ import { saveToFile, saveAsToFile, openFile, clearFileHandle, getCurrentFilename
 import { exportSvg, serializeSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
-import { limnWindow } from "./limn-window";
+import { limnWindow, type AssetAddedDetail } from "./limn-window";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -494,7 +494,7 @@ export function App({ docId, initialData }: AppProps) {
   const [assetUrls, setAssetUrls] = useState<AssetUrlMap>(new Map());
 
   const handleAssetAdded = useCallback((e: Event) => {
-    const { assetId, blobUrl } = (e as CustomEvent).detail;
+    const { assetId, blobUrl } = (e as CustomEvent<AssetAddedDetail>).detail;
     setAssetUrls((prev) => {
       const next = new Map(prev);
       next.set(assetId, blobUrl);

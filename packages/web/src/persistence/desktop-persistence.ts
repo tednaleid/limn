@@ -104,8 +104,8 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
 
     if (msg.payload.format === "json") {
       // Plain JSON with optional sidecar assets
-      const raw = JSON.parse(msg.payload.data);
-      data = migrateToLatest(raw);
+      const raw: unknown = JSON.parse(msg.payload.data);
+      data = migrateToLatest(raw as MindMapFileFormat);
 
       // Load sidecar assets (assetId -> base64)
       if (msg.payload.assets) {
@@ -142,10 +142,10 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     return getCurrentFilename();
   }
 
-  async load(): Promise<MindMapFileFormat | null> {
+  load(): Promise<MindMapFileFormat | null> {
     // Desktop app sends loadFile when it has a file to open.
     // If no file is pending, return null (empty canvas).
-    return null;
+    return Promise.resolve(null);
   }
 
   async save(data: MindMapFileFormat): Promise<void> {
@@ -198,16 +198,17 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
     });
   }
 
-  async saveAsset(assetId: string, blob: Blob): Promise<void> {
+  saveAsset(assetId: string, blob: Blob): Promise<void> {
     getAssetCache().set(assetId, blob);
     // Assets are bundled into the ZIP on save -- no sidecar bridge message needed.
+    return Promise.resolve();
   }
 
-  async loadAsset(assetId: string): Promise<Blob | undefined> {
-    return getAssetCache().get(assetId);
+  loadAsset(assetId: string): Promise<Blob | undefined> {
+    return Promise.resolve(getAssetCache().get(assetId));
   }
 
-  async loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
+  loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
     const result = new Map<string, string>();
     for (const id of assetIds) {
       // Reuse existing URL if available
@@ -223,7 +224,7 @@ export class DesktopPersistenceProvider implements PersistenceProvider {
         result.set(id, url);
       }
     }
-    return result;
+    return Promise.resolve(result);
   }
 
   /** Signal to Swift that the web view is ready to receive file data. */

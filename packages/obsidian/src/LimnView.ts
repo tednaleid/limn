@@ -24,6 +24,7 @@ import { resolveActiveThemeKey } from "@limn/web/theme/themes";
 import { exportSvg } from "@limn/web/export/svg";
 import { KeystrokeOverlay } from "@limn/web/components/KeystrokeOverlay";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
+import type { AssetAddedDetail } from "@limn/web/limn-window";
 
 export const VIEW_TYPE_LIMN = "limn-view";
 
@@ -66,7 +67,7 @@ function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HT
   }, [editor, provider]);
 
   const handleAssetAdded = useCallback((e: Event) => {
-    const { assetId, blobUrl } = (e as CustomEvent).detail;
+    const { assetId, blobUrl } = (e as CustomEvent<AssetAddedDetail>).detail;
     setAssetUrls((prev) => {
       const next = new Map(prev);
       next.set(assetId, blobUrl);
@@ -165,8 +166,8 @@ export class LimnView extends FileView {
     const effective: "light" | "dark" = themeKey.includes("light") || themeKey.includes("latte") ? "light" : "dark";
     const theme = resolveTheme(themeKey, effective);
     const vars = deriveThemeVars(theme);
-    for (const [key, value] of Object.entries(vars)) {
-      el.style.setProperty(key, value);
+    for (const key of THEME_CSS_VARS) {
+      el.style.setProperty(key, vars[key]);
     }
     // Set color directly so buttons (which use `inherit`) get the right color.
     // This bypasses Obsidian's --text-color variable that shadows ours.

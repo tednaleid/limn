@@ -18,21 +18,22 @@ export class ObsidianPersistenceProvider implements PersistenceProvider {
     await this.view.saveToDisk();
   }
 
-  async saveAsset(assetId: string, blob: Blob): Promise<void> {
+  saveAsset(assetId: string, blob: Blob): Promise<void> {
     this.assetCache.set(assetId, blob);
+    return Promise.resolve();
   }
 
-  async loadAsset(assetId: string): Promise<Blob | undefined> {
-    return this.assetCache.get(assetId);
+  loadAsset(assetId: string): Promise<Blob | undefined> {
+    return Promise.resolve(this.assetCache.get(assetId));
   }
 
-  async loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
+  loadAssetUrls(assetIds: string[]): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     for (const id of assetIds) {
       const blob = this.assetCache.get(id);
       if (blob) map.set(id, URL.createObjectURL(blob));
     }
-    return map;
+    return Promise.resolve(map);
   }
 
   /** Get all cached asset blobs (needed by the view for ZIP building). */

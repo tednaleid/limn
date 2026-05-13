@@ -17,7 +17,8 @@
     "./export/svg": "./src/export/svg.ts",
     "./theme/themes": "./src/theme/themes.ts",
     "./components/KeystrokeOverlay": "./src/components/KeystrokeOverlay.tsx",
-    "./persistence/file": "./src/persistence/file.ts"
+    "./persistence/file": "./src/persistence/file.ts",
+    "./limn-window": "./src/limn-window.ts"
   },
   "scripts": {
     "dev": "vite",

@@ -29,13 +29,14 @@ import noUnsanitized from "eslint-plugin-no-unsanitized";
 // `packages/web`. Tests get a narrower rule set since they're not shipped.
 export default defineConfig(
   ...tseslint.configs.strict,
+  // Typed linting (strictTypeChecked) only applies to source files in a
+  // tsconfig project. Tests are excluded from packages/core/tsconfig.json
+  // and would crash projectService, so we scope all typed parsing to
+  // packages/*/src/**.
   {
-    // Typed linting needs each linted file to be in a tsconfig.json. Tests are
-    // excluded from packages/core/tsconfig.json, and vite/vitest/esbuild configs
-    // are outside src/, so projectService refuses them. Restrict typed parsing
-    // to actual source files; tests fall back to the default parser below.
     files: ["packages/*/src/**/*.{ts,tsx}"],
     ignores: ["**/__tests__/**", "**/*.test.*"],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
         projectService: true,

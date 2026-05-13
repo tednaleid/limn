@@ -4,6 +4,12 @@
 import type { MindMapFileFormat } from "@limn/core";
 import type { IncomingMessage } from "./persistence/desktop-bridge";
 
+/** CustomEvent detail for `limn:asset-added` — dispatched by MindMapCanvas, observed by app + plugin view. */
+export interface AssetAddedDetail {
+  assetId: string;
+  blobUrl: string;
+}
+
 export interface LimnDesktopState {
   onMessage?: (msg: IncomingMessage) => void;
   _handler?: ((msg: IncomingMessage) => void) | null;
