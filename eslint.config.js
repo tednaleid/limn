@@ -18,11 +18,20 @@ export default defineConfig(
   // The remaining noisier obsidianmd rules live in eslint.obsidian.config.js
   // and run via `just lint-obsidian` until Phase 2 of the scorecard cleanup
   // closes the warnings.
+  // obsidianmd rules with zero current violations are promoted to the main
+  // lint gate. Any regression blocks at commit. The remaining typed/heavier
+  // obsidianmd rules live in eslint.obsidian.config.js and run via
+  // `just lint-obsidian`.
   {
-    files: ["packages/obsidian/**/*.{ts,tsx}", "packages/web/**/*.{ts,tsx}"],
+    files: ["packages/**/*.{ts,tsx}"],
     plugins: { obsidianmd },
     rules: {
       "obsidianmd/no-global-this": "error",
+      "obsidianmd/no-static-styles-assignment": "error",
+      "obsidianmd/no-tfile-tfolder-cast": "error",
+      "obsidianmd/platform": "error",
+      "obsidianmd/prefer-active-doc": "error",
+      "obsidianmd/prefer-window-timers": "error",
     },
   },
   {
@@ -30,6 +39,8 @@ export default defineConfig(
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
       "obsidianmd/no-global-this": "off",
+      "obsidianmd/prefer-window-timers": "off",
+      "obsidianmd/prefer-active-doc": "off",
     },
   },
   {

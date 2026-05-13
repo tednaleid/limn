@@ -1,6 +1,15 @@
 // ABOUTME: Configurable auto-save controller with debounce and interval modes.
 // ABOUTME: Subscribes to Editor changes and delegates saves to a PersistenceProvider.
 
+// Bare `setTimeout`/`setInterval` are intentional here. AutoSaveController lives
+// in @limn/core and runs both in the browser (via @limn/web and the Obsidian
+// plugin, where `window` is the active window) and in vitest's `environment:
+// "node"` where `window` doesn't exist. Hard-coding `window.setTimeout` would
+// break the test suite. The obsidianmd/prefer-window-timers rule's intent
+// (popout-window safety) is satisfied at consumer call sites in @limn/web,
+// which use `window.setTimeout` directly.
+/* eslint-disable obsidianmd/prefer-window-timers */
+
 import type { Editor } from "../editor/Editor";
 import type { PersistenceProvider } from "./types";
 

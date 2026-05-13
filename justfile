@@ -33,7 +33,7 @@ lint:
 # findings locally. Not part of `just check` until Phase 2 of the scorecard
 # cleanup lands (see docs/specs/obsidian-plugin-review.md).
 lint-obsidian:
-    bunx eslint --config eslint.obsidian.config.js packages/obsidian/src packages/web/src
+    bunx eslint --config eslint.obsidian.config.js packages/
 
 # Start the Vite dev server (skips if already running on :5173)
 serve:

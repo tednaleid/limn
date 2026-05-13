@@ -184,6 +184,23 @@ The Scorecard lists 8 disclosures (these are informational, not findings, but wo
 
 - [ ] Audit whether `@limn/web` should be split into `@limn/render` (DOM rendering, host-agnostic) and `@limn/web-app` (the PWA shell, navigator/fetch/window-level concerns). The Obsidian plugin would only depend on `@limn/render`.
 
+### 15. Expand local lint to mirror scorecard scanner ✓
+
+After Phase 2 closed the user-fixable warnings, the local config was widened to mirror the scorecard scanner's ruleset:
+
+- Typed linting enabled via `parserOptions.projectService: true` for `packages/*/src/**/*.{ts,tsx}` (tests excluded since `packages/core/tsconfig.json` skips them).
+- All five obsidianmd typed rules enabled: `no-plugin-as-component`, `no-unsupported-api`, `no-view-references-in-plugin`, `prefer-file-manager-trash-file`, `prefer-instanceof`.
+- `@microsoft/sdl/no-document-write` and `@microsoft/sdl/no-inner-html` enabled.
+- `no-unsanitized/property` and `no-unsanitized/method` enabled.
+- `import/no-nodejs-modules` enabled (manifest.isDesktopOnly = false).
+- `no-restricted-globals`: `fetch` / `localStorage` warn; `no-restricted-imports`: axios / node-fetch / got / ofetch / ky / superagent / moment warn.
+- Core JS rules: `no-eval`, `no-implied-eval`, `no-alert`, `no-implicit-globals`.
+- Six obsidianmd rules with zero current violations promoted into `eslint.config.js` so regressions block at `just check` / commit: `no-global-this`, `no-static-styles-assignment`, `no-tfile-tfolder-cast`, `platform`, `prefer-active-doc`, `prefer-window-timers`.
+
+Scoped exceptions:
+- `packages/core/src/host/Host.ts` — two `eslint-disable-next-line` comments on the default-host fallback for `globalThis.document`. The Host port IS the abstraction the rules want consumers to use; flagging its implementation is a false positive.
+- `packages/core/src/persistence/AutoSaveController.ts` — file-level disable for `prefer-window-timers`. Bare `setTimeout`/`setInterval` is intentional in core since vitest runs the suite in `environment: "node"` where `window` is undefined.
+
 ### 14. Install eslint-plugin-obsidianmd ✓
 
 Local regression net so Obsidian-scanner findings surface at `just lint` time, not 10 days later on the scorecard.
