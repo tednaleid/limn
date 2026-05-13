@@ -22,7 +22,7 @@ on disk).
 - Typecheck: `just typecheck`
 - Coverage: `just coverage`
 - Full CI check: `just check` (coverage + lint + typecheck + obsidian-build)
-- Build: `just build`
+- Build: `just build` (Obsidian plugin); `just build-web` (web PWA)
 - Run web dev server: `just serve` (Vite on http://localhost:5173)
 - Desktop dev: `just desktop-dev` (needs `just serve` running)
 - Desktop release install: `just desktop-release-install`

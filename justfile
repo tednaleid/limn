@@ -43,9 +43,13 @@ serve:
         bun run dev 2>&1 | tee /tmp/limn-dev.log; \
     fi
 
-# Production build
+# Production build (Obsidian plugin — the primary artifact)
 build:
     bun run build
+
+# Build the web PWA (for GitHub Pages deploy)
+build-web:
+    bun run build:web
 
 # Run tests, lint, type-check, and build Obsidian plugin (CI check)
 check: coverage lint typecheck obsidian-build

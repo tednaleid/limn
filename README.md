@@ -41,7 +41,8 @@ just test-file drag  # run a specific test file (by name)
 just lint          # run ESLint
 just coverage      # run tests with coverage report
 just check         # run tests (with coverage) + lint + typecheck (CI check)
-just build         # production build
+just build         # build the Obsidian plugin (primary artifact)
+just build-web     # build the web PWA (used by the Pages deploy)
 just typecheck     # TypeScript type checking
 ```
 
@@ -51,7 +52,8 @@ You can also use `bun run` directly:
 bun run test       # vitest
 bun run dev        # vite dev server
 bun run lint       # eslint
-bun run build      # production build
+bun run build      # build the Obsidian plugin
+bun run build:web  # build the web PWA
 ```
 
 ## Architecture

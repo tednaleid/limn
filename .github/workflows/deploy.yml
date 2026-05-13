@@ -34,7 +34,7 @@ jobs:
         run: just install
 
       - name: Build
-        run: just build
+        run: just build-web
 
       # TODO: bump to v5+ when released (fixes Node 20 warning)
       # Track: https://github.com/actions/upload-pages-artifact/pull/139
