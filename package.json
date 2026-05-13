@@ -8,7 +8,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "dev": "bun run --filter @limn/web dev",
-    "build": "bun run --filter @limn/obsidian build",
+    "build": "bun run --filter @limn/obsidian build && mkdir -p dist && cp packages/obsidian/dist/main.js packages/obsidian/dist/manifest.json packages/obsidian/dist/styles.css dist/",
     "build:web": "bun run --filter @limn/web build",
     "lint": "eslint packages/",
     "test:coverage": "vitest run --coverage"
