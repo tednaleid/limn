@@ -247,4 +247,4 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 | 2026-05-13 | 0.9.15  | tbd     | tbd       | Completed | 0E / 4W   | replaced disables with AST aliasing; renamed Host.doc      |
 | 2026-05-13 | 0.9.16  | tbd     | tbd       | Completed | 2W        | root build → Obsidian plugin; !important removed via `.limn-view.limn-view`; dropped `text-indent` override. CSS warnings cleared; build still fails (esbuild needs git) |
 | 2026-05-13 | 0.9.17  | tbd     | tbd       | Completed | 2W        | esbuild gitSha fallback (build succeeds) but scanner expects main.js in repo-root `dist/` |
-| 2026-05-13 | 0.9.18  | tbd     | tbd       | tbd       | tbd       | root `build` copies main.js + manifest.json + styles.css to repo-root `dist/` so scanner finds them |
+| 2026-05-13 | 0.9.18  | tbd     | tbd       | Completed | 2W        | root `build` copies artifacts to repo-root `dist/`; scanner now runs a reproducibility byte-diff which fails (likely esbuild/bun version drift between release CI and scanner image). Stopping here — no confident, durable fix; accept as the residual build-verification warning. |
