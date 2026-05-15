@@ -119,16 +119,18 @@ try {
 }
 console.log(releaseNotes);
 
-// Create two annotated tags at the same commit:
-//   ${newVersion}            -> triggers the Obsidian plugin release (main.js / manifest.json / styles.css only)
-//   desktop-${newVersion}    -> triggers the macOS desktop release (DMG)
-// Splitting the tags keeps the Obsidian plugin release free of the DMG, which the
-// Obsidian community-plugin scanner flags as an extraneous asset.
+// Create a single annotated tag that triggers both release workflows
+// (Obsidian plugin assets + macOS DMG). The plugin and desktop workflows
+// each call `gh release create ... || gh release upload --clobber`, so
+// whichever wins the race creates the release and the other uploads.
+// Earlier we used a separate `desktop-${newVersion}` tag to keep the
+// plugin release free of the DMG, but Obsidian's community-plugin
+// scanner parsed `desktop-*` as a plugin version that didn't match the
+// manifest and put the plugin into manual-review limbo.
 const notesFile = join(tmpdir(), `limn-release-notes-${newVersion}.txt`);
 writeFileSync(notesFile, releaseNotes);
 try {
   run(`git tag -a ${newVersion} -F ${notesFile}`);
-  run(`git tag -a desktop-${newVersion} -F ${notesFile}`);
 } finally {
   unlinkSync(notesFile);
 }
