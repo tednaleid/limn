@@ -59,7 +59,7 @@ cask "limn" do
   desc "Keyboard-first, offline-capable mind map app"
   homepage "https://github.com/${OWNER}/${MAIN_REPO}"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "Limn.app"
 
