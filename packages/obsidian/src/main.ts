@@ -31,6 +31,8 @@ export default class LimnPlugin extends Plugin {
       name = `Untitled ${i}.limn`;
       i++;
     }
+    // Empty file; LimnView opens it as a blank document and writes a real
+    // ZIP on first save (see loadLimnDocument).
     const file = await this.app.vault.create(`${folder.path}${name}`, "");
     const leaf = this.app.workspace.getLeaf(false);
     await leaf.openFile(file);
