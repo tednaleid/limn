@@ -36,6 +36,9 @@ const ctx = await esbuild[watch ? "context" : "build"]({
   define: {
     __APP_VERSION__: JSON.stringify(version),
     __GIT_SHA__: JSON.stringify(gitSha),
+    // Ship production React in release builds (strips dev warnings/checks,
+    // ~40% smaller); keep the dev build for --dev/watch DX.
+    "process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production"),
   },
   logLevel: "info",
 });
