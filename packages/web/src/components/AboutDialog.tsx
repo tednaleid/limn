@@ -158,7 +158,7 @@ export function AboutDialog({ onClose, variant = "web" }: AboutDialogProps) {
             </a>
           </div>
           <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-            v{__APP_VERSION__} ({__GIT_SHA__})
+            v{__APP_VERSION__}{__GIT_SHA__ ? ` (${__GIT_SHA__})` : ""}
           </div>
         </div>
       </div>

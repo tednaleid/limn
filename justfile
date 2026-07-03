@@ -67,6 +67,31 @@ typecheck:
 obsidian-build:
     cd packages/obsidian && bun run build
 
+# Reproduce the Obsidian scorecard's failing automated checks locally, against
+# the BUILT bundle (what the server-side scanner inspects), so we can iterate
+# without pushing a release. See docs/specs/obsidian-plugin-review.md.
+scorecard: obsidian-build
+    #!/usr/bin/env bash
+    set -uo pipefail
+    bundle=packages/obsidian/dist/main.js
+    echo "== Dependencies (scanner: DEPENDENCIES) =="
+    bun audit || true
+    echo
+    scripts=$(grep -oE 'createElement\("script"\)' "$bundle" | wc -l | tr -d ' ')
+    echo "== Code obfuscation: dynamic <script> creations in main.js =="
+    echo "   createElement(\"script\") count = $scripts  (scanner Error when > 0)"
+    if [ "$scripts" -gt 0 ]; then
+      echo "   These are React DOM resource-preload internals (preinit/preloadModule),"
+      echo "   not limn code; only removable by not bundling react-dom (e.g. Preact)."
+    fi
+    echo
+    echo "== Build verification: reproducibility =="
+    if grep -qE '"'"$(git rev-parse --short HEAD 2>/dev/null || echo __no_git__)"'"' "$bundle"; then
+      echo "   WARNING: a live git sha is embedded; scanner's clean rebuild will not match"
+    else
+      echo "   no live git sha embedded -> deterministic, scanner rebuild should byte-match"
+    fi
+
 # Build the Obsidian plugin in dev/watch mode
 obsidian-dev:
     cd packages/obsidian && bun run dev

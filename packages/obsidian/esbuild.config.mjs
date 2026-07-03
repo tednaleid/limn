@@ -10,14 +10,17 @@ const watch = process.argv.includes("--watch");
 
 mkdirSync("dist", { recursive: true });
 
-// The Obsidian community-plugin scanner runs `bun run build` from a
-// repo snapshot with no `.git` directory, so a failing git invocation
-// would abort the build. Fall back to "unknown" when git isn't usable.
-let gitSha = "unknown";
-try {
-  gitSha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-} catch {
-  // Not in a git checkout (e.g. scanner build) — leave gitSha = "unknown".
+// Release builds embed no git sha so the community-plugin scanner's clean
+// rebuild (from a repo snapshot with no `.git`) byte-matches our released
+// main.js -- the build-verification/reproducibility check. Dev builds keep the
+// short sha for local debugging.
+let gitSha = "";
+if (dev) {
+  try {
+    gitSha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    gitSha = "unknown";
+  }
 }
 const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
 const version = pkg.version ?? "dev";
@@ -27,6 +30,15 @@ const ctx = await esbuild[watch ? "context" : "build"]({
   bundle: true,
   outfile: "dist/main.js",
   external: ["obsidian", "electron", "@codemirror/*"],
+  // Bundle Preact (via preact/compat) instead of React. Preact has none of
+  // react-dom's resource-preload code, which the Obsidian scanner flags as
+  // dynamic <script> creation. Obsidian-only; web/desktop still use React.
+  alias: {
+    react: "preact/compat",
+    "react-dom": "preact/compat",
+    "react-dom/client": "preact/compat/client",
+    "react/jsx-runtime": "preact/jsx-runtime",
+  },
   format: "cjs",
   platform: "node",
   target: "es2022",

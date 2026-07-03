@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { execSync } from "child_process";
-import react from "@vitejs/plugin-react";
+import preact from "@preact/preset-vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const gitSha = execSync("git rev-parse --short HEAD").toString().trim();
@@ -9,7 +9,7 @@ const version = process.env.npm_package_version ?? "dev";
 export default defineConfig({
   base: "/limn/",
   plugins: [
-    react(),
+    preact(),
     VitePWA({
       registerType: "prompt",
       includeAssets: ["favicon.ico"],

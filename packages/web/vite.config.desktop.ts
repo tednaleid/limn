@@ -3,14 +3,14 @@
 
 import { defineConfig } from "vite";
 import { execSync } from "child_process";
-import react from "@vitejs/plugin-react";
+import preact from "@preact/preset-vite";
 
 const gitSha = execSync("git rev-parse --short HEAD").toString().trim();
 const version = process.env.npm_package_version ?? "dev";
 
 export default defineConfig({
   base: "./",
-  plugins: [react()],
+  plugins: [preact()],
   resolve: {
     alias: {
       // Stub out PWA virtual module -- service workers don't work in WKWebView

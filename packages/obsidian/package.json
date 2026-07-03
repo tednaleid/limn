@@ -10,6 +10,7 @@
   "dependencies": {
     "@limn/core": "workspace:*",
     "@limn/web": "workspace:*",
+    "preact": "^10.29.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
