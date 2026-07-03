@@ -72,4 +72,17 @@ describe("save/open dispatch", () => {
     // Should not throw
     expect(() => editor.pressKey("s", { meta: true })).not.toThrow();
   });
+
+  it("requestNew triggers the new callback", () => {
+    const editor = new TestEditor();
+    const newFn = vi.fn();
+    editor.onNew(newFn);
+    editor.requestNew();
+    expect(newFn).toHaveBeenCalledOnce();
+  });
+
+  it("requestNew without callback is a no-op", () => {
+    const editor = new TestEditor();
+    expect(() => editor.requestNew()).not.toThrow();
+  });
 });

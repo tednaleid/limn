@@ -133,6 +133,7 @@ export class Editor {
   private clearCallback: (() => void) | null = null;
   private openLinkCallback: ((url: string) => void) | null = null;
   private shareCallback: (() => void) | null = null;
+  private newCallback: (() => void) | null = null;
 
   // Undo/redo
   private undoStack: HistoryEntry[] = [];
@@ -488,6 +489,19 @@ export class Editor {
   /** Request a share operation. */
   requestShare(): void {
     this.shareCallback?.();
+  }
+
+  /** Register a callback for "new document" requests (menu "New"). */
+  onNew(cb: () => void): void {
+    this.newCallback = cb;
+  }
+
+  /**
+   * Request a new document. The host decides what "new" means: the web app
+   * routes to a fresh local document, the desktop app opens a new window.
+   */
+  requestNew(): void {
+    this.newCallback?.();
   }
 
   /** Register a callback for theme changes. */

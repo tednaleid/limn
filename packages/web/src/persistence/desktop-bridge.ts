@@ -16,6 +16,10 @@ export interface RequestOpenMessage {
   type: "requestOpen";
 }
 
+export interface RequestNewMessage {
+  type: "requestNew";
+}
+
 export interface RequestSaveAsMessage {
   type: "requestSaveAs";
   payload: { data: string }; // base64-encoded ZIP
@@ -30,6 +34,7 @@ export type OutgoingMessage =
   | ReadyMessage
   | SaveMessage
   | RequestOpenMessage
+  | RequestNewMessage
   | RequestSaveAsMessage
   | ExportSvgMessage;
 

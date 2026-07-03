@@ -98,10 +98,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
   const handleSaveAs = () => { editor.requestSaveAs(); close(); };
   const handleExport = () => { editor.requestExport(); close(); };
   const handleShare = () => { editor.requestShare(); close(); };
-  const handleClear = () => {
-    window.location.hash = "local-doc=" + crypto.randomUUID();
-    window.location.reload();
-  };
+  const handleNew = () => { editor.requestNew(); close(); };
   const handleShortcuts = () => { setShowShortcuts(true); close(); };
   const handleKeystrokeOverlay = () => {
     window.dispatchEvent(new Event("limn:toggle-keystroke-overlay"));
@@ -120,7 +117,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
         { label: "Save As", onClick: handleSaveAs },
         { label: "Export SVG", onClick: handleExport },
         ...(showShare ? [{ label: "Copy Share Link", onClick: handleShare }] : []),
-        { label: "New", onClick: handleClear },
+        { label: "New", onClick: handleNew },
       ];
   // Always append the fixed items at the bottom
   actionableItems.push(
@@ -325,7 +322,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
                   <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} active={focusIndex === idx++} />
                   {showShare && <MenuItem label="Copy Share Link" onClick={handleShare} active={focusIndex === idx++} />}
                   <MenuDivider />
-                  <MenuItem label="New" onClick={handleClear} active={focusIndex === idx++} />
+                  <MenuItem label="New" onClick={handleNew} active={focusIndex === idx++} />
                 </>
               );
             })()

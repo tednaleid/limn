@@ -36,6 +36,7 @@ struct WebViewBridge: NSViewRepresentable {
         // while coordinator properties are @MainActor-isolated.
         MainActor.assumeIsolated {
             coordinator.onFileURLChanged = onFileURLChanged
+            coordinator.appDelegate = appDelegate
             appDelegate.registerCoordinator(
                 ObjectIdentifier(coordinator),
                 coordinator: coordinator,
@@ -134,6 +135,9 @@ struct WebViewBridge: NSViewRepresentable {
             case "requestOpen":
                 handleRequestOpen()
 
+            case "requestNew":
+                handleRequestNew()
+
             case "requestSaveAs":
                 if let base64 = payload?["data"] as? String {
                     handleRequestSaveAs(base64: base64)
@@ -179,6 +183,15 @@ struct WebViewBridge: NSViewRepresentable {
                 guard let url = await FileOperations.showOpenPanel() else { return }
                 loadFileIntoWebView(url: url)
             }
+        }
+
+        /// Open a new, empty document in a fresh window -- the same behavior as
+        /// the native File > New (Cmd+N) menu item. The current window and its
+        /// open file are left untouched. The "limn:new/" sentinel URL is not a
+        /// file URL, so the new window starts with the default (empty) document.
+        private func handleRequestNew() {
+            let sentinel = URL(string: "limn:new/\(UUID().uuidString)")!
+            appDelegate?.openWindowAction?(sentinel)
         }
 
         /// Derive the sidecar assets directory URL for a .limn file.
@@ -318,9 +331,10 @@ struct WebViewBridge: NSViewRepresentable {
 
         // MARK: - App delegate access
 
-        private var appDelegate: AppDelegate? {
-            NSApp?.delegate as? AppDelegate
-        }
+        /// Reference to the app delegate, set by makeNSView. Reaching it via
+        /// NSApp.delegate does not work here (the cast returns nil), so the
+        /// hosting view hands us the instance directly.
+        weak var appDelegate: AppDelegate?
 
         // MARK: - Menu-triggered actions
 

@@ -427,6 +427,19 @@ export function App({ docId, initialData }: AppProps) {
       if (!desktop) clearFileHandle();
       setFilename(null);
     });
+    editor.onNew(() => {
+      if (desktop) {
+        // Desktop is a multi-window app: "New" opens a fresh window (like the
+        // native File > New / Cmd+N), leaving the current document untouched.
+        // Swift creates the window; a plain reload would just re-load the same
+        // file the window already has open.
+        postToSwift({ type: "requestNew" });
+      } else {
+        // Web: route to a fresh local document by assigning a new id and reloading.
+        window.location.hash = "local-doc=" + crypto.randomUUID();
+        window.location.reload();
+      }
+    });
     editor.onOpenLink((url) => {
       window.open(url, "_blank", "noopener,noreferrer");
     });
