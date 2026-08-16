@@ -217,6 +217,16 @@ describe("node text", () => {
     },
   );
 
+  test("an indented continuation line that starts like a bullet is escaped after its own indent", () => {
+    const node: OutlineNode = { text: "a\n  - b\n  ***", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- a\\\n    \\- b\\\n    \\***");
+    const back = outlineRoots(parseOutline(text));
+    expect(back).toHaveLength(1);
+    expect(back[0]?.text).toBe("a\n  - b\n  ***");
+    expect(back[0]?.children).toEqual([]);
+  });
+
   test("escapes apply to every line of node text and round-trip through the file", () => {
     const node: OutlineNode = { text: "first\n- second\n# third", collapsed: false, children: [] };
     const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });

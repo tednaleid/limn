@@ -60,27 +60,32 @@ const THEMATIC_BREAK_RE = /^([-*_])(?: *\1){2,} *$/;
 const ORDERED_PREFIX_RE = /^(\d+)([.)])(?: |$)/;
 const ESCAPED_ORDERED_RE = /^(\d+)\\([.)])(?: |$)/;
 
-/** Backslash-escape a line of node text that would otherwise be read as list, heading, quote, fence, or rule syntax. */
+/** Backslash-escape a line of node text that would otherwise be read as list, heading, quote,
+ *  fence, or rule syntax. The line's own leading whitespace is kept in front of the escape. */
 export function escapeLine(line: string): string {
-  if (ESCAPE_PREFIX_RE.test(line) || THEMATIC_BREAK_RE.test(line)) return `\\${line}`;
-  const m = ORDERED_PREFIX_RE.exec(line);
-  if (m) return `${m[1]}\\${line.slice((m[1] ?? "").length)}`;
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body)) return `${ws}\\${body}`;
+  const m = ORDERED_PREFIX_RE.exec(body);
+  if (m) return `${ws}${m[1]}\\${body.slice((m[1] ?? "").length)}`;
   return line;
 }
 
 /** Inverse of escapeLine. Only the escapes escapeLine produces are removed. */
 export function unescapeLine(line: string): string {
-  if (line.startsWith("\\")) {
-    const rest = line.slice(1);
-    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return rest;
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (body.startsWith("\\")) {
+    const rest = body.slice(1);
+    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return `${ws}${rest}`;
     return line;
   }
-  const m = ESCAPED_ORDERED_RE.exec(line);
-  if (m) return `${m[1]}${line.slice((m[1] ?? "").length + 1)}`;
+  const m = ESCAPED_ORDERED_RE.exec(body);
+  if (m) return `${ws}${m[1]}${body.slice((m[1] ?? "").length + 1)}`;
   return line;
 }
 
-/** Remove a trailing hard-break marker (backslash or two spaces) and trailing whitespace. */
+/** Remove a trailing backslash and any trailing whitespace. */
 function stripHardBreak(line: string): string {
   const trimmed = line.trimEnd();
   if (line.endsWith("\\")) return line.slice(0, -1).trimEnd();
