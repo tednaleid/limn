@@ -197,8 +197,9 @@ function contentLines(node: OutlineNode): string[] {
 
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
   const lines = contentLines(node);
-  const hasBody = lines.length > 0 || node.children.length > 0;
-  if (!hasBody) return;
+  const childLines: string[] = [];
+  for (const child of node.children) writeNode(child, depth + 1, childLines);
+  if (lines.length === 0 && childLines.length === 0) return;
   const indent = INDENT.repeat(depth);
   const marker = "-";
   if (lines.length === 0) {
@@ -210,7 +211,7 @@ function writeNode(node: OutlineNode, depth: number, out: string[]): void {
       out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
     });
   }
-  for (const child of node.children) writeNode(child, depth + 1, out);
+  out.push(...childLines);
 }
 
 export function writeNodes(nodes: OutlineNode[], depth = 0): string[] {

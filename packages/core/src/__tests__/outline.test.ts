@@ -128,4 +128,9 @@ describe("writeOutline", () => {
     const parsed = parseOutline("- a\n-\n- b\n");
     expect(writeOutline(parsed)).toBe("- a\n- b\n");
   });
+
+  test("a chain of empty items collapses completely in one write, so writing is idempotent", () => {
+    expect(writeOutline(parseOutline("-\n  -\n"))).toBe("");
+    expect(writeOutline(parseOutline("- a\n  -\n    -\n- b\n"))).toBe("- a\n- b\n");
+  });
 });
