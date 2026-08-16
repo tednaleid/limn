@@ -751,12 +751,9 @@ describe("Editor", () => {
   });
 
   describe("toMarkdown", () => {
-    test("exports markdown outline from current state", () => {
+    test("exports a nested bullet outline from current state", () => {
       const md = editor.toMarkdown();
-      expect(md).toContain("# Root");
-      expect(md).toContain("## Child 1");
-      expect(md).toContain("## Child 2");
-      expect(md).toContain("- Grandchild");
+      expect(md).toBe("- Root\n  - Child 1\n    - Grandchild\n  - Child 2");
     });
   });
 

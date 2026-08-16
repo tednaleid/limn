@@ -3,8 +3,20 @@
 
 import { describe, test, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseOutline, outlineRoots, writeOutline, escapeLine, unescapeLine } from "../markdown/outline";
+import {
+  parseOutline,
+  outlineRoots,
+  writeOutline,
+  escapeLine,
+  unescapeLine,
+  writeSubtree,
+  parseSubtree,
+  outlineToFileNodes,
+  fileNodesToOutline,
+  OUTLINE_IMAGE_PLACEHOLDER,
+} from "../markdown/outline";
 import type { OutlineNode } from "../markdown/outline";
+import { generateNodeId, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../store/MindMapStore";
 
 function fixture(name: string): string {
   return readFileSync(new URL(`../markdown/fixtures/${name}.md`, import.meta.url), "utf8");
@@ -281,5 +293,95 @@ describe("collapse marker and embeds", () => {
     const once = writeOutline(parseOutline(text));
     expect(writeOutline(parseOutline(once))).toBe(once);
     expect(shape(outlineRoots(parseOutline(once)))).toBe(shape(outlineRoots(parseOutline(text))));
+  });
+});
+
+describe("subtree helpers and file-node conversion", () => {
+  test("writeSubtree and parseSubtree round-trip a forest without frontmatter or prose", () => {
+    const nodes: OutlineNode[] = [
+      { text: "a", collapsed: false, children: [{ text: "b", collapsed: false, children: [] }] },
+      { text: "c", collapsed: false, children: [] },
+    ];
+    const text = writeSubtree(nodes);
+    expect(text).toBe("- a\n  - b\n- c");
+    expect(parseSubtree(text)).toEqual(nodes);
+  });
+
+  test("parseSubtree ignores prose and returns roots from every list", () => {
+    expect(shape(parseSubtree("intro\n- a\n\ntext\n- b"))).toBe("a,b");
+  });
+
+  test("outlineToFileNodes assigns ids, placeholder geometry, and maps collapse and images", () => {
+    let n = 0;
+    const nextId = () => `t${n++}`;
+    const nodes: OutlineNode[] = [
+      {
+        text: "root",
+        collapsed: true,
+        image: { target: "pic.png", width: 300 },
+        children: [{ text: "kid", collapsed: false, children: [] }],
+      },
+    ];
+    const file = outlineToFileNodes(nodes, nextId);
+    expect(file).toEqual([
+      {
+        id: "t0",
+        text: "root",
+        x: 0,
+        y: 0,
+        width: DEFAULT_NODE_WIDTH,
+        height: DEFAULT_NODE_HEIGHT,
+        collapsed: true,
+        image: { assetId: "pic.png", width: 300, height: 300 },
+        children: [
+          { id: "t1", text: "kid", x: 0, y: 0, width: DEFAULT_NODE_WIDTH, height: DEFAULT_NODE_HEIGHT, children: [] },
+        ],
+      },
+    ]);
+  });
+
+  test("an image with no size gets the square placeholder; an explicit height is kept", () => {
+    const [a, b] = outlineToFileNodes(
+      [
+        { text: "", collapsed: false, image: { target: "a.png" }, children: [] },
+        { text: "", collapsed: false, image: { target: "b.png", width: 100, height: 40 }, children: [] },
+      ],
+      generateNodeId,
+    );
+    expect(a?.image).toEqual({ assetId: "a.png", width: OUTLINE_IMAGE_PLACEHOLDER, height: OUTLINE_IMAGE_PLACEHOLDER });
+    expect(b?.image).toEqual({ assetId: "b.png", width: 100, height: 40 });
+  });
+
+  test("fileNodesToOutline drops geometry and ids and keeps text, collapse, and image", () => {
+    const outline = fileNodesToOutline([
+      {
+        id: "n9",
+        text: "root",
+        x: 10,
+        y: 20,
+        width: 120,
+        height: 40,
+        collapsed: true,
+        image: { assetId: "pic.png", width: 300, height: 200 },
+        children: [{ id: "n10", text: "kid", x: 0, y: 0, width: 1, height: 1, children: [] }],
+      },
+      { id: "n11", text: "collapsed leaf is not collapsed", x: 0, y: 0, width: 1, height: 1, collapsed: true, children: [] },
+    ]);
+    expect(outline).toEqual([
+      {
+        text: "root",
+        collapsed: true,
+        image: { target: "pic.png", width: 300, height: 200 },
+        children: [{ text: "kid", collapsed: false, children: [] }],
+      },
+      { text: "collapsed leaf is not collapsed", collapsed: false, children: [] },
+    ]);
+  });
+
+  test("generateNodeId yields fresh n-ids that do not collide with loaded ids", () => {
+    const a = generateNodeId();
+    const b = generateNodeId();
+    expect(a).toMatch(/^n\d+$/);
+    expect(b).not.toBe(a);
   });
 });

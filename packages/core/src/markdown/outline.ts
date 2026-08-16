@@ -1,6 +1,9 @@
 // ABOUTME: Markdown outline codec: nested bullet lists <-> OutlineNode trees.
 // ABOUTME: Line-based parser and writer over prose regions and list regions.
 
+import type { MindMapFileNode } from "../serialization/schema";
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../store/MindMapStore";
+
 export interface OutlineImage {
   target: string;
   width?: number;
@@ -296,4 +299,51 @@ export function writeOutline(parsed: ParsedOutline): string {
     else out.push(...writeNodes(region.roots));
   }
   return out.join("\n");
+}
+
+/** Display size used for an embedded image whose size is not yet known. */
+export const OUTLINE_IMAGE_PLACEHOLDER = 200;
+
+export function writeSubtree(nodes: OutlineNode[]): string {
+  return writeNodes(nodes).join("\n");
+}
+
+export function parseSubtree(text: string): OutlineNode[] {
+  return outlineRoots(parseOutline(text));
+}
+
+export function outlineToFileNodes(nodes: OutlineNode[], nextId: () => string): MindMapFileNode[] {
+  return nodes.map((node) => {
+    const file: MindMapFileNode = {
+      id: nextId(),
+      text: node.text,
+      x: 0,
+      y: 0,
+      width: DEFAULT_NODE_WIDTH,
+      height: DEFAULT_NODE_HEIGHT,
+      children: [],
+    };
+    if (node.collapsed) file.collapsed = true;
+    if (node.image) {
+      const width = node.image.width ?? OUTLINE_IMAGE_PLACEHOLDER;
+      const height = node.image.height ?? width;
+      file.image = { assetId: node.image.target, width, height };
+    }
+    file.children = outlineToFileNodes(node.children, nextId);
+    return file;
+  });
+}
+
+export function fileNodesToOutline(nodes: MindMapFileNode[]): OutlineNode[] {
+  return nodes.map((node) => {
+    const outline: OutlineNode = {
+      text: node.text,
+      collapsed: node.collapsed === true && node.children.length > 0,
+      children: fileNodesToOutline(node.children),
+    };
+    if (node.image) {
+      outline.image = { target: node.image.assetId, width: node.image.width, height: node.image.height };
+    }
+    return outline;
+  });
 }

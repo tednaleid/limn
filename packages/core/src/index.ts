@@ -14,7 +14,7 @@ export type {
   TextMeasurer,
 } from "./model/types";
 
-export { MindMapStore, resetIdCounter } from "./store/MindMapStore";
+export { MindMapStore, resetIdCounter, generateNodeId, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "./store/MindMapStore";
 
 export {
   serialize,
@@ -75,6 +75,21 @@ export {
   isPlainSegments,
 } from "./markdown/inlineMarkdown";
 export type { TextStyle, StyledSegment } from "./markdown/inlineMarkdown";
+
+export {
+  parseOutline,
+  writeOutline,
+  outlineRoots,
+  writeNodes,
+  writeSubtree,
+  parseSubtree,
+  escapeLine,
+  unescapeLine,
+  outlineToFileNodes,
+  fileNodesToOutline,
+  OUTLINE_IMAGE_PLACEHOLDER,
+} from "./markdown/outline";
+export type { OutlineNode, OutlineImage, OutlineRegion, ParsedOutline } from "./markdown/outline";
 
 export { SHORTCUT_GROUPS } from "./keybindings/shortcutHelp";
 export type { ShortcutEntry, ShortcutGroup } from "./keybindings/shortcutHelp";

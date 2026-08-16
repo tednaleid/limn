@@ -293,15 +293,19 @@ describe("serialization", () => {
   });
 
   describe("toMarkdown", () => {
-    test("generates indented outline from store", () => {
+    test("generates a nested bullet outline from store", () => {
       const store = deserialize(sampleFile);
       const md = toMarkdown(store);
-      expect(md).toContain("# Project Plan");
-      expect(md).toContain("## Phase 1");
-      expect(md).toContain("## Phase 2");
-      expect(md).toContain("- Research");
-      expect(md).toContain("- Architecture");
-      expect(md).toContain("- Implementation");
+      expect(md).toBe(
+        [
+          "- Project Plan",
+          "  - Phase 1",
+          "    - Research",
+          "    - Architecture",
+          "  * Phase 2",
+          "    - Implementation",
+        ].join("\n"),
+      );
     });
 
     test("handles empty store", () => {
@@ -315,15 +319,7 @@ describe("serialization", () => {
       store.addRoot("Root A");
       store.addRoot("Root B");
       const md = toMarkdown(store);
-      expect(md).toContain("# Root A");
-      expect(md).toContain("# Root B");
-    });
-
-    test("supports multi-line node text", () => {
-      const store = new MindMapStore();
-      store.addRoot("Line 1\nLine 2");
-      const md = toMarkdown(store);
-      expect(md).toContain("# Line 1\nLine 2");
+      expect(md).toBe("- Root A\n- Root B");
     });
   });
 });

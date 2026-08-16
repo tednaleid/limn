@@ -5,6 +5,8 @@ import type { MindMapNode, MindMapMeta } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
 import type { MindMapFileFormat, MindMapFileNode } from "./schema";
 import { mindMapFileSchema, CURRENT_FORMAT_VERSION } from "./schema";
+import type { OutlineNode } from "../markdown/outline";
+import { writeSubtree } from "../markdown/outline";
 
 /**
  * Deserialize nested file format into a flat MindMapStore.
@@ -92,31 +94,18 @@ export function validateFileFormat(data: unknown): {
   return { success: false, error: result.error.message };
 }
 
-/**
- * Export a MindMapStore as a markdown outline.
- * Roots become H1, depth 1 becomes H2, depth 2+ becomes bullet points.
- */
+/** Nested bullet outline of the store in the Limn Markdown dialect. */
 export function toMarkdown(store: MindMapStore): string {
-  const lines: string[] = [];
-
-  function renderNode(node: MindMapNode, depth: number): void {
-    if (depth === 0) {
-      lines.push(`# ${node.text}`);
-    } else if (depth === 1) {
-      lines.push(`## ${node.text}`);
-    } else {
-      const indent = "  ".repeat(depth - 2);
-      lines.push(`${indent}- ${node.text}`);
+  const toOutline = (node: MindMapNode): OutlineNode => {
+    const outline: OutlineNode = {
+      text: node.text,
+      collapsed: node.collapsed && node.children.length > 0,
+      children: store.getChildren(node.id).map(toOutline),
+    };
+    if (node.image) {
+      outline.image = { target: node.image.assetId, width: node.image.width, height: node.image.height };
     }
-
-    for (const childId of node.children) {
-      renderNode(store.getNode(childId), depth + 1);
-    }
-  }
-
-  for (const root of store.getRoots()) {
-    renderNode(root, 0);
-  }
-
-  return lines.join("\n");
+    return outline;
+  };
+  return writeSubtree(store.getRoots().map(toOutline));
 }

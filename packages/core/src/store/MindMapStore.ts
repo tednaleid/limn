@@ -14,8 +14,13 @@ export function resetIdCounter(): void {
   nextIdCounter = 0;
 }
 
-const DEFAULT_WIDTH = 100;
-const DEFAULT_HEIGHT = 32;
+/** Fresh node id from the shared counter, for callers that build nodes outside the store. */
+export function generateNodeId(): string {
+  return generateId();
+}
+
+export const DEFAULT_NODE_WIDTH = 100;
+export const DEFAULT_NODE_HEIGHT = 32;
 
 export class MindMapStore {
   private nodes: Map<string, MindMapNode> = new Map();
@@ -128,8 +133,8 @@ export class MindMapStore {
       collapsed: false,
       x,
       y,
-      width: DEFAULT_WIDTH,
-      height: DEFAULT_HEIGHT,
+      width: DEFAULT_NODE_WIDTH,
+      height: DEFAULT_NODE_HEIGHT,
       widthConstrained: false,
     };
     this.nodes.set(id, node);
@@ -148,8 +153,8 @@ export class MindMapStore {
       collapsed: false,
       x: parent.x + 250,
       y: parent.y,
-      width: DEFAULT_WIDTH,
-      height: DEFAULT_HEIGHT,
+      width: DEFAULT_NODE_WIDTH,
+      height: DEFAULT_NODE_HEIGHT,
       widthConstrained: false,
     };
     this.nodes.set(id, node);
@@ -168,8 +173,8 @@ export class MindMapStore {
       collapsed: false,
       x: parent.x + 250,
       y: parent.y,
-      width: DEFAULT_WIDTH,
-      height: DEFAULT_HEIGHT,
+      width: DEFAULT_NODE_WIDTH,
+      height: DEFAULT_NODE_HEIGHT,
       widthConstrained: false,
     };
     this.nodes.set(id, node);
