@@ -49,7 +49,7 @@ This is the contract between the note and the map. Everything else in the design
 - A bullet line matches `^(indent)([-*+])[ \t]+(content)$`. Ordered lists (`1.` / `1)`) are prose, not map content.
 - Depth comes from indent width relative to enclosing items (tab counts as 4 columns). A stack of open items is kept: greater indent than the top means child, equal means sibling, less pops until it fits.
 - Prose regions are preserved byte-for-byte. Fenced code blocks (```` ``` ```` or `~~~`) and comment blocks are opaque: nothing inside them is a bullet. A comment block is delimited by lines that are exactly `%%`, so an inline `%% ... %%` on a content line is plain text.
-- A fenced block that starts on an item's continuation line belongs to that item's text instead of being opaque prose: every following line is part of the item, bullets included, until a line with the same fence marker closes it, and the writer writes the pair back as a balanced fence. A fence that is never closed runs to the end of the note, which is how Obsidian renders it too. A fence opener the parser cannot read back this way, because it is unbalanced or because it falls on the item's first line, is escaped on write like any other line.
+- A fenced block that starts on an item's continuation line belongs to that item's text instead of being opaque prose: every following line is part of the item, bullets included, until a line with the same fence marker closes it, and the writer writes the pair back as a balanced fence. Lines inside the block are code: they are read and written verbatim, with no escapes, no hard-break markers, and trailing whitespace kept, and the line just before the opener keeps a literal trailing backslash. A fence that is never closed runs to the end of the note, which is how Obsidian renders it too. A fence opener the parser cannot read back this way, because it is unbalanced or because it falls on the item's first line, is escaped on write like any other line.
 - Every top-level item across all list regions is a root, in document order.
 
 ### 5.2 Node text
@@ -67,7 +67,7 @@ This is the contract between the note and the map. Everything else in the design
 
 ### 5.4 Images
 
-- A node with an image writes an embed as its last line (after any text lines, indented to the content column when there is text): `![[filename|WxH]]` when the height is known, `![[filename|W]]` when only the width is known, and `![[filename]]` when the size is unknown. An image whose display size is the placeholder (see 8.3) in both dimensions counts as unknown. An image-only node writes the embed as the item content.
+- A node with an image writes an embed as its last line (after any text lines, indented to the content column when there is text): `![[filename|WxH]]` when the height is known, `![[filename|W]]` when only the width is known, and `![[filename]]` when the size is unknown. A dimension the note did not specify is stored as 0 until the host resolves the image's natural size (see 8.3), and a stored 0 is written back as unknown. An image-only node writes the embed as the item content.
 - On parse, an item whose last line is exactly an embed `![[target]]` or `![[target|W]]` or `![[target|WxH]]` yields `image = { assetId: target, width, height }`. Height comes from `WxH` if present, otherwise from the loaded image's aspect ratio (see 8.3). Any other embed position is plain text.
 - Only `![[...]]` wikilink embeds are recognized. Markdown-style `![alt](path)` stays text.
 
@@ -92,7 +92,7 @@ Pure functions, no browser dependencies:
 - `outlineRoots(parsed: ParsedOutline): OutlineNode[]` flattens list regions' roots in document order.
 - Helper functions: `writeNodes(nodes, depth?): string[]`, `writeSubtree(nodes): string`, `parseSubtree(text): OutlineNode[]`, `escapeLine(line)`, `unescapeLine(line)`.
 - Conversion helpers between `OutlineNode` trees and `MindMapFileNode` trees: `outlineToFileNodes(nodes, nextId): MindMapFileNode[]` assigns placeholder positions and sizes; `fileNodesToOutline(nodes): OutlineNode[]` reads text, collapsed, image.
-- `OUTLINE_IMAGE_PLACEHOLDER = 200` is the width and height used for images whose size is not yet known.
+- `OUTLINE_IMAGE_UNKNOWN_SIZE = 0` is stored for an embed dimension the note did not specify; hosts resolve the natural size before the first write.
 - `Editor.toMarkdown()` and `serialization.toMarkdown()` change to emit the pure-list dialect (they currently emit headings for depth 0 and 1 and are only used by tests). Tests updated.
 
 ### 6.2 `DocumentCapabilities`
@@ -192,7 +192,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 8.3 Image size resolution
 
-- On parse, an embed with `|W` only has no height. The view resolves each image's natural size once per session (`Image` load from the resource URL, cached by target) and calls `editor.setNodeImage` with the computed height. Until resolved, the node uses a square placeholder of side `W` (or a default width when no `|W`). The resulting write is identical text, so no save is triggered.
+- On parse, an embed with `|W` only has no height, and a bare embed has neither. An unspecified dimension is stored as 0. The view resolves each image's natural size once per session (`Image` load from the resource URL, cached by target) and calls `editor.setNodeImage` with the resolved size, before the first write. The resulting write is identical text, so no save is triggered.
 - Image resize in the map updates `W` in the embed.
 
 ### 8.4 Empty and odd notes

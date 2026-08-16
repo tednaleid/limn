@@ -13,7 +13,7 @@ import {
   parseSubtree,
   outlineToFileNodes,
   fileNodesToOutline,
-  OUTLINE_IMAGE_PLACEHOLDER,
+  OUTLINE_IMAGE_UNKNOWN_SIZE,
 } from "../markdown/outline";
 import type { OutlineNode } from "../markdown/outline";
 import { generateNodeId, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../store/MindMapStore";
@@ -380,6 +380,30 @@ describe("continuation lines and fenced blocks", () => {
     expect(writeOutline(parseOutline(text))).toBe(text);
   });
 
+  test("a trailing backslash inside a fenced block is code, not a hard break", () => {
+    const text = "- note\n  ```sh\n  echo a \\\n    b\n  ```\n";
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("note\n```sh\necho a \\\n  b\n```");
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("backslashes inside a fenced block are code, not escapes", () => {
+    const text = "- note\n  ```\n  \\- x\n  1\\. one\n  ```\n";
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("note\n```\n\\- x\n1\\. one\n```");
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("a trailing backslash on the line before a fence opener is literal text", () => {
+    const node: OutlineNode = { text: "a\\\n```\nc\n```", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("a\\\n```\nc\n```");
+  });
+
+  test("trailing spaces inside a fenced block survive a round trip", () => {
+    const node: OutlineNode = { text: "x\n```\ncode  \n```", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("x\n```\ncode  \n```");
+  });
+
   test("an unbalanced fence opener in item text stays escaped", () => {
     const node: OutlineNode = { text: "```\nlonely opener", collapsed: false, children: [] };
     const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
@@ -479,7 +503,7 @@ describe("subtree helpers and file-node conversion", () => {
         width: DEFAULT_NODE_WIDTH,
         height: DEFAULT_NODE_HEIGHT,
         collapsed: true,
-        image: { assetId: "pic.png", width: 300, height: 300 },
+        image: { assetId: "pic.png", width: 300, height: OUTLINE_IMAGE_UNKNOWN_SIZE },
         children: [
           { id: "t1", text: "kid", x: 0, y: 0, width: DEFAULT_NODE_WIDTH, height: DEFAULT_NODE_HEIGHT, children: [] },
         ],
@@ -487,7 +511,7 @@ describe("subtree helpers and file-node conversion", () => {
     ]);
   });
 
-  test("an image with no size gets the square placeholder; an explicit height is kept", () => {
+  test("an unknown embed dimension is stored as zero; an explicit size is kept", () => {
     const [a, b] = outlineToFileNodes(
       [
         { text: "", collapsed: false, image: { target: "a.png" }, children: [] },
@@ -495,7 +519,11 @@ describe("subtree helpers and file-node conversion", () => {
       ],
       generateNodeId,
     );
-    expect(a?.image).toEqual({ assetId: "a.png", width: OUTLINE_IMAGE_PLACEHOLDER, height: OUTLINE_IMAGE_PLACEHOLDER });
+    expect(a?.image).toEqual({
+      assetId: "a.png",
+      width: OUTLINE_IMAGE_UNKNOWN_SIZE,
+      height: OUTLINE_IMAGE_UNKNOWN_SIZE,
+    });
     expect(b?.image).toEqual({ assetId: "b.png", width: 100, height: 40 });
   });
 
@@ -507,6 +535,16 @@ describe("subtree helpers and file-node conversion", () => {
   test("a sized embed keeps its size through outline -> file nodes -> outline", () => {
     const back = fileNodesToOutline(outlineToFileNodes(parseSubtree("- ![[p.png|200x150]]\n"), generateNodeId));
     expect(writeSubtree(back)).toBe("- ![[p.png|200x150]]");
+  });
+
+  test("a width-only embed gains no height through outline -> file nodes -> outline", () => {
+    const back = fileNodesToOutline(outlineToFileNodes(parseSubtree("- ![[q.png|300]]\n"), generateNodeId));
+    expect(writeSubtree(back)).toBe("- ![[q.png|300]]");
+  });
+
+  test("a square embed keeps both dimensions through outline -> file nodes -> outline", () => {
+    const back = fileNodesToOutline(outlineToFileNodes(parseSubtree("- ![[s.png|200x200]]\n"), generateNodeId));
+    expect(writeSubtree(back)).toBe("- ![[s.png|200x200]]");
   });
 
   test("fileNodesToOutline drops geometry and ids and keeps text, collapse, and image", () => {

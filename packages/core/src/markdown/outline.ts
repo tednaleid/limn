@@ -125,6 +125,8 @@ function embedLine(image: OutlineImage): string {
 interface OpenItem {
   node: OutlineNode;
   rawLines: string[];
+  /** Whether each raw line arrived inside an item fence, opener and closer included. */
+  fenced: boolean[];
   marker: string;
   indent: number;
   depth: number;
@@ -144,13 +146,16 @@ function canonicalContentColumn(depth: number): number {
   return 2 * depth + 2;
 }
 
-/** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes.
+/** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes. Lines
+ *  inside a fenced block are code and are kept verbatim, and the line before a fence opener keeps
+ *  a trailing backslash because the writer never puts a hard break there.
  *  A trailing embed line becomes the node's image. The marker determines collapse:
  *  a star on an item with children means collapsed. */
 function finishItem(item: OpenItem): void {
   const lines = item.rawLines.map((raw, i) => {
-    const line = i < item.rawLines.length - 1 ? stripHardBreak(raw) : raw.trimEnd();
-    return unescapeLine(line);
+    if (item.fenced[i]) return raw;
+    const keepBackslash = i === item.rawLines.length - 1 || item.fenced[i + 1] === true;
+    return unescapeLine(keepBackslash ? raw.trimEnd() : stripHardBreak(raw));
   });
   const last = lines[lines.length - 1];
   const image = last !== undefined ? parseEmbedLine(last) : null;
@@ -183,11 +188,10 @@ function continuedItem(list: ListBuilder, line: string): OpenItem | null {
   return null;
 }
 
-/** Append a line to an item, stripping the item's own content columns. Returns the stripped body. */
-function addContinuation(item: OpenItem, line: string): string {
-  const body = stripColumns(line, item.contentColumn);
+/** Record a continuation line of an item, noting whether it arrived inside a fenced block. */
+function pushRawLine(item: OpenItem, body: string, fenced: boolean): void {
   item.rawLines.push(body);
-  return body;
+  item.fenced.push(fenced);
 }
 
 function pushProse(lines: string[], regions: OutlineRegion[]): void {
@@ -211,6 +215,7 @@ function addBullet(list: ListBuilder, m: RegExpExecArray): void {
   list.stack.push({
     node,
     rawLines: [content],
+    fenced: [false],
     marker,
     indent,
     depth: list.stack.length,
@@ -242,7 +247,8 @@ export function parseOutline(text: string): ParsedOutline {
     if (list && fence === null && !inComment) {
       if (list.itemFence !== null) {
         const item = list.stack[list.stack.length - 1] as OpenItem;
-        const body = addContinuation(item, line);
+        const body = stripColumns(line, item.contentColumn);
+        pushRawLine(item, body, true);
         if (FENCE_RE.exec(body)?.[1] === list.itemFence) list.itemFence = null;
         continue;
       }
@@ -257,7 +263,9 @@ export function parseOutline(text: string): ParsedOutline {
       }
       const item = list.pendingBlank.length === 0 ? continuedItem(list, line) : null;
       if (item) {
-        list.itemFence = FENCE_RE.exec(addContinuation(item, line))?.[1] ?? null;
+        const body = stripColumns(line, item.contentColumn);
+        list.itemFence = FENCE_RE.exec(body)?.[1] ?? null;
+        pushRawLine(item, body, list.itemFence !== null);
         continue;
       }
       prose = closeList(list, regions);
@@ -318,20 +326,22 @@ function fencedLines(lines: string[]): boolean[] {
   return fenced;
 }
 
-/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped
- *  unless they are inside a balanced fence, first line's leading whitespace trimmed, then escaped
- *  except inside a balanced fence. */
+/** Lines of a node's text ready to be written: first line's leading whitespace trimmed, then each
+ *  line trimmed of trailing whitespace, blank lines dropped, and the rest escaped. Lines inside a
+ *  balanced fence are code: they are written verbatim, blank ones included. */
 function contentLines(node: OutlineNode): { lines: string[]; fenced: boolean[] } {
-  const trimmed = node.text.split("\n").map((l) => l.trimEnd());
-  const start = trimmed.findIndex((l) => l !== "");
-  const body = start === -1 ? [] : trimmed.slice(start);
+  const all = node.text.split("\n");
+  const start = all.findIndex((l) => l.trim() !== "");
+  const body = start === -1 ? [] : all.slice(start);
   const spans = fencedLines(body);
   const lines: string[] = [];
   const fenced: boolean[] = [];
   body.forEach((line, i) => {
-    if (line === "" && !spans[i]) return;
-    lines.push(line);
-    fenced.push(spans[i] ?? false);
+    const inFence = spans[i] ?? false;
+    const text = inFence ? line : line.trimEnd();
+    if (text === "" && !inFence) return;
+    lines.push(text);
+    fenced.push(inFence);
   });
   if (lines[0] !== undefined) lines[0] = lines[0].trimStart();
   return { lines: lines.map((l, i) => (fenced[i] ? l : escapeLine(l))), fenced };
@@ -378,9 +388,9 @@ export function writeOutline(parsed: ParsedOutline): string {
   return out.join(parsed.lineEnding ?? "\n");
 }
 
-/** Display size used for an embedded image whose size is not yet known. A node carrying it in both
- *  dimensions is written back as an embed with no size. */
-export const OUTLINE_IMAGE_PLACEHOLDER = 200;
+/** Stored for an embed dimension the note did not specify; hosts resolve the natural size before
+ *  the first write. */
+export const OUTLINE_IMAGE_UNKNOWN_SIZE = 0;
 
 export function writeSubtree(nodes: OutlineNode[]): string {
   return writeNodes(nodes).join("\n");
@@ -403,9 +413,11 @@ export function outlineToFileNodes(nodes: OutlineNode[], nextId: () => string): 
     };
     if (node.collapsed) file.collapsed = true;
     if (node.image) {
-      const width = node.image.width ?? OUTLINE_IMAGE_PLACEHOLDER;
-      const height = node.image.height ?? width;
-      file.image = { assetId: node.image.target, width, height };
+      file.image = {
+        assetId: node.image.target,
+        width: node.image.width ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
+        height: node.image.height ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
+      };
     }
     file.children = outlineToFileNodes(node.children, nextId);
     return file;
@@ -421,8 +433,10 @@ export function fileNodesToOutline(nodes: MindMapFileNode[]): OutlineNode[] {
     };
     if (node.image) {
       const { assetId, width, height } = node.image;
-      const unsized = width === OUTLINE_IMAGE_PLACEHOLDER && height === OUTLINE_IMAGE_PLACEHOLDER;
-      outline.image = unsized ? { target: assetId } : { target: assetId, width, height };
+      const image: OutlineImage = { target: assetId };
+      if (width > 0) image.width = width;
+      if (height > 0) image.height = height;
+      outline.image = image;
     }
     return outline;
   });

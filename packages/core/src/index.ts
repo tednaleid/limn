@@ -92,7 +92,7 @@ export {
   unescapeLine,
   outlineToFileNodes,
   fileNodesToOutline,
-  OUTLINE_IMAGE_PLACEHOLDER,
+  OUTLINE_IMAGE_UNKNOWN_SIZE,
 } from "./markdown/outline";
 export type { OutlineNode, OutlineImage, OutlineRegion, ParsedOutline } from "./markdown/outline";
 
