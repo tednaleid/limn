@@ -163,7 +163,7 @@ describe("parseOutline structure", () => {
     expect(parsed.regions.map((r) => r.kind)).toEqual(["prose", "list", "prose", "list", "prose"]);
     const prose0 = parsed.regions[0];
     if (prose0?.kind !== "prose") throw new Error("expected prose");
-    expect(prose0.lines).toEqual(["# Weekly plan", "", "Some prose before the list."]);
+    expect(prose0.lines).toEqual(["# Weekly plan", "", "Some prose before the list.", ""]);
     const prose2 = parsed.regions[2];
     if (prose2?.kind !== "prose") throw new Error("expected prose");
     expect(prose2.lines).toEqual([
@@ -493,6 +493,11 @@ describe("writeOutline", () => {
     const parsed = parseOutline("- a\n-\n- b\n");
     expect(writeOutline(parsed)).toBe("- a\n- b\n");
   });
+
+  test("a chain of empty items collapses completely in one write, so writing is idempotent", () => {
+    expect(writeOutline(parseOutline("-\n  -\n"))).toBe("");
+    expect(writeOutline(parseOutline("- a\n  -\n    -\n- b\n"))).toBe("- a\n- b\n");
+  });
 });
 ```
 
@@ -517,8 +522,9 @@ function contentLines(node: OutlineNode): string[] {
 
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
   const lines = contentLines(node);
-  const hasBody = lines.length > 0 || node.children.length > 0;
-  if (!hasBody) return;
+  const childLines: string[] = [];
+  for (const child of node.children) writeNode(child, depth + 1, childLines);
+  if (lines.length === 0 && childLines.length === 0) return;
   const indent = INDENT.repeat(depth);
   const marker = "-";
   if (lines.length === 0) {
@@ -530,7 +536,7 @@ function writeNode(node: OutlineNode, depth: number, out: string[]): void {
       out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
     });
   }
-  for (const child of node.children) writeNode(child, depth + 1, out);
+  out.push(...childLines);
 }
 
 export function writeNodes(nodes: OutlineNode[], depth = 0): string[] {
@@ -654,6 +660,16 @@ describe("node text", () => {
     },
   );
 
+  test("an indented continuation line that starts like a bullet is escaped after its own indent", () => {
+    const node: OutlineNode = { text: "a\n  - b\n  ***", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- a\\\n    \\- b\\\n    \\***");
+    const back = outlineRoots(parseOutline(text));
+    expect(back).toHaveLength(1);
+    expect(back[0]?.text).toBe("a\n  - b\n  ***");
+    expect(back[0]?.children).toEqual([]);
+  });
+
   test("escapes apply to every line of node text and round-trip through the file", () => {
     const node: OutlineNode = { text: "first\n- second\n# third", collapsed: false, children: [] };
     const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
@@ -679,23 +695,28 @@ const THEMATIC_BREAK_RE = /^([-*_])(?: *\1){2,} *$/;
 const ORDERED_PREFIX_RE = /^(\d+)([.)])(?: |$)/;
 const ESCAPED_ORDERED_RE = /^(\d+)\\([.)])(?: |$)/;
 
-/** Backslash-escape a line of node text that would otherwise be read as list, heading, quote, fence, or rule syntax. */
+/** Backslash-escape a line of node text that would otherwise be read as list, heading, quote,
+ *  fence, or rule syntax. The line's own leading whitespace is kept in front of the escape. */
 export function escapeLine(line: string): string {
-  if (ESCAPE_PREFIX_RE.test(line) || THEMATIC_BREAK_RE.test(line)) return `\\${line}`;
-  const m = ORDERED_PREFIX_RE.exec(line);
-  if (m) return `${m[1]}\\${line.slice((m[1] ?? "").length)}`;
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body)) return `${ws}\\${body}`;
+  const m = ORDERED_PREFIX_RE.exec(body);
+  if (m) return `${ws}${m[1]}\\${body.slice((m[1] ?? "").length)}`;
   return line;
 }
 
 /** Inverse of escapeLine. Only the escapes escapeLine produces are removed. */
 export function unescapeLine(line: string): string {
-  if (line.startsWith("\\")) {
-    const rest = line.slice(1);
-    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return rest;
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (body.startsWith("\\")) {
+    const rest = body.slice(1);
+    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return `${ws}${rest}`;
     return line;
   }
-  const m = ESCAPED_ORDERED_RE.exec(line);
-  if (m) return `${m[1]}${line.slice((m[1] ?? "").length + 1)}`;
+  const m = ESCAPED_ORDERED_RE.exec(body);
+  if (m) return `${ws}${m[1]}${body.slice((m[1] ?? "").length + 1)}`;
   return line;
 }
 
@@ -889,10 +910,11 @@ Update the writer. In `writeNode`:
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
   const lines = contentLines(node);
   if (node.image) lines.push(embedLine(node.image));
-  const hasBody = lines.length > 0 || node.children.length > 0;
-  if (!hasBody) return;
+  const childLines: string[] = [];
+  for (const child of node.children) writeNode(child, depth + 1, childLines);
+  if (lines.length === 0 && childLines.length === 0) return;
   const indent = INDENT.repeat(depth);
-  const marker = node.collapsed && node.children.length > 0 ? "*" : "-";
+  const marker = node.collapsed && childLines.length > 0 ? "*" : "-";
   if (lines.length === 0) {
     out.push(`${indent}${marker}`);
   } else {
@@ -902,7 +924,7 @@ function writeNode(node: OutlineNode, depth: number, out: string[]): void {
       out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
     });
   }
-  for (const child of node.children) writeNode(child, depth + 1, out);
+  out.push(...childLines);
 }
 ```
 The embed line is appended after `contentLines` returns, so it is never escaped (its first character is `!`, which `escapeLine` leaves alone anyway).
@@ -1058,7 +1080,7 @@ Update `packages/core/src/__tests__/serialization.test.ts` `describe("toMarkdown
           "  - Phase 1",
           "    - Research",
           "    - Architecture",
-          "  - Phase 2",
+          "  * Phase 2",
           "    - Implementation",
         ].join("\n"),
       );
