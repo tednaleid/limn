@@ -6,7 +6,7 @@ import { MindMapStore } from "../store/MindMapStore";
 import type { MindMapFileFormat, MindMapFileNode } from "./schema";
 import { mindMapFileSchema, CURRENT_FORMAT_VERSION } from "./schema";
 import type { OutlineNode } from "../markdown/outline";
-import { writeSubtree } from "../markdown/outline";
+import { writeSubtree, imageRefToOutline } from "../markdown/outline";
 
 /**
  * Deserialize nested file format into a flat MindMapStore.
@@ -102,9 +102,7 @@ export function toMarkdown(store: MindMapStore): string {
       collapsed: node.collapsed && node.children.length > 0,
       children: store.getChildren(node.id).map(toOutline),
     };
-    if (node.image) {
-      outline.image = { target: node.image.assetId, width: node.image.width, height: node.image.height };
-    }
+    if (node.image) outline.image = imageRefToOutline(node.image);
     return outline;
   };
   return writeSubtree(store.getRoots().map(toOutline));

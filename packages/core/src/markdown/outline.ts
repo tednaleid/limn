@@ -424,6 +424,14 @@ export function outlineToFileNodes(nodes: OutlineNode[], nextId: () => string): 
   });
 }
 
+/** Outline image for a stored image reference, keeping only the dimensions the note specified. */
+export function imageRefToOutline(image: { assetId: string; width: number; height: number }): OutlineImage {
+  const outline: OutlineImage = { target: image.assetId };
+  if (image.width > 0) outline.width = image.width;
+  if (image.height > 0) outline.height = image.height;
+  return outline;
+}
+
 export function fileNodesToOutline(nodes: MindMapFileNode[]): OutlineNode[] {
   return nodes.map((node) => {
     const outline: OutlineNode = {
@@ -431,13 +439,7 @@ export function fileNodesToOutline(nodes: MindMapFileNode[]): OutlineNode[] {
       collapsed: node.collapsed === true && node.children.length > 0,
       children: fileNodesToOutline(node.children),
     };
-    if (node.image) {
-      const { assetId, width, height } = node.image;
-      const image: OutlineImage = { target: assetId };
-      if (width > 0) image.width = width;
-      if (height > 0) image.height = height;
-      outline.image = image;
-    }
+    if (node.image) outline.image = imageRefToOutline(node.image);
     return outline;
   });
 }

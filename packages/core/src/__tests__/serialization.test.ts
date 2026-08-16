@@ -314,6 +314,20 @@ describe("serialization", () => {
       expect(md).toBe("");
     });
 
+    test("an image with unknown dimensions writes a bare embed", () => {
+      const store = new MindMapStore();
+      const id = store.addRoot("");
+      store.setNodeImage(id, { id: "x.png", filename: "x.png", mimeType: "image/png", width: 0, height: 0 }, 0, 0);
+      expect(toMarkdown(store)).toBe("- ![[x.png]]");
+    });
+
+    test("an image with a known width and an unknown height writes the width only", () => {
+      const store = new MindMapStore();
+      const id = store.addRoot("");
+      store.setNodeImage(id, { id: "x.png", filename: "x.png", mimeType: "image/png", width: 0, height: 0 }, 120, 0);
+      expect(toMarkdown(store)).toBe("- ![[x.png|120]]");
+    });
+
     test("handles multiple roots", () => {
       const store = new MindMapStore();
       store.addRoot("Root A");

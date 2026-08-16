@@ -79,6 +79,19 @@ describe("DocumentCapabilities", () => {
       expect(editor.getNode("n1").image?.height).toBe(110);
     });
 
+    test("an image whose size is unresolved is not resized by keyboard or by handle", () => {
+      editor.setNodeImage("n1", { id: "x.png", filename: "x.png", mimeType: "image/png", width: 0, height: 0 }, 0, 0);
+      const before = snapshot(editor);
+      editor.resizeNode("n1", 20);
+      editor.startImageResize("n1");
+      expect(editor.isResizingImage()).toBe(false);
+      expect(snapshot(editor)).toBe(before);
+      expect(editor.getNode("n1").image).toEqual({ assetId: "x.png", width: 0, height: 0 });
+      editor.undo();
+      expect(editor.getNode("n1").image).toBeUndefined();
+      expect(editor.canUndo()).toBe(false);
+    });
+
     test("color cycling and setNodeColorIndex do nothing", () => {
       const before = snapshot(editor);
       editor.cycleNodeColor("n1", 1);

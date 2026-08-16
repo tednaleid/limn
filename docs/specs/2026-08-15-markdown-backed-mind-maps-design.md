@@ -91,7 +91,7 @@ Pure functions, no browser dependencies:
 - `writeOutline(parsed: ParsedOutline): string` regenerates the note from the model. `writeOutline(parseOutline(x))` is idempotent for any `x`.
 - `outlineRoots(parsed: ParsedOutline): OutlineNode[]` flattens list regions' roots in document order.
 - Helper functions: `writeNodes(nodes, depth?): string[]`, `writeSubtree(nodes): string`, `parseSubtree(text): OutlineNode[]`, `escapeLine(line)`, `unescapeLine(line)`.
-- Conversion helpers between `OutlineNode` trees and `MindMapFileNode` trees: `outlineToFileNodes(nodes, nextId): MindMapFileNode[]` assigns placeholder positions and sizes; `fileNodesToOutline(nodes): OutlineNode[]` reads text, collapsed, image.
+- Conversion helpers between `OutlineNode` trees and `MindMapFileNode` trees: `outlineToFileNodes(nodes, nextId): MindMapFileNode[]` assigns placeholder positions and sizes; `fileNodesToOutline(nodes): OutlineNode[]` reads text, collapsed, image. `imageRefToOutline(image)` maps one stored image reference to an `OutlineImage`, keeping only the dimensions greater than 0, and is shared with `serialization.toMarkdown()`.
 - `OUTLINE_IMAGE_UNKNOWN_SIZE = 0` is stored for an embed dimension the note did not specify; hosts resolve the natural size before the first write.
 - `Editor.toMarkdown()` and `serialization.toMarkdown()` change to emit the pure-list dialect (they currently emit headings for depth 0 and 1 and are only used by tests). Tests updated.
 

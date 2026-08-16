@@ -853,6 +853,7 @@ export class Editor {
     const squashLabel = `resize:${nodeId}`;
 
     if (node.image) {
+      if (node.image.width <= 0 || node.image.height <= 0) return;
       const aspectRatio = node.image.width / node.image.height;
       const newImgWidth = Math.max(MIN_IMAGE_WIDTH, node.image.width + delta);
       if (newImgWidth === node.image.width) return;

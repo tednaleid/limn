@@ -93,6 +93,7 @@ export {
   outlineToFileNodes,
   fileNodesToOutline,
   OUTLINE_IMAGE_UNKNOWN_SIZE,
+  imageRefToOutline,
 } from "./markdown/outline";
 export type { OutlineNode, OutlineImage, OutlineRegion, ParsedOutline } from "./markdown/outline";
 

@@ -45,9 +45,10 @@ export function initialImageResizeState(): ImageResizeState {
   return { active: false, nodeId: null, aspectRatio: 1, changed: false };
 }
 
-/** Initialize image resize from a node. Returns null if node has no image. */
+/** Initialize image resize from a node. Returns null when the node has no image or its display
+ *  size is not resolved yet. */
 export function initImageResize(node: MindMapNode): ImageResizeState | null {
-  if (!node.image) return null;
+  if (!node.image || node.image.width <= 0 || node.image.height <= 0) return null;
   return {
     active: true,
     nodeId: node.id,
