@@ -62,6 +62,17 @@ describe("shortcut help data", () => {
     }
   });
 
+  test("Positioning offers node resize with no capability requirement", () => {
+    const positioning = SHORTCUT_GROUPS.find((g) => g.title === "Positioning");
+    const resize = positioning?.entries.filter((e) => e.description.endsWith("node width or image")) ?? [];
+    expect(resize.map((e) => e.keys)).toEqual([
+      ["Ctrl", "Alt", "\u2190"],
+      ["Ctrl", "Alt", "\u2192"],
+    ]);
+    expect(resize.every((e) => e.requires === undefined)).toBe(true);
+    expect(positioning?.entries.some((e) => e.description.includes("(fine)"))).toBe(false);
+  });
+
   test("exports types correctly", () => {
     // Type-level checks -- these just need to compile
     const group: ShortcutGroup = SHORTCUT_GROUPS[0];
@@ -77,13 +88,31 @@ describe("filterShortcutGroups", () => {
     expect(filtered).toEqual(SHORTCUT_GROUPS);
   });
 
-  test("outline capabilities drop nudge and color entries and drop a group that becomes empty", () => {
+  test("outline capabilities drop nudge and color entries and keep node resize", () => {
     const filtered = filterShortcutGroups(SHORTCUT_GROUPS, OUTLINE_CAPABILITIES);
     const descriptions = filtered.flatMap((g) => g.entries.map((e) => e.description));
     expect(descriptions).not.toContain("Nudge node");
     expect(descriptions).not.toContain("Cycle branch color forward");
     expect(descriptions).toContain("Reflow children to computed layout");
+    expect(descriptions).toContain("Grow node width or image");
     expect(descriptions).toContain("Toggle collapse");
-    for (const group of filtered) expect(group.entries.length).toBeGreaterThan(0);
+  });
+
+  test("a group whose only entry needs a missing capability is dropped", () => {
+    const groups: ShortcutGroup[] = [
+      {
+        title: "Color",
+        type: "keyboard",
+        entries: [{ keys: ["c"], description: "Cycle branch color forward", requires: "nodeColor" }],
+      },
+      {
+        title: "Kept",
+        type: "keyboard",
+        entries: [{ keys: ["Space"], description: "Toggle collapse" }],
+      },
+    ];
+    const filtered = filterShortcutGroups(groups, OUTLINE_CAPABILITIES);
+    expect(filtered.map((g) => g.title)).toEqual(["Kept"]);
+    expect(filtered[0]?.entries).toHaveLength(1);
   });
 });

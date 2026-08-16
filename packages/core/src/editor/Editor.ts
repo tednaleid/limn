@@ -205,6 +205,8 @@ export class Editor {
     return this.capabilities;
   }
 
+  /** Switching freePosition off relays out the document, overwriting positions with no undo entry,
+   *  so hosts set capabilities once when they create the document. */
   setCapabilities(caps: DocumentCapabilities): void {
     this.capabilities = { ...caps };
     this.notify();
