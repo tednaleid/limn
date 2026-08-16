@@ -52,6 +52,8 @@ import {
   moveSubtree,
   computeDragUpdate,
 } from "./drag";
+import { FULL_CAPABILITIES } from "./capabilities";
+import type { DocumentCapabilities } from "./capabilities";
 
 export const ROOT_FONT_SIZE = 18;
 
@@ -124,6 +126,9 @@ export class Editor {
   // Document metadata
   protected meta: MindMapMeta = { id: "default", version: 1, mode: "system", lightTheme: "catppuccin-latte", darkTheme: "catppuccin-mocha" };
 
+  // What the backing document can hold; hosts set this once per document
+  private capabilities: DocumentCapabilities = FULL_CAPABILITIES;
+
   // External action callbacks (set by web layer)
   private saveCallback: (() => void) | null = null;
   private saveAsCallback: (() => void) | null = null;
@@ -194,6 +199,15 @@ export class Editor {
     return depth;
   }
 
+  getCapabilities(): DocumentCapabilities {
+    return this.capabilities;
+  }
+
+  setCapabilities(caps: DocumentCapabilities): void {
+    this.capabilities = { ...caps };
+    this.notify();
+  }
+
   /** Get the active ThemeDefinition based on mode and chosen themes. */
   getThemeDefinition(): ThemeDefinition {
     const mode = this.meta.mode === "light" ? "light" : "dark";
@@ -226,6 +240,7 @@ export class Editor {
 
   /** Set a node's branch colorIndex. */
   setNodeColorIndex(id: string, colorIndex: number): void {
+    if (!this.capabilities.nodeColor) return;
     const node = this.store.getNode(id);
     node.style = { ...node.style, colorIndex };
     this.notify();
@@ -235,6 +250,7 @@ export class Editor {
    *  For child nodes: if the resulting color matches the inherited parent color,
    *  the explicit colorIndex is removed so the node reverts to inheritance. */
   cycleNodeColor(id: string, direction: 1 | -1): void {
+    if (!this.capabilities.nodeColor) return;
     this.pushUndo("cycle-color");
     const node = this.store.getNode(id);
     const isRoot = node.parentId === null;
@@ -754,7 +770,8 @@ export class Editor {
     }
     const id = this.store.addChild(parentId, text);
     this.remeasureNode(id);
-    positionNewChild(this.store, id, direction);
+    const sideHint = this.capabilities.sides ? direction : 1;
+    positionNewChild(this.store, id, sideHint);
     this.resolveOverlapForNode(id);
     this.selectedId = id;
     this.editing = true;
@@ -812,6 +829,7 @@ export class Editor {
   }
 
   nudgeNode(nodeId: string, dx: number, dy: number): void {
+    if (!this.capabilities.freePosition) return;
     const squashLabel = `nudge:${nodeId}`;
     if (this.lastUndoLabel !== squashLabel) {
       this.pushUndo(squashLabel);
@@ -838,6 +856,7 @@ export class Editor {
       relayoutFromNode(this.store, nodeId);
       this.notify();
     } else {
+      if (!this.capabilities.widthResize) return;
       const newWidth = clampNodeWidth(node.width + delta);
       if (newWidth === node.width) return;
       if (this.lastUndoLabel !== squashLabel) {
@@ -1051,9 +1070,11 @@ export class Editor {
       this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId);
     } else {
-      const directionHint = target.parentId === null
-        ? (direction === "right" ? -1 : 1)
-        : branchDirection(this.store, target.id);
+      const directionHint = !this.capabilities.sides
+        ? 1
+        : target.parentId === null
+          ? (direction === "right" ? -1 : 1)
+          : branchDirection(this.store, target.id);
       this.store.moveNode(nodeId, target.id);
       this.remeasureNode(nodeId);
       positionNewChild(this.store, nodeId, directionHint);
@@ -1071,6 +1092,7 @@ export class Editor {
   }
 
   private flipBranchSide(nodeId: string): void {
+    if (!this.capabilities.sides) return;
     const node = this.store.getNode(nodeId);
     if (node.parentId === null) return;
 
@@ -1134,6 +1156,7 @@ export class Editor {
   }
 
   setNodePosition(nodeId: string, x: number, y: number): void {
+    if (!this.capabilities.freePosition) return;
     this.pushUndo("set-position");
     this.store.setNodePosition(nodeId, x, y);
     this.notify();
@@ -1267,6 +1290,7 @@ export class Editor {
   }
 
   startWidthResize(nodeId: string): void {
+    if (!this.capabilities.widthResize) return;
     this.pushUndo("resize-width");
     this.widthResize = initWidthResize(this.store.getNode(nodeId));
     this.notify();

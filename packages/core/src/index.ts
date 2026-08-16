@@ -51,6 +51,8 @@ export {
 } from "./layout/layout";
 
 export { Editor, stubTextMeasurer, ROOT_FONT_SIZE } from "./editor/Editor";
+export { FULL_CAPABILITIES, OUTLINE_CAPABILITIES } from "./editor/capabilities";
+export type { DocumentCapabilities } from "./editor/capabilities";
 export { nextBranchColorIndex } from "./theme/palette";
 export type { ThemeDefinition, ThemeKey } from "./theme/theme";
 export {
