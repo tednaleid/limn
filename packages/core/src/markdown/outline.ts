@@ -30,13 +30,18 @@ const TAB_WIDTH = 4;
 const BULLET_RE = /^([ \t]*)([-*+])(?:[ \t]+(.*))?$/;
 const FENCE_RE = /^[ \t]*(```|~~~)/;
 
-/** Width in columns of a run of leading spaces and tabs. */
-function indentWidth(ws: string): number {
-  let col = 0;
+/** Column reached by a run of spaces and tabs that starts at `startColumn`. */
+function columnAfter(ws: string, startColumn: number): number {
+  let col = startColumn;
   for (const ch of ws) {
     col = ch === "\t" ? col + TAB_WIDTH - (col % TAB_WIDTH) : col + 1;
   }
   return col;
+}
+
+/** Width in columns of a run of leading spaces and tabs. */
+function indentWidth(ws: string): number {
+  return columnAfter(ws, 0);
 }
 
 /** Leading whitespace of a line. */
@@ -115,6 +120,7 @@ interface OpenItem {
   rawLines: string[];
   marker: string;
   indent: number;
+  depth: number;
   contentColumn: number;
 }
 
@@ -122,6 +128,13 @@ interface ListBuilder {
   roots: OutlineNode[];
   stack: OpenItem[];
   pendingBlank: string[];
+  /** Fence marker of a fenced block opened on the top item's continuation line, or null. */
+  itemFence: string | null;
+}
+
+/** Canonical content column of an item at `depth`: two columns per level plus the marker and a space. */
+function canonicalContentColumn(depth: number): number {
+  return 2 * depth + 2;
 }
 
 /** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes.
@@ -148,6 +161,28 @@ function closeList(list: ListBuilder, regions: OutlineRegion[]): string[] {
   return list.pendingBlank;
 }
 
+/** The open item a non-bullet line continues, or null when the line ends the list region.
+ *  The line belongs to the deepest open item whose canonical content column fits within the
+ *  line's indent; open items deeper than that are finished. */
+function continuedItem(list: ListBuilder, line: string): OpenItem | null {
+  const indent = indentWidth(leadingWhitespace(line));
+  for (let i = list.stack.length - 1; i >= 0; i--) {
+    const item = list.stack[i] as OpenItem;
+    if (canonicalContentColumn(item.depth) <= indent) {
+      while (list.stack.length > i + 1) finishItem(list.stack.pop() as OpenItem);
+      return item;
+    }
+  }
+  return null;
+}
+
+/** Append a line to an item, stripping the item's own content columns. Returns the stripped body. */
+function addContinuation(item: OpenItem, line: string): string {
+  const body = stripColumns(line, item.contentColumn);
+  item.rawLines.push(body);
+  return body;
+}
+
 function pushProse(lines: string[], regions: OutlineRegion[]): void {
   if (lines.length === 0) return;
   regions.push({ kind: "prose", lines });
@@ -164,14 +199,15 @@ function addBullet(list: ListBuilder, m: RegExpExecArray): void {
   const parent = list.stack[list.stack.length - 1];
   if (parent) parent.node.children.push(node);
   else list.roots.push(node);
-  const afterMarker = m[0].slice((m[1] ?? "").length + 1);
-  const spaces = afterMarker.length - afterMarker.replace(/^[ \t]+/, "").length;
+  const gap = leadingWhitespace(m[0].slice((m[1] ?? "").length + 1));
+  const markerColumn = indent + 1;
   list.stack.push({
     node,
     rawLines: [content],
     marker,
     indent,
-    contentColumn: indent + 1 + Math.max(1, indentWidth(afterMarker.slice(0, spaces))),
+    depth: list.stack.length,
+    contentColumn: gap === "" ? markerColumn + 1 : columnAfter(gap, markerColumn),
   });
   list.pendingBlank = [];
 }
@@ -197,6 +233,12 @@ export function parseOutline(text: string): ParsedOutline {
 
   for (const line of rest) {
     if (list && fence === null && !inComment) {
+      if (list.itemFence !== null) {
+        const item = list.stack[list.stack.length - 1] as OpenItem;
+        const body = addContinuation(item, line);
+        if (FENCE_RE.exec(body)?.[1] === list.itemFence) list.itemFence = null;
+        continue;
+      }
       if (line.trim() === "") {
         list.pendingBlank.push(line);
         continue;
@@ -206,9 +248,9 @@ export function parseOutline(text: string): ParsedOutline {
         addBullet(list, m);
         continue;
       }
-      const top = list.stack[list.stack.length - 1];
-      if (top && list.pendingBlank.length === 0 && indentWidth(leadingWhitespace(line)) >= top.contentColumn) {
-        top.rawLines.push(stripColumns(line, top.contentColumn));
+      const item = list.pendingBlank.length === 0 ? continuedItem(list, line) : null;
+      if (item) {
+        list.itemFence = FENCE_RE.exec(addContinuation(item, line))?.[1] ?? null;
         continue;
       }
       prose = closeList(list, regions);
@@ -222,17 +264,14 @@ export function parseOutline(text: string): ParsedOutline {
         else if (f[1] === fence) fence = null;
       }
     }
-    if (fence === null) {
-      const markers = line.split("%%").length - 1;
-      if (markers % 2 === 1) inComment = !inComment;
-    }
+    if (fence === null && line.trim() === "%%") inComment = !inComment;
 
     if (fence === null && !inComment) {
       const m = BULLET_RE.exec(line);
       if (m) {
         pushProse(prose, regions);
         prose = [];
-        list = { roots: [], stack: [], pendingBlank: [] };
+        list = { roots: [], stack: [], pendingBlank: [], itemFence: null };
         addBullet(list, m);
         continue;
       }
@@ -255,19 +294,39 @@ export function outlineRoots(parsed: ParsedOutline): OutlineNode[] {
 
 const INDENT = "  ";
 
-/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped, first line's leading whitespace trimmed, then escaped. */
-function contentLines(node: OutlineNode): string[] {
+/** Marks the lines of a balanced fence pair and the lines between them. The parser only opens a
+ *  fence from a continuation line, so a fence opening on the first line does not count. */
+function fencedLines(lines: string[]): boolean[] {
+  const fenced = lines.map(() => false);
+  for (let i = 1; i < lines.length; i++) {
+    const marker = FENCE_RE.exec(lines[i] as string)?.[1];
+    if (marker === undefined) continue;
+    const close = lines.findIndex((l, j) => j > i && FENCE_RE.exec(l)?.[1] === marker);
+    if (close === -1) continue;
+    for (let j = i; j <= close; j++) fenced[j] = true;
+    i = close;
+  }
+  return fenced;
+}
+
+/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped,
+ *  first line's leading whitespace trimmed, then escaped except inside a balanced fence. */
+function contentLines(node: OutlineNode): { lines: string[]; fenced: boolean[] } {
   const lines = node.text
     .split("\n")
     .map((l) => l.trimEnd())
     .filter((l) => l !== "");
   if (lines[0] !== undefined) lines[0] = lines[0].trimStart();
-  return lines.map(escapeLine);
+  const fenced = fencedLines(lines);
+  return { lines: lines.map((l, i) => (fenced[i] ? l : escapeLine(l))), fenced };
 }
 
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
-  const lines = contentLines(node);
-  if (node.image) lines.push(embedLine(node.image));
+  const { lines, fenced } = contentLines(node);
+  if (node.image) {
+    lines.push(embedLine(node.image));
+    fenced.push(false);
+  }
   const childLines: string[] = [];
   for (const child of node.children) writeNode(child, depth + 1, childLines);
   const hasBody = lines.length > 0 || childLines.length > 0;
@@ -279,7 +338,8 @@ function writeNode(node: OutlineNode, depth: number, out: string[]): void {
   } else {
     const contentIndent = indent + INDENT;
     lines.forEach((line, i) => {
-      const suffix = i < lines.length - 1 ? "\\" : "";
+      const hardBreak = i < lines.length - 1 && !fenced[i] && !fenced[i + 1];
+      const suffix = hardBreak ? "\\" : "";
       out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
     });
   }

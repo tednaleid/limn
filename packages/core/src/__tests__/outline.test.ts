@@ -29,6 +29,17 @@ function shape(nodes: OutlineNode[]): string {
     .join(",");
 }
 
+/** Deterministic PRNG so a failing fuzz document can be reproduced. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 describe("parseOutline structure", () => {
   test("nested bullets become a tree; two top-level items are two roots", () => {
     const parsed = parseOutline(fixture("basic-nested"));
@@ -68,6 +79,15 @@ describe("parseOutline structure", () => {
     if (middle?.kind !== "prose") throw new Error("expected prose between lists");
     expect(middle.lines).toContain("- not an item, inside a fence");
     expect(middle.lines).toContain("- not an item, inside a comment");
+  });
+
+  test("an inline %% pair on a content line is text, not a comment delimiter", () => {
+    const roots: OutlineNode[] = [
+      { text: "todo %% secret", collapsed: false, children: [{ text: "child", collapsed: false, children: [] }] },
+      { text: "second", collapsed: false, children: [] },
+    ];
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots }] });
+    expect(shape(outlineRoots(parseOutline(text)))).toBe("todo %% secret[child],second");
   });
 
   test("frontmatter-only note has no roots and one prose region holding the trailing newline", () => {
@@ -155,6 +175,35 @@ describe("writeOutline", () => {
   test("a chain of empty items collapses completely in one write, so writing is idempotent", () => {
     expect(writeOutline(parseOutline("-\n  -\n"))).toBe("");
     expect(writeOutline(parseOutline("- a\n  -\n    -\n- b\n"))).toBe("- a\n- b\n");
+  });
+
+  test("writing a parsed document is idempotent for random documents", () => {
+    const alphabet = [
+      "- a",
+      "  - b",
+      "    - c",
+      "* d",
+      "+ e",
+      "text",
+      "  text",
+      "    text",
+      "",
+      "# h",
+      "```",
+      "  ```",
+      "%%",
+      "- x\\",
+      "---",
+      "1. one",
+      "  ![[i.png|3]]",
+    ];
+    const random = mulberry32(0x5eed);
+    for (let i = 0; i < 2000; i++) {
+      const count = 1 + Math.floor(random() * 12);
+      const doc = Array.from({ length: count }, () => alphabet[Math.floor(random() * alphabet.length)]).join("\n");
+      const once = writeOutline(parseOutline(doc));
+      expect(writeOutline(parseOutline(once)), `document ${JSON.stringify(doc)}`).toBe(once);
+    }
   });
 });
 
@@ -245,6 +294,56 @@ describe("node text", () => {
     expect(text).toBe("- first\\\n  \\- second\\\n  \\# third");
     const back = outlineRoots(parseOutline(text));
     expect(shape(back)).toBe("first\n- second\n# third");
+    expect(back[0]?.children).toEqual([]);
+  });
+});
+
+describe("continuation lines and fenced blocks", () => {
+  test("a continuation line at the canonical column attaches even when the item is indented", () => {
+    const once = writeOutline(parseOutline("  - item\n  note\n"));
+    expect(once).toBe("- item\\\n  note\n");
+    expect(writeOutline(parseOutline(once))).toBe(once);
+  });
+
+  test("an under-indented continuation attaches to the ancestor it fits and closes deeper items", () => {
+    const roots = outlineRoots(parseOutline("- Parent\n    - Child\n  note under parent\n"));
+    expect(roots).toHaveLength(1);
+    expect(roots[0]?.text).toBe("Parent\nnote under parent");
+    expect(shape(roots[0]?.children ?? [])).toBe("Child");
+  });
+
+  test("a tab after the marker measures the content column from the marker, not from column zero", () => {
+    const roots = outlineRoots(parseOutline("-\tfoo\n\tbar\n"));
+    expect(roots).toHaveLength(1);
+    expect(roots[0]?.text).toBe("foo\nbar");
+  });
+
+  test("a fence opened on a continuation line is item text, bullets inside it included", () => {
+    const roots = outlineRoots(parseOutline("- item\n  ```js\n  - x\n  ```\n- next\n"));
+    expect(roots).toHaveLength(2);
+    expect(roots[0]?.text).toBe("item\n```js\n- x\n```");
+    expect(roots[0]?.children).toEqual([]);
+    expect(roots[1]?.text).toBe("next");
+  });
+
+  test("a balanced fence in item text is written back as a fence, with no escapes or hard breaks", () => {
+    const text = "- item\n  ```js\n  - x\n  ```\n- next\n";
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("an unbalanced fence opener in item text stays escaped", () => {
+    const node: OutlineNode = { text: "```\nlonely opener", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- \\```\\\n  lonely opener");
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("```\nlonely opener");
+  });
+
+  test("a fence on the item's own first line is escaped, since only continuation lines open one", () => {
+    const node: OutlineNode = { text: "```js\n- x\n```", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- \\```js\\\n  \\- x\\\n  \\```");
+    const back = outlineRoots(parseOutline(text));
+    expect(back[0]?.text).toBe("```js\n- x\n```");
     expect(back[0]?.children).toEqual([]);
   });
 });
