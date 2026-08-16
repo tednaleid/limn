@@ -86,10 +86,12 @@ The writer regenerates list regions from the model. It preserves prose regions e
 
 Pure functions, no browser dependencies:
 
-- `parseOutline(text: string): ParsedOutline` where `ParsedOutline = { frontmatter: string; regions: Region[]; roots: OutlineNode[] }`, `Region = { kind: "prose"; lines: string[] } | { kind: "list"; rootIndices: number[] }`, `OutlineNode = { text: string; collapsed: boolean; image?: { target: string; width?: number; height?: number }; children: OutlineNode[] }`.
+- `parseOutline(text: string): ParsedOutline` where `ParsedOutline = { frontmatterLines: string[]; regions: OutlineRegion[] }`, `OutlineRegion = { kind: "prose"; lines: string[] } | { kind: "list"; roots: OutlineNode[] }`, `OutlineNode = { text: string; collapsed: boolean; image?: OutlineImage; children: OutlineNode[] }`, and `OutlineImage = { target: string; width?: number; height?: number }`.
 - `writeOutline(parsed: ParsedOutline): string` regenerates the note from the model. `writeOutline(parseOutline(x))` is idempotent for any `x`.
-- `serializeSubtree(node: OutlineNode): string` and `parseSubtree(text): OutlineNode[]` for clipboard use (no frontmatter, no prose regions).
-- Conversion helpers between `OutlineNode` trees and `MindMapFileNode` trees (`toFileNodes` assigns placeholder positions and sizes; `fromFileNodes` reads text, collapsed, image).
+- `outlineRoots(parsed: ParsedOutline): OutlineNode[]` flattens list regions' roots in document order.
+- Helper functions: `writeNodes(nodes, depth?): string[]`, `writeSubtree(nodes): string`, `parseSubtree(text): OutlineNode[]`, `escapeLine(line)`, `unescapeLine(line)`.
+- Conversion helpers between `OutlineNode` trees and `MindMapFileNode` trees: `outlineToFileNodes(nodes, nextId): MindMapFileNode[]` assigns placeholder positions and sizes; `fileNodesToOutline(nodes): OutlineNode[]` reads text, collapsed, image.
+- `OUTLINE_IMAGE_PLACEHOLDER = 200` is the width and height used for images whose size is not yet known.
 - `Editor.toMarkdown()` and `serialization.toMarkdown()` change to emit the pure-list dialect (they currently emit headings for depth 0 and 1 and are only used by tests). Tests updated.
 
 ### 6.2 `DocumentCapabilities`
@@ -121,8 +123,9 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 6.4 Id reconciliation for external updates
 
-- `Editor.applyExternalUpdate(data)` currently replaces the store and drops selection if the id vanished. Since the outline parser mints ids on every parse, ids would always vanish. Add `reconcileIds(existing: MindMapStore, incoming: MindMapFileNode[]): MindMapFileNode[]` in core: walk both forests in parallel per parent; match children in order by exact text first, then by position; matched incoming nodes take the existing id; unmatched get fresh ids. `applyExternalUpdate` uses it, so selection and edit mode survive an external change that did not touch the selected node.
-- The Obsidian adapter passes the Editor's current forest as `existing`.
+- `reconcileIds(store: MindMapStore, incoming: MindMapFileNode[]): MindMapFileNode[]` walks both forests in parallel per parent, matching children first by exact text (first unused sibling), then by index. Matched incoming nodes take the existing id and recursion continues; unmatched get the fresh ids they arrived with.
+- `Editor.applyExternalUpdate(data, options: { reconcileIds?: boolean })` takes an optional `reconcileIds` flag (defaults to false). When true, calls `reconcileIds` internally so selection and edit mode survive an external change that did not touch the selected node.
+- The Obsidian adapter passes `{ reconcileIds: true }` when applying external updates.
 
 ### 6.5 Change signal for saves
 
