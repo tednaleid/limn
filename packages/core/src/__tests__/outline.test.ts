@@ -3,7 +3,7 @@
 
 import { describe, test, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseOutline, outlineRoots, writeOutline } from "../markdown/outline";
+import { parseOutline, outlineRoots, writeOutline, escapeLine, unescapeLine } from "../markdown/outline";
 import type { OutlineNode } from "../markdown/outline";
 
 function fixture(name: string): string {
@@ -88,6 +88,17 @@ describe("parseOutline structure", () => {
     expect(parsed.regions.map((r) => r.kind)).toEqual(["list", "prose"]);
     expect(shape(outlineRoots(parsed))).toBe("a,b");
   });
+
+  test("tilde fences are opaque like backtick fences", () => {
+    const parsed = parseOutline("~~~\n- not an item\n~~~\n- item\n");
+    expect(shape(outlineRoots(parsed))).toBe("item");
+  });
+
+  test("frontmatter may be closed with three dots", () => {
+    const parsed = parseOutline("---\na: 1\n...\n- item\n");
+    expect(parsed.frontmatterLines).toEqual(["---", "a: 1", "..."]);
+    expect(shape(outlineRoots(parsed))).toBe("item");
+  });
 });
 
 describe("writeOutline", () => {
@@ -132,5 +143,86 @@ describe("writeOutline", () => {
   test("a chain of empty items collapses completely in one write, so writing is idempotent", () => {
     expect(writeOutline(parseOutline("-\n  -\n"))).toBe("");
     expect(writeOutline(parseOutline("- a\n  -\n    -\n- b\n"))).toBe("- a\n- b\n");
+  });
+});
+
+describe("node text", () => {
+  test("multi-line text is written as backslash continuation lines and read back", () => {
+    const node: OutlineNode = { text: "Alpha\nBeta\nGamma", collapsed: false, children: [] };
+    const parsed = { frontmatterLines: [], regions: [{ kind: "list" as const, roots: [node] }] };
+    const text = writeOutline(parsed);
+    expect(text).toBe("- Alpha\\\n  Beta\\\n  Gamma");
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("Alpha\nBeta\nGamma");
+  });
+
+  test("two trailing spaces are also read as a hard break; trailing whitespace is trimmed", () => {
+    const text = "- Alpha  \n  Beta \n- Next";
+    const roots = outlineRoots(parseOutline(text));
+    expect(roots[0]?.text).toBe("Alpha\nBeta");
+    expect(roots[1]?.text).toBe("Next");
+  });
+
+  test("continuation lines keep indentation beyond the content column", () => {
+    const text = "- code:\\\n    indented\n";
+    const roots = outlineRoots(parseOutline(text));
+    expect(roots[0]?.text).toBe("code:\n  indented");
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("an unindented non-bullet line ends the list and is prose, not node text", () => {
+    const parsed = parseOutline("- item\nlazy line\n- next\n");
+    expect(shape(outlineRoots(parsed))).toBe("item,next");
+    expect(parsed.regions[1]).toEqual({ kind: "prose", lines: ["lazy line"] });
+  });
+
+  test("blank lines inside node text collapse to a single break on write", () => {
+    const node: OutlineNode = { text: "a\n\n\nb", collapsed: false, children: [] };
+    expect(writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] })).toBe("- a\\\n  b");
+  });
+
+  test("leading whitespace on the first line is trimmed on write so the content column stays canonical", () => {
+    const node: OutlineNode = { text: "   padded\nsecond", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- padded\\\n  second");
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("padded\nsecond");
+  });
+
+  test.each([
+    ["- looks like a bullet", "\\- looks like a bullet"],
+    ["* star", "\\* star"],
+    ["+ plus", "\\+ plus"],
+    ["-", "\\-"],
+    ["# Heading", "\\# Heading"],
+    ["### Deep", "\\### Deep"],
+    ["#", "\\#"],
+    ["> quote", "\\> quote"],
+    ["```js", "\\```js"],
+    ["~~~", "\\~~~"],
+    ["***", "\\***"],
+    ["- - -", "\\- - -"],
+    ["___", "\\___"],
+    ["1. one", "1\\. one"],
+    ["12) twelve", "12\\) twelve"],
+    ["3.", "3\\."],
+  ])("escapes %j as %j and unescapes back", (raw, escaped) => {
+    expect(escapeLine(raw)).toBe(escaped);
+    expect(unescapeLine(escaped)).toBe(raw);
+  });
+
+  test.each(["#tag", "[[Note]]", "[ ] task", "**bold** text", "-not a bullet", "1.5 is a number", "\\*kept\\*"])(
+    "leaves %j alone in both directions",
+    (raw) => {
+      expect(escapeLine(raw)).toBe(raw);
+      expect(unescapeLine(raw)).toBe(raw);
+    },
+  );
+
+  test("escapes apply to every line of node text and round-trip through the file", () => {
+    const node: OutlineNode = { text: "first\n- second\n# third", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- first\\\n  \\- second\\\n  \\# third");
+    const back = outlineRoots(parseOutline(text));
+    expect(shape(back)).toBe("first\n- second\n# third");
+    expect(back[0]?.children).toEqual([]);
   });
 });

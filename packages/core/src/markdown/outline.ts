@@ -55,6 +55,38 @@ function stripColumns(line: string, columns: number): string {
   return line.slice(i);
 }
 
+const ESCAPE_PREFIX_RE = /^(?:[-*+](?: |$)|#{1,6}(?: |$)|>(?: |$)|```|~~~)/;
+const THEMATIC_BREAK_RE = /^([-*_])(?: *\1){2,} *$/;
+const ORDERED_PREFIX_RE = /^(\d+)([.)])(?: |$)/;
+const ESCAPED_ORDERED_RE = /^(\d+)\\([.)])(?: |$)/;
+
+/** Backslash-escape a line of node text that would otherwise be read as list, heading, quote, fence, or rule syntax. */
+export function escapeLine(line: string): string {
+  if (ESCAPE_PREFIX_RE.test(line) || THEMATIC_BREAK_RE.test(line)) return `\\${line}`;
+  const m = ORDERED_PREFIX_RE.exec(line);
+  if (m) return `${m[1]}\\${line.slice((m[1] ?? "").length)}`;
+  return line;
+}
+
+/** Inverse of escapeLine. Only the escapes escapeLine produces are removed. */
+export function unescapeLine(line: string): string {
+  if (line.startsWith("\\")) {
+    const rest = line.slice(1);
+    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return rest;
+    return line;
+  }
+  const m = ESCAPED_ORDERED_RE.exec(line);
+  if (m) return `${m[1]}${line.slice((m[1] ?? "").length + 1)}`;
+  return line;
+}
+
+/** Remove a trailing hard-break marker (backslash or two spaces) and trailing whitespace. */
+function stripHardBreak(line: string): string {
+  const trimmed = line.trimEnd();
+  if (line.endsWith("\\")) return line.slice(0, -1).trimEnd();
+  return trimmed;
+}
+
 interface OpenItem {
   node: OutlineNode;
   rawLines: string[];
@@ -69,9 +101,13 @@ interface ListBuilder {
   pendingBlank: string[];
 }
 
-/** Assemble an item's text by joining its raw lines. */
+/** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes. */
 function finishItem(item: OpenItem): void {
-  item.node.text = item.rawLines.join("\n");
+  const lines = item.rawLines.map((raw, i) => {
+    const line = i < item.rawLines.length - 1 ? stripHardBreak(raw) : raw.trimEnd();
+    return unescapeLine(line);
+  });
+  item.node.text = lines.join("\n");
 }
 
 function closeList(list: ListBuilder, regions: OutlineRegion[]): string[] {
@@ -187,12 +223,14 @@ export function outlineRoots(parsed: ParsedOutline): OutlineNode[] {
 
 const INDENT = "  ";
 
-/** Lines of a node's text ready to be written, trimmed of trailing whitespace and blank lines dropped. */
+/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped, first line's leading whitespace trimmed, then escaped. */
 function contentLines(node: OutlineNode): string[] {
-  return node.text
+  const lines = node.text
     .split("\n")
     .map((l) => l.trimEnd())
     .filter((l) => l !== "");
+  if (lines[0] !== undefined) lines[0] = lines[0].trimStart();
+  return lines.map(escapeLine);
 }
 
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
