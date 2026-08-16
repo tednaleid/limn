@@ -9,6 +9,7 @@ export default defineConfig({
       exclude: [
         "packages/core/src/__tests__/**",
         "packages/core/src/serialization/fixtures/**",
+        "packages/core/src/markdown/fixtures/**",
         "packages/core/src/model/**",
       ],
       reporter: ["text", "json-summary"],

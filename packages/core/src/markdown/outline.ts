@@ -69,7 +69,7 @@ interface ListBuilder {
   pendingBlank: string[];
 }
 
-/** Assemble an item's text from its raw lines. Later tasks add hard-break and escape handling here. */
+/** Assemble an item's text by joining its raw lines. */
 function finishItem(item: OpenItem): void {
   item.node.text = item.rawLines.join("\n");
 }
