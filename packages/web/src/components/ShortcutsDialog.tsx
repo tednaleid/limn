@@ -2,16 +2,18 @@
 // ABOUTME: Shows all shortcuts grouped by category with kbd-style key badges.
 
 import { useEffect, useCallback, useRef } from "react";
-import { SHORTCUT_GROUPS, displayKey, getHost } from "@limn/core";
-import type { ShortcutEntry, ShortcutGroup } from "@limn/core";
+import { SHORTCUT_GROUPS, filterShortcutGroups, displayKey, getHost } from "@limn/core";
+import type { ShortcutEntry, ShortcutGroup, DocumentCapabilities } from "@limn/core";
 
 export interface ShortcutsDialogProps {
   onClose: () => void;
+  capabilities?: DocumentCapabilities;
 }
 
 const SCROLL_AMOUNT = 60;
 
-export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
+export function ShortcutsDialog({ onClose, capabilities }: ShortcutsDialogProps) {
+  const groups = capabilities ? filterShortcutGroups(SHORTCUT_GROUPS, capabilities) : SHORTCUT_GROUPS;
   const handleClose = useCallback(() => onClose(), [onClose]);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +122,7 @@ export function ShortcutsDialog({ onClose }: ShortcutsDialogProps) {
 
         {/* Body */}
         <div ref={bodyRef} tabIndex={-1} style={{ overflow: "auto", padding: "12px 20px 20px", outline: "none" }}>
-          {SHORTCUT_GROUPS.map((group) => (
+          {groups.map((group) => (
             <ShortcutSection key={group.title} group={group} />
           ))}
         </div>

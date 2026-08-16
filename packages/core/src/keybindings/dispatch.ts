@@ -2,6 +2,7 @@
 // ABOUTME: Shared by web input handler and TestEditor for consistent behavior.
 
 import type { Editor } from "../editor/Editor";
+import type { DocumentCapabilities } from "../editor/capabilities";
 
 export interface Modifiers {
   meta?: boolean;
@@ -14,6 +15,8 @@ interface KeyBinding {
   key: string;
   modifiers?: Modifiers;
   mode: "nav" | "edit" | "both";
+  /** Capability the binding needs; the binding is skipped when the Editor's document lacks it. */
+  requires?: keyof DocumentCapabilities;
   action: (editor: Editor) => void;
 }
 
@@ -222,6 +225,7 @@ const bindings: KeyBinding[] = [
     key: "ArrowUp",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 0, -20);
@@ -231,6 +235,7 @@ const bindings: KeyBinding[] = [
     key: "ArrowDown",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 0, 20);
@@ -240,6 +245,7 @@ const bindings: KeyBinding[] = [
     key: "ArrowLeft",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, -20, 0);
@@ -249,6 +255,7 @@ const bindings: KeyBinding[] = [
     key: "ArrowRight",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 20, 0);
@@ -330,6 +337,7 @@ const bindings: KeyBinding[] = [
   {
     key: "c",
     mode: "nav",
+    requires: "nodeColor",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.cycleNodeColor(sel, 1);
@@ -339,6 +347,7 @@ const bindings: KeyBinding[] = [
     key: "c",
     modifiers: { shift: true },
     mode: "nav",
+    requires: "nodeColor",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.cycleNodeColor(sel, -1);
@@ -458,6 +467,7 @@ const bindings: KeyBinding[] = [
     key: "k",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 0, -20);
@@ -467,6 +477,7 @@ const bindings: KeyBinding[] = [
     key: "j",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 0, 20);
@@ -476,6 +487,7 @@ const bindings: KeyBinding[] = [
     key: "h",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, -20, 0);
@@ -485,6 +497,7 @@ const bindings: KeyBinding[] = [
     key: "l",
     modifiers: { ctrl: true },
     mode: "nav",
+    requires: "freePosition",
     action: (editor) => {
       const sel = editor.getSelectedId();
       if (sel) editor.nudgeNode(sel, 20, 0);
@@ -710,6 +723,7 @@ export function dispatch(
     if (binding.key !== normalizedKey) continue;
     if (binding.mode !== mode && binding.mode !== "both") continue;
     if (!modifiersMatch(binding.modifiers, modifiers)) continue;
+    if (binding.requires && !editor.getCapabilities()[binding.requires]) continue;
 
     binding.action(editor);
     return true;

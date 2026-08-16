@@ -18,9 +18,10 @@ interface NodeViewProps {
   isReparentTarget?: boolean;
   imageUrl?: string;
   branchColor?: string;
+  showResizeHandle?: boolean;
 }
 
-export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget, imageUrl, branchColor }: NodeViewProps) {
+export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget, imageUrl, branchColor, showResizeHandle = true }: NodeViewProps) {
   const lines = node.text.split("\n");
   const hasImage = node.image && imageUrl;
   const fontSize = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
@@ -138,7 +139,7 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
         );
       })}
       {/* Right edge resize handle (visible on selected) */}
-      {isSelected && (
+      {isSelected && showResizeHandle && (
         <rect
           data-resize-handle
           x={node.width - 4}

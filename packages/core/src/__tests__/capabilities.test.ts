@@ -5,6 +5,7 @@ import { describe, test, expect, beforeEach } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
 import { FULL_CAPABILITIES, OUTLINE_CAPABILITIES } from "../editor/capabilities";
 import type { MindMapFileFormat } from "../serialization/schema";
+import { dispatch } from "../keybindings/dispatch";
 
 const sampleMap: MindMapFileFormat = {
   version: 1,
@@ -121,5 +122,36 @@ describe("DocumentCapabilities", () => {
     editor.startWidthResize("n2");
     expect(editor.isResizingWidth()).toBe(true);
     editor.endWidthResize();
+  });
+
+  describe("dispatch gating", () => {
+    test("Ctrl+ArrowRight nudges under full capabilities and is unhandled under outline capabilities", () => {
+      editor.select("n1");
+      const x0 = editor.getNode("n1").x;
+      editor.pressKey("ArrowRight", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(x0 + 20);
+
+      editor.setCapabilities(OUTLINE_CAPABILITIES);
+      const x1 = editor.getNode("n1").x;
+      editor.pressKey("ArrowRight", { ctrl: true });
+      editor.pressKey("l", { ctrl: true });
+      expect(editor.getNode("n1").x).toBe(x1);
+    });
+
+    test("c and Shift+c are unhandled under outline capabilities", () => {
+      editor.setCapabilities(OUTLINE_CAPABILITIES);
+      editor.select("n1");
+      editor.pressKey("c");
+      editor.pressKey("c", { shift: true });
+      expect(editor.getNode("n1").style?.colorIndex).toBeUndefined();
+    });
+
+    test("dispatch returns false for a gated binding so hosts can let the key propagate", () => {
+      editor.setCapabilities(OUTLINE_CAPABILITIES);
+      editor.select("n1");
+      expect(dispatch(editor, "c")).toBe(false);
+      expect(dispatch(editor, "ArrowUp", { ctrl: true })).toBe(false);
+      expect(dispatch(editor, "ArrowUp", { alt: true })).toBe(true);
+    });
   });
 });

@@ -1,10 +1,13 @@
 // ABOUTME: Static shortcut data for the help dialog.
 // ABOUTME: Defines all keyboard and mouse shortcuts grouped by category.
 
+import type { DocumentCapabilities } from "../editor/capabilities";
+
 export interface ShortcutEntry {
   keys: string[];        // each element = one kbd box, e.g. ["Cmd", "Z"]
   description: string;
   altKeys?: string[];    // alternate keys shown as "or" in keys column, e.g. ["h"]
+  requires?: keyof DocumentCapabilities;  // hidden when the document lacks this capability
 }
 
 export interface ShortcutGroup {
@@ -36,8 +39,8 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ["Shift", "Enter"], description: "Create sibling node" },
       { keys: ["Backspace"], description: "Delete node" },
       { keys: ["Space"], description: "Toggle collapse" },
-      { keys: ["c"], description: "Cycle branch color forward" },
-      { keys: ["Shift", "c"], description: "Cycle branch color backward" },
+      { keys: ["c"], description: "Cycle branch color forward", requires: "nodeColor" },
+      { keys: ["Shift", "c"], description: "Cycle branch color backward", requires: "nodeColor" },
     ],
   },
   {
@@ -56,14 +59,14 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: "Positioning",
     type: "keyboard",
     entries: [
-      { keys: ["Ctrl", "\u2190"], description: "Nudge node", altKeys: ["h"] },
-      { keys: ["Ctrl", "\u2192"], description: "Nudge node", altKeys: ["l"] },
-      { keys: ["Ctrl", "\u2191"], description: "Nudge node", altKeys: ["k"] },
-      { keys: ["Ctrl", "\u2193"], description: "Nudge node", altKeys: ["j"] },
-      { keys: ["Ctrl", "Alt", "\u2190"], description: "Nudge node (fine)", altKeys: ["h"] },
-      { keys: ["Ctrl", "Alt", "\u2192"], description: "Nudge node (fine)", altKeys: ["l"] },
-      { keys: ["Ctrl", "Alt", "\u2191"], description: "Nudge node (fine)", altKeys: ["k"] },
-      { keys: ["Ctrl", "Alt", "\u2193"], description: "Nudge node (fine)", altKeys: ["j"] },
+      { keys: ["Ctrl", "\u2190"], description: "Nudge node", altKeys: ["h"], requires: "freePosition" },
+      { keys: ["Ctrl", "\u2192"], description: "Nudge node", altKeys: ["l"], requires: "freePosition" },
+      { keys: ["Ctrl", "\u2191"], description: "Nudge node", altKeys: ["k"], requires: "freePosition" },
+      { keys: ["Ctrl", "\u2193"], description: "Nudge node", altKeys: ["j"], requires: "freePosition" },
+      { keys: ["Ctrl", "Alt", "\u2190"], description: "Nudge node (fine)", altKeys: ["h"], requires: "freePosition" },
+      { keys: ["Ctrl", "Alt", "\u2192"], description: "Nudge node (fine)", altKeys: ["l"], requires: "freePosition" },
+      { keys: ["Ctrl", "Alt", "\u2191"], description: "Nudge node (fine)", altKeys: ["k"], requires: "freePosition" },
+      { keys: ["Ctrl", "Alt", "\u2193"], description: "Nudge node (fine)", altKeys: ["j"], requires: "freePosition" },
       { keys: ["r"], description: "Reflow children to computed layout" },
     ],
   },
@@ -116,3 +119,16 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
 ];
+
+/** Drop entries (and then empty groups) whose capability the document lacks. */
+export function filterShortcutGroups(
+  groups: ShortcutGroup[],
+  caps: DocumentCapabilities,
+): ShortcutGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      entries: group.entries.filter((e) => !e.requires || caps[e.requires]),
+    }))
+    .filter((group) => group.entries.length > 0);
+}

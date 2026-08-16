@@ -365,7 +365,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
         </div>
       )}
     </div>
-    {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+    {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} capabilities={editor.getCapabilities()} />}
     {showAbout && <AboutDialog onClose={() => setShowAbout(false)} variant={aboutVariant} />}
     </>
   );

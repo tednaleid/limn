@@ -93,7 +93,7 @@ export {
 } from "./markdown/outline";
 export type { OutlineNode, OutlineImage, OutlineRegion, ParsedOutline } from "./markdown/outline";
 
-export { SHORTCUT_GROUPS } from "./keybindings/shortcutHelp";
+export { SHORTCUT_GROUPS, filterShortcutGroups } from "./keybindings/shortcutHelp";
 export type { ShortcutEntry, ShortcutGroup } from "./keybindings/shortcutHelp";
 
 export type { PersistenceProvider } from "./persistence/types";

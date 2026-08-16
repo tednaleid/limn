@@ -536,6 +536,7 @@ export function MindMapCanvas() {
                   isReparentTarget={node.id === reparentTargetId}
                   imageUrl={node.image ? assetUrls.get(node.image.assetId) : undefined}
                   branchColor={editor.getBranchColor(node.id)}
+                  showResizeHandle={editor.getCapabilities().widthResize}
                 />
               </g>
             );
