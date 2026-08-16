@@ -44,10 +44,12 @@ export {
   relayoutSubtree,
   relayoutFromNode,
   relayoutAfterDelete,
+  relayoutAll,
   treeBoundingBox,
   resolveTreeOverlap,
   H_OFFSET,
   V_GAP,
+  TREE_PADDING,
 } from "./layout/layout";
 
 export { Editor, stubTextMeasurer, ROOT_FONT_SIZE } from "./editor/Editor";

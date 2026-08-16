@@ -12,6 +12,7 @@ import {
   positionNewSibling,
   reflowSubtree,
   relayoutAfterDelete,
+  relayoutAll as relayoutAllTrees,
   relayoutFromNode,
   relayoutSubtree,
   resolveTreeOverlap,
@@ -572,8 +573,13 @@ export class Editor {
     return this.version;
   }
 
-  /** Notify all subscribers that state has changed. */
+  /** Notify all subscribers that state has changed.
+   *  Documents without free positioning are laid out canonically first, except mid-drag
+   *  so reorder and reparent detection can follow the pointer. */
   protected notify(): void {
+    if (!this.capabilities.freePosition && !this.drag.active) {
+      relayoutAllTrees(this.store);
+    }
     this.version++;
     for (const listener of this.listeners) {
       listener();
@@ -914,6 +920,12 @@ export class Editor {
     relayoutSubtree(this.store, nodeId);     // re-center y bottom-up
     relayoutFromNode(this.store, nodeId);    // cascade up ancestors
     this.resolveOverlapForNode(nodeId);      // push other trees
+    this.notify();
+  }
+
+  /** Lay out every tree from structure alone; see layout.relayoutAll. */
+  relayoutAll(): void {
+    relayoutAllTrees(this.store);
     this.notify();
   }
 
