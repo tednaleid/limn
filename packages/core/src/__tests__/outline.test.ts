@@ -312,6 +312,13 @@ describe("node text", () => {
     },
   );
 
+  test("a literal backslash before an ordered marker is escaped so unescaping is its inverse", () => {
+    expect(unescapeLine(escapeLine("1\\. one"))).toBe("1\\. one");
+    const node: OutlineNode = { text: "1\\. one", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe("1\\. one");
+  });
+
   test("an indented continuation line that starts like a bullet is escaped after its own indent", () => {
     const node: OutlineNode = { text: "a\n  - b\n  ***", collapsed: false, children: [] };
     const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
@@ -362,6 +369,14 @@ describe("continuation lines and fenced blocks", () => {
 
   test("a balanced fence in item text is written back as a fence, with no escapes or hard breaks", () => {
     const text = "- item\n  ```js\n  - x\n  ```\n- next\n";
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("blank lines inside a fenced block are kept, since they are code", () => {
+    const text = "- item\n  ```\n  a\n\n  b\n  ```\n";
+    const roots = outlineRoots(parseOutline(text));
+    expect(roots).toHaveLength(1);
+    expect(roots[0]?.text).toBe("item\n```\na\n\nb\n```");
     expect(writeOutline(parseOutline(text))).toBe(text);
   });
 

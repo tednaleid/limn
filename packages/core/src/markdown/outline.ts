@@ -68,17 +68,18 @@ function stripColumns(line: string, columns: number): string {
 const ESCAPE_PREFIX_RE = /^(?:[-*+](?: |$)|#{1,6}(?: |$)|>(?: |$)|```|~~~)/;
 const THEMATIC_BREAK_RE = /^([-*_])(?: *\1){2,} *$/;
 const ORDERED_PREFIX_RE = /^(\d+)([.)])(?: |$)/;
-const ESCAPED_ORDERED_RE = /^(\d+)\\([.)])(?: |$)/;
+const ESCAPED_ORDERED_RE = /^(\d+)\\+([.)])(?: |$)/;
 
 /** Backslash-escape a line of node text that would otherwise be read as list, heading, quote,
- *  fence, or rule syntax. The line's own leading whitespace is kept in front of the escape. */
+ *  fence, or rule syntax, or as an escape the parser would strip. The line's own leading
+ *  whitespace is kept in front of the escape. */
 export function escapeLine(line: string): string {
   const ws = leadingWhitespace(line);
   const body = line.slice(ws.length);
   if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body)) return `${ws}\\${body}`;
   if (body.startsWith("\\") && unescapeLine(body) !== body) return `${ws}\\${body}`;
-  const m = ORDERED_PREFIX_RE.exec(body);
-  if (m) return `${ws}${m[1]}\\${body.slice((m[1] ?? "").length)}`;
+  const ordered = ORDERED_PREFIX_RE.exec(body) ?? ESCAPED_ORDERED_RE.exec(body);
+  if (ordered) return `${ws}${ordered[1]}\\${body.slice((ordered[1] ?? "").length)}`;
   return line;
 }
 
@@ -317,15 +318,22 @@ function fencedLines(lines: string[]): boolean[] {
   return fenced;
 }
 
-/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped,
- *  first line's leading whitespace trimmed, then escaped except inside a balanced fence. */
+/** Lines of a node's text ready to be written: trailing whitespace trimmed, blank lines dropped
+ *  unless they are inside a balanced fence, first line's leading whitespace trimmed, then escaped
+ *  except inside a balanced fence. */
 function contentLines(node: OutlineNode): { lines: string[]; fenced: boolean[] } {
-  const lines = node.text
-    .split("\n")
-    .map((l) => l.trimEnd())
-    .filter((l) => l !== "");
+  const trimmed = node.text.split("\n").map((l) => l.trimEnd());
+  const start = trimmed.findIndex((l) => l !== "");
+  const body = start === -1 ? [] : trimmed.slice(start);
+  const spans = fencedLines(body);
+  const lines: string[] = [];
+  const fenced: boolean[] = [];
+  body.forEach((line, i) => {
+    if (line === "" && !spans[i]) return;
+    lines.push(line);
+    fenced.push(spans[i] ?? false);
+  });
   if (lines[0] !== undefined) lines[0] = lines[0].trimStart();
-  const fenced = fencedLines(lines);
   return { lines: lines.map((l, i) => (fenced[i] ? l : escapeLine(l))), fenced };
 }
 
@@ -348,7 +356,8 @@ function writeNode(node: OutlineNode, depth: number, out: string[]): void {
     lines.forEach((line, i) => {
       const hardBreak = i < lines.length - 1 && !fenced[i] && !fenced[i + 1];
       const suffix = hardBreak ? "\\" : "";
-      out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
+      if (i === 0) out.push(`${indent}${marker} ${line}${suffix}`);
+      else out.push(line === "" ? "" : `${contentIndent}${line}${suffix}`);
     });
   }
   out.push(...childLines);
