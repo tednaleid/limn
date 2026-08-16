@@ -30,6 +30,7 @@ export type {
 
 export { CURRENT_FORMAT_VERSION } from "./serialization/schema";
 export { migrateToLatest } from "./serialization/migration";
+export { reconcileIds } from "./serialization/reconcile";
 
 export { compressToUrl, decompressFromUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "./export/url";
 

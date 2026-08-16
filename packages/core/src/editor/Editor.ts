@@ -5,6 +5,7 @@ import type { MindMapNode, NodeStyle, TextMeasurer, MindMapMeta, Camera, Asset }
 import { MindMapStore } from "../store/MindMapStore";
 import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
+import { reconcileIds } from "../serialization/reconcile";
 import {
   branchDirection,
   childXFromParent,
@@ -1422,12 +1423,14 @@ export class Editor {
   }
 
   /**
-   * Apply an external update (from another tab) preserving local session state.
+   * Apply an external update (from another tab or the backing file) preserving local session state.
    * Replaces document data but keeps selection (if node still exists), camera,
-   * and sets isExternalUpdate so auto-save can skip.
+   * and sets isExternalUpdate so auto-save can skip. With `reconcileIds`, incoming
+   * nodes take the ids of matching existing nodes so selection survives a reparse.
    */
-  applyExternalUpdate(data: MindMapFileFormat): void {
-    this.store = deserialize(data);
+  applyExternalUpdate(data: MindMapFileFormat, options: { reconcileIds?: boolean } = {}): void {
+    const roots = options.reconcileIds ? reconcileIds(this.store, data.roots) : data.roots;
+    this.store = deserialize({ ...data, roots });
     this.store.setAssets((data.assets ?? []).map((a) => ({ ...a })));
     this.meta = this.parseMeta(data);
     // Preserve camera -- don't let another tab move our viewport
