@@ -184,3 +184,46 @@ export function outlineRoots(parsed: ParsedOutline): OutlineNode[] {
   }
   return roots;
 }
+
+const INDENT = "  ";
+
+/** Lines of a node's text ready to be written, trimmed of trailing whitespace and blank lines dropped. */
+function contentLines(node: OutlineNode): string[] {
+  return node.text
+    .split("\n")
+    .map((l) => l.trimEnd())
+    .filter((l) => l !== "");
+}
+
+function writeNode(node: OutlineNode, depth: number, out: string[]): void {
+  const lines = contentLines(node);
+  const hasBody = lines.length > 0 || node.children.length > 0;
+  if (!hasBody) return;
+  const indent = INDENT.repeat(depth);
+  const marker = "-";
+  if (lines.length === 0) {
+    out.push(`${indent}${marker}`);
+  } else {
+    const contentIndent = indent + INDENT;
+    lines.forEach((line, i) => {
+      const suffix = i < lines.length - 1 ? "\\" : "";
+      out.push(i === 0 ? `${indent}${marker} ${line}${suffix}` : `${contentIndent}${line}${suffix}`);
+    });
+  }
+  for (const child of node.children) writeNode(child, depth + 1, out);
+}
+
+export function writeNodes(nodes: OutlineNode[], depth = 0): string[] {
+  const out: string[] = [];
+  for (const node of nodes) writeNode(node, depth, out);
+  return out;
+}
+
+export function writeOutline(parsed: ParsedOutline): string {
+  const out: string[] = [...parsed.frontmatterLines];
+  for (const region of parsed.regions) {
+    if (region.kind === "prose") out.push(...region.lines);
+    else out.push(...writeNodes(region.roots));
+  }
+  return out.join("\n");
+}

@@ -3,7 +3,7 @@
 
 import { describe, test, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { parseOutline, outlineRoots } from "../markdown/outline";
+import { parseOutline, outlineRoots, writeOutline } from "../markdown/outline";
 import type { OutlineNode } from "../markdown/outline";
 
 function fixture(name: string): string {
@@ -87,5 +87,45 @@ describe("parseOutline structure", () => {
     const parsed = parseOutline(text);
     expect(parsed.regions.map((r) => r.kind)).toEqual(["list", "prose"]);
     expect(shape(outlineRoots(parsed))).toBe("a,b");
+  });
+});
+
+describe("writeOutline", () => {
+  const FIXTURES = ["basic-nested", "prose-and-lists", "fenced-and-comments", "frontmatter-only"];
+
+  test.each(FIXTURES)("%s: writing a parse is idempotent", (name) => {
+    const once = writeOutline(parseOutline(fixture(name)));
+    const twice = writeOutline(parseOutline(once));
+    expect(twice).toBe(once);
+  });
+
+  test.each(FIXTURES)("%s: parse(write(parse(x))) has the same structure as parse(x)", (name) => {
+    const first = parseOutline(fixture(name));
+    const second = parseOutline(writeOutline(first));
+    expect(shape(outlineRoots(second))).toBe(shape(outlineRoots(first)));
+    expect(second.frontmatterLines).toEqual(first.frontmatterLines);
+    expect(second.regions.map((r) => r.kind)).toEqual(first.regions.map((r) => r.kind));
+  });
+
+  test("a canonical note is written back byte for byte", () => {
+    const text = fixture("basic-nested");
+    expect(writeOutline(parseOutline(text))).toBe(text);
+  });
+
+  test("prose regions and frontmatter are preserved verbatim, lists are canonicalized", () => {
+    const text = "---\na: 1\n---\nIntro\n\n+ one\n    + two\n\n+ three\n\nOutro\n";
+    expect(writeOutline(parseOutline(text))).toBe(
+      "---\na: 1\n---\nIntro\n\n- one\n  - two\n- three\n\nOutro\n",
+    );
+  });
+
+  test("an item with empty text but children is written as a bare marker", () => {
+    const parsed = parseOutline("-\n  - child\n");
+    expect(writeOutline(parsed)).toBe("-\n  - child\n");
+  });
+
+  test("an item with empty text and no children is dropped", () => {
+    const parsed = parseOutline("- a\n-\n- b\n");
+    expect(writeOutline(parsed)).toBe("- a\n- b\n");
   });
 });
