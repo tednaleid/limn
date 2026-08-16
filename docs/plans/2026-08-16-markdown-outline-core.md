@@ -2300,5 +2300,7 @@ MSG
 
 ## What plans 2 and 3 will consume from this plan
 
-- Obsidian view (plan 2): `parseOutline`, `writeOutline`, `outlineToFileNodes(roots, generateNodeId)`, `fileNodesToOutline`, `OUTLINE_CAPABILITIES`, `Editor.setCapabilities`, `Editor.applyExternalUpdate(data, { reconcileIds: true })`, `Editor.relayoutAll()` after `remeasureAllNodes()`, `OUTLINE_IMAGE_PLACEHOLDER` for unresolved image sizes.
+- Obsidian view (plan 2): `parseOutline`, `writeOutline` (preserve the `ParsedOutline` object, including `lineEnding`, between parse and write), `outlineToFileNodes(roots, generateNodeId)`, `fileNodesToOutline`, `imageRefToOutline`, `OUTLINE_CAPABILITIES`, `Editor.setCapabilities`, `Editor.applyExternalUpdate(data, { reconcileIds: true })`, `Editor.relayoutAll()` after `remeasureAllNodes()`. Image dimensions the note did not specify arrive as `OUTLINE_IMAGE_UNKNOWN_SIZE` (0); the host resolves the natural size (and calls `setNodeImage`) before its first write, and image resize is a no-op while a dimension is 0.
+
+Post-review hardening (after Task 10, see the ledger rulings in git history): `%%` toggles only on a bare `%%` line; fenced code inside an item is node text and round-trips verbatim; continuation threshold is canonical (`2*depth+2`) with ancestor attachment; escapes are reversible for leading backslashes; CRLF preserved via `ParsedOutline.lineEnding`; embeds write `|WxH` / `|W` / bare; the shortcut help lists the resize keys instead of "Nudge node (fine)". The task texts above predate these changes; the spec is authoritative.
 - Web/desktop clipboard (plan 3): `writeSubtree`, `parseSubtree`, `outlineToFileNodes`, `Editor.importRoots` or a new "add parsed nodes under a parent" method.
