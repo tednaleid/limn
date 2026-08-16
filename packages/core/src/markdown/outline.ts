@@ -92,6 +92,21 @@ function stripHardBreak(line: string): string {
   return trimmed;
 }
 
+const EMBED_RE = /^!\[\[([^\]|]+)(?:\|(\d+)(?:x(\d+))?)?\]\]$/;
+
+function parseEmbedLine(line: string): OutlineImage | null {
+  const m = EMBED_RE.exec(line);
+  if (!m) return null;
+  const image: OutlineImage = { target: m[1] ?? "", width: undefined, height: undefined };
+  if (m[2] !== undefined) image.width = Number(m[2]);
+  if (m[3] !== undefined) image.height = Number(m[3]);
+  return image;
+}
+
+function embedLine(image: OutlineImage): string {
+  return image.width !== undefined ? `![[${image.target}|${image.width}]]` : `![[${image.target}]]`;
+}
+
 interface OpenItem {
   node: OutlineNode;
   rawLines: string[];
@@ -106,13 +121,22 @@ interface ListBuilder {
   pendingBlank: string[];
 }
 
-/** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes. */
+/** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes.
+ *  A trailing embed line becomes the node's image. The marker determines collapse:
+ *  a star on an item with children means collapsed. */
 function finishItem(item: OpenItem): void {
   const lines = item.rawLines.map((raw, i) => {
     const line = i < item.rawLines.length - 1 ? stripHardBreak(raw) : raw.trimEnd();
     return unescapeLine(line);
   });
+  const last = lines[lines.length - 1];
+  const image = last !== undefined ? parseEmbedLine(last) : null;
+  if (image) {
+    lines.pop();
+    item.node.image = image;
+  }
   item.node.text = lines.join("\n");
+  item.node.collapsed = item.marker === "*" && item.node.children.length > 0;
 }
 
 function closeList(list: ListBuilder, regions: OutlineRegion[]): string[] {
@@ -240,11 +264,13 @@ function contentLines(node: OutlineNode): string[] {
 
 function writeNode(node: OutlineNode, depth: number, out: string[]): void {
   const lines = contentLines(node);
+  if (node.image) lines.push(embedLine(node.image));
   const childLines: string[] = [];
   for (const child of node.children) writeNode(child, depth + 1, childLines);
-  if (lines.length === 0 && childLines.length === 0) return;
+  const hasBody = lines.length > 0 || childLines.length > 0;
+  if (!hasBody) return;
   const indent = INDENT.repeat(depth);
-  const marker = "-";
+  const marker = node.collapsed && childLines.length > 0 ? "*" : "-";
   if (lines.length === 0) {
     out.push(`${indent}${marker}`);
   } else {

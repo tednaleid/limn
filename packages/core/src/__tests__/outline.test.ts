@@ -236,3 +236,50 @@ describe("node text", () => {
     expect(back[0]?.children).toEqual([]);
   });
 });
+
+describe("collapse marker and embeds", () => {
+  test("star marker on an item with children means collapsed; star or plus on a leaf is open", () => {
+    const roots = outlineRoots(parseOutline(fixture("collapse-and-images")));
+    expect(roots[0]?.collapsed).toBe(false);
+    expect(roots[1]?.collapsed).toBe(true);
+    expect(roots[2]?.collapsed).toBe(false);
+    expect(roots[3]?.collapsed).toBe(false);
+    expect(roots[3]?.children).toHaveLength(1);
+  });
+
+  test("collapsed nodes with children write a star; everything else writes a dash", () => {
+    const roots: OutlineNode[] = [
+      { text: "a", collapsed: true, children: [{ text: "b", collapsed: false, children: [] }] },
+      { text: "c", collapsed: true, children: [] },
+    ];
+    expect(writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots }] })).toBe("* a\n  - b\n- c");
+  });
+
+  test("an embed on the last line becomes the node image; width and height are read", () => {
+    const roots = outlineRoots(parseOutline(fixture("collapse-and-images")));
+    expect(roots[4]?.text).toBe("");
+    expect(roots[4]?.image).toEqual({ target: "diagram.png", width: 300, height: undefined });
+    expect(roots[5]?.text).toBe("Caption");
+    expect(roots[5]?.image).toEqual({ target: "photo.jpg", width: 200, height: 150 });
+    expect(roots[6]?.image).toBeUndefined();
+    expect(roots[6]?.text).toBe("Text with an embed in the middle ![[inline.png]] stays text");
+  });
+
+  test("images write as the last line with width only", () => {
+    const roots: OutlineNode[] = [
+      { text: "", collapsed: false, image: { target: "a.png", width: 120, height: 80 }, children: [] },
+      { text: "two\nlines", collapsed: false, image: { target: "b.png", width: 50 }, children: [] },
+      { text: "no size", collapsed: false, image: { target: "c.png" }, children: [] },
+    ];
+    expect(writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots }] })).toBe(
+      "- ![[a.png|120]]\n- two\\\n  lines\\\n  ![[b.png|50]]\n- no size\\\n  ![[c.png]]",
+    );
+  });
+
+  test("the fixture round-trips idempotently and keeps its structure", () => {
+    const text = fixture("collapse-and-images");
+    const once = writeOutline(parseOutline(text));
+    expect(writeOutline(parseOutline(once))).toBe(once);
+    expect(shape(outlineRoots(parseOutline(once)))).toBe(shape(outlineRoots(parseOutline(text))));
+  });
+});
