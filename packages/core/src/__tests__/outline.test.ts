@@ -22,6 +22,17 @@ function fixture(name: string): string {
   return readFileSync(new URL(`../markdown/fixtures/${name}.md`, import.meta.url), "utf8");
 }
 
+/** Compact structural view including collapse marker and image, for round-trip laws. */
+function detail(nodes: OutlineNode[]): string {
+  return nodes
+    .map((n) => {
+      const image = n.image ? ` !${n.image.target}|${n.image.width}x${n.image.height}` : "";
+      const children = n.children.length ? `[${detail(n.children)}]` : "";
+      return `${n.collapsed ? "*" : "-"}${n.text}${image}${children}`;
+    })
+    .join(",");
+}
+
 /** Compact structural view: text with children in brackets. */
 function shape(nodes: OutlineNode[]): string {
   return nodes
@@ -134,7 +145,13 @@ describe("parseOutline structure", () => {
 });
 
 describe("writeOutline", () => {
-  const FIXTURES = ["basic-nested", "prose-and-lists", "fenced-and-comments", "frontmatter-only"];
+  const FIXTURES = [
+    "basic-nested",
+    "prose-and-lists",
+    "fenced-and-comments",
+    "frontmatter-only",
+    "collapse-and-images",
+  ];
 
   test.each(FIXTURES)("%s: writing a parse is idempotent", (name) => {
     const once = writeOutline(parseOutline(fixture(name)));
@@ -145,9 +162,16 @@ describe("writeOutline", () => {
   test.each(FIXTURES)("%s: parse(write(parse(x))) has the same structure as parse(x)", (name) => {
     const first = parseOutline(fixture(name));
     const second = parseOutline(writeOutline(first));
-    expect(shape(outlineRoots(second))).toBe(shape(outlineRoots(first)));
+    expect(detail(outlineRoots(second))).toBe(detail(outlineRoots(first)));
     expect(second.frontmatterLines).toEqual(first.frontmatterLines);
     expect(second.regions.map((r) => r.kind)).toEqual(first.regions.map((r) => r.kind));
+  });
+
+  test("a note with CRLF line endings keeps them", () => {
+    const text = "- a\r\n  - b\r\n";
+    const parsed = parseOutline(text);
+    expect(shape(outlineRoots(parsed))).toBe("a[b]");
+    expect(writeOutline(parsed)).toBe(text);
   });
 
   test("a canonical note is written back byte for byte", () => {
@@ -278,6 +302,16 @@ describe("node text", () => {
     },
   );
 
+  test.each(["\\- literal", "\\# heading", "\\```", "\\\\- x"])(
+    "a leading backslash in %j is escaped so unescaping is its inverse",
+    (raw) => {
+      expect(unescapeLine(escapeLine(raw))).toBe(raw);
+      const node: OutlineNode = { text: raw, collapsed: false, children: [] };
+      const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+      expect(outlineRoots(parseOutline(text))[0]?.text).toBe(raw);
+    },
+  );
+
   test("an indented continuation line that starts like a bullet is escaped after its own indent", () => {
     const node: OutlineNode = { text: "a\n  - b\n  ***", collapsed: false, children: [] };
     const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
@@ -376,22 +410,21 @@ describe("collapse marker and embeds", () => {
     expect(roots[6]?.text).toBe("Text with an embed in the middle ![[inline.png]] stays text");
   });
 
-  test("images write as the last line with width only", () => {
+  test("images write as the last line with the sizes they have", () => {
     const roots: OutlineNode[] = [
       { text: "", collapsed: false, image: { target: "a.png", width: 120, height: 80 }, children: [] },
       { text: "two\nlines", collapsed: false, image: { target: "b.png", width: 50 }, children: [] },
       { text: "no size", collapsed: false, image: { target: "c.png" }, children: [] },
     ];
     expect(writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots }] })).toBe(
-      "- ![[a.png|120]]\n- two\\\n  lines\\\n  ![[b.png|50]]\n- no size\\\n  ![[c.png]]",
+      "- ![[a.png|120x80]]\n- two\\\n  lines\\\n  ![[b.png|50]]\n- no size\\\n  ![[c.png]]",
     );
   });
 
-  test("the fixture round-trips idempotently and keeps its structure", () => {
-    const text = fixture("collapse-and-images");
-    const once = writeOutline(parseOutline(text));
-    expect(writeOutline(parseOutline(once))).toBe(once);
-    expect(shape(outlineRoots(parseOutline(once)))).toBe(shape(outlineRoots(parseOutline(text))));
+  test("a write keeps both dimensions of a sized embed", () => {
+    const once = writeOutline(parseOutline(fixture("collapse-and-images")));
+    expect(once).toContain("![[photo.jpg|200x150]]");
+    expect(once).toContain("![[diagram.png|300]]");
   });
 });
 
@@ -449,6 +482,16 @@ describe("subtree helpers and file-node conversion", () => {
     );
     expect(a?.image).toEqual({ assetId: "a.png", width: OUTLINE_IMAGE_PLACEHOLDER, height: OUTLINE_IMAGE_PLACEHOLDER });
     expect(b?.image).toEqual({ assetId: "b.png", width: 100, height: 40 });
+  });
+
+  test("an unsized embed stays unsized through outline -> file nodes -> outline", () => {
+    const back = fileNodesToOutline(outlineToFileNodes(parseSubtree("- ![[x.png]]\n"), generateNodeId));
+    expect(writeSubtree(back)).toBe("- ![[x.png]]");
+  });
+
+  test("a sized embed keeps its size through outline -> file nodes -> outline", () => {
+    const back = fileNodesToOutline(outlineToFileNodes(parseSubtree("- ![[p.png|200x150]]\n"), generateNodeId));
+    expect(writeSubtree(back)).toBe("- ![[p.png|200x150]]");
   });
 
   test("fileNodesToOutline drops geometry and ids and keeps text, collapse, and image", () => {

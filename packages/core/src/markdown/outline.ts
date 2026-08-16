@@ -24,6 +24,8 @@ export type OutlineRegion =
 export interface ParsedOutline {
   frontmatterLines: string[];
   regions: OutlineRegion[];
+  /** Set only for notes written with CRLF, which the writer then keeps. */
+  lineEnding?: "\r\n";
 }
 
 const TAB_WIDTH = 4;
@@ -74,6 +76,7 @@ export function escapeLine(line: string): string {
   const ws = leadingWhitespace(line);
   const body = line.slice(ws.length);
   if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body)) return `${ws}\\${body}`;
+  if (body.startsWith("\\") && unescapeLine(body) !== body) return `${ws}\\${body}`;
   const m = ORDERED_PREFIX_RE.exec(body);
   if (m) return `${ws}${m[1]}\\${body.slice((m[1] ?? "").length)}`;
   return line;
@@ -86,6 +89,7 @@ export function unescapeLine(line: string): string {
   if (body.startsWith("\\")) {
     const rest = body.slice(1);
     if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return `${ws}${rest}`;
+    if (rest.startsWith("\\") && unescapeLine(rest) !== rest) return `${ws}${rest}`;
     return line;
   }
   const m = ESCAPED_ORDERED_RE.exec(body);
@@ -112,7 +116,9 @@ function parseEmbedLine(line: string): OutlineImage | null {
 }
 
 function embedLine(image: OutlineImage): string {
-  return image.width !== undefined ? `![[${image.target}|${image.width}]]` : `![[${image.target}]]`;
+  if (image.width === undefined) return `![[${image.target}]]`;
+  if (image.height === undefined) return `![[${image.target}|${image.width}]]`;
+  return `![[${image.target}|${image.width}x${image.height}]]`;
 }
 
 interface OpenItem {
@@ -224,7 +230,7 @@ function splitFrontmatter(lines: string[]): { frontmatterLines: string[]; rest: 
 }
 
 export function parseOutline(text: string): ParsedOutline {
-  const { frontmatterLines, rest } = splitFrontmatter(text.split("\n"));
+  const { frontmatterLines, rest } = splitFrontmatter(text.split(/\r?\n/));
   const regions: OutlineRegion[] = [];
   let prose: string[] = [];
   let list: ListBuilder | null = null;
@@ -281,7 +287,9 @@ export function parseOutline(text: string): ParsedOutline {
 
   if (list) prose = closeList(list, regions);
   pushProse(prose, regions);
-  return { frontmatterLines, regions };
+  const parsed: ParsedOutline = { frontmatterLines, regions };
+  if (text.includes("\r\n")) parsed.lineEnding = "\r\n";
+  return parsed;
 }
 
 export function outlineRoots(parsed: ParsedOutline): OutlineNode[] {
@@ -358,10 +366,11 @@ export function writeOutline(parsed: ParsedOutline): string {
     if (region.kind === "prose") out.push(...region.lines);
     else out.push(...writeNodes(region.roots));
   }
-  return out.join("\n");
+  return out.join(parsed.lineEnding ?? "\n");
 }
 
-/** Display size used for an embedded image whose size is not yet known. */
+/** Display size used for an embedded image whose size is not yet known. A node carrying it in both
+ *  dimensions is written back as an embed with no size. */
 export const OUTLINE_IMAGE_PLACEHOLDER = 200;
 
 export function writeSubtree(nodes: OutlineNode[]): string {
@@ -402,7 +411,9 @@ export function fileNodesToOutline(nodes: MindMapFileNode[]): OutlineNode[] {
       children: fileNodesToOutline(node.children),
     };
     if (node.image) {
-      outline.image = { target: node.image.assetId, width: node.image.width, height: node.image.height };
+      const { assetId, width, height } = node.image;
+      const unsized = width === OUTLINE_IMAGE_PLACEHOLDER && height === OUTLINE_IMAGE_PLACEHOLDER;
+      outline.image = unsized ? { target: assetId } : { target: assetId, width, height };
     }
     return outline;
   });
