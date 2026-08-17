@@ -1,7 +1,7 @@
 // ABOUTME: SVG component rendering a single mind map node.
 // ABOUTME: Displays text with optional selection highlight, collapse indicator, and images.
 
-import type { MindMapNode, StyledSegment } from "@limn/core";
+import type { ImageSize, MindMapNode, StyledSegment } from "@limn/core";
 import { ROOT_FONT_SIZE, parseInlineMarkdown, isPlainSegments } from "@limn/core";
 
 const PADDING_X = 10;
@@ -17,13 +17,14 @@ interface NodeViewProps {
   isRoot: boolean;
   isReparentTarget?: boolean;
   imageUrl?: string;
+  imageSize?: ImageSize;
   branchColor?: string;
   showResizeHandle?: boolean;
 }
 
-export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget, imageUrl, branchColor, showResizeHandle = true }: NodeViewProps) {
+export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget, imageUrl, imageSize, branchColor, showResizeHandle = true }: NodeViewProps) {
   const lines = node.text.split("\n");
-  const hasImage = node.image && imageUrl;
+  const hasImage = node.image && imageUrl && imageSize;
   const fontSize = isRoot ? ROOT_FONT_SIZE : FONT_SIZE;
   const lineHeight = isRoot ? Math.round(ROOT_FONT_SIZE * (LINE_HEIGHT / FONT_SIZE)) : LINE_HEIGHT;
   const paddingY = isRoot ? Math.round(ROOT_FONT_SIZE * (PADDING_Y / FONT_SIZE)) : PADDING_Y;
@@ -61,22 +62,22 @@ export function NodeView({ node, isSelected, isEditing, isRoot, isReparentTarget
         />
       )}
       {/* Image (below text) */}
-      {hasImage && node.image && (
+      {hasImage && node.image && imageSize && (
         <g className="node-image-group">
           <image
             href={imageUrl}
             data-asset-id={node.image.assetId}
             x={PADDING_X}
             y={textHeight}
-            width={node.image.width}
-            height={node.image.height}
+            width={imageSize.width}
+            height={imageSize.height}
             preserveAspectRatio="xMidYMid meet"
           />
           {/* Image resize handle: dot in lower-right corner */}
           <circle
             data-image-resize-handle
-            cx={PADDING_X + node.image.width}
-            cy={textHeight + node.image.height}
+            cx={PADDING_X + imageSize.width}
+            cy={textHeight + imageSize.height}
             r={5}
             style={{ fill: branchColor ?? "var(--selection-border)", cursor: "nwse-resize" }}
             stroke="#ffffff"
