@@ -18,7 +18,7 @@ export function rememberChoice(choices: LeafChoices, leaf: WorkspaceLeaf, path: 
   byPath.set(path, type);
 }
 
-function filePathOf(state: ViewState): string | undefined {
+export function filePathOf(state: ViewState): string | undefined {
   const file = state.state?.file;
   return typeof file === "string" ? file : undefined;
 }

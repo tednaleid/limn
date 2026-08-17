@@ -8,7 +8,8 @@ import { obsidianHost } from "./host/obsidianHost";
 import { DEFAULT_SETTINGS, mergeSettings, type LimnSettings } from "./settings";
 import { LimnSettingTab } from "./LimnSettingTab";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, hasMindMapMarker } from "./markdown/routing";
-import { installRoutingPatch, type LeafChoices } from "./markdown/leafRouting";
+import { installRoutingPatch, filePathOf, type LeafChoices } from "./markdown/leafRouting";
+import { LimnMarkdownView } from "./markdown/LimnMarkdownView";
 
 export default class LimnPlugin extends Plugin {
   settings: LimnSettings = { ...DEFAULT_SETTINGS };
@@ -20,6 +21,7 @@ export default class LimnPlugin extends Plugin {
     this.settings = mergeSettings(await this.loadData());
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
+    this.registerView(VIEW_TYPE_LIMN_MARKDOWN, (leaf) => new LimnMarkdownView(leaf, this));
     this.addSettingTab(new LimnSettingTab(this.app, this));
     this.uninstallRouting = installRoutingPatch(this);
     this.app.workspace.onLayoutReady(() => this.routeOpenMarkedNotes());
@@ -49,17 +51,21 @@ export default class LimnPlugin extends Plugin {
   private routeOpenMarkedNotes(): void {
     if (this.settings.openMarkedNotesAs !== "mindmap") return;
     for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW_TYPE)) {
+      if (leaf.isDeferred) continue;
       const state = leaf.getViewState();
-      const path = state.state?.file;
-      if (typeof path !== "string") continue;
+      const path = filePathOf(state);
+      if (path === undefined) continue;
       if (!hasMindMapMarker(this.app.metadataCache.getCache(path)?.frontmatter)) continue;
       // Re-setting the same state runs it through the wrapper, which rewrites the type.
       void leaf.setViewState(state);
     }
   }
 
-  /** Re-apply the theme setting to open Markdown mind map views (filled in with the view). */
-  applyThemeSettingToMarkdownViews(): void {}
+  applyThemeSettingToMarkdownViews(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN)) {
+      if (leaf.view instanceof LimnMarkdownView) leaf.view.applyThemeSetting();
+    }
+  }
 
   private async createNewFile(): Promise<void> {
     const folder = this.app.vault.getRoot();
