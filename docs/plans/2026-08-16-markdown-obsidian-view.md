@@ -1840,7 +1840,7 @@ export class WorkspaceLeaf {
   getViewState(): unknown {
     return this.lastState;
   }
-  openFile(): Promise<void> {
+  openFile(_file?: unknown): Promise<void> {
     return Promise.resolve();
   }
 }
