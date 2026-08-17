@@ -18,7 +18,8 @@
     "./theme/themes": "./src/theme/themes.ts",
     "./components/KeystrokeOverlay": "./src/components/KeystrokeOverlay.tsx",
     "./persistence/file": "./src/persistence/file.ts",
-    "./limn-window": "./src/limn-window.ts"
+    "./limn-window": "./src/limn-window.ts",
+    "./assets/attachImage": "./src/assets/attachImage.ts"
   },
   "scripts": {
     "dev": "vite",

@@ -16,6 +16,7 @@ import { exportSvg } from "@limn/web/export/svg";
 import { KeystrokeOverlay } from "@limn/web/components/KeystrokeOverlay";
 import { useKeyboardHandler } from "@limn/web/input/useKeyboardHandler";
 import type { AssetAddedDetail } from "@limn/web/limn-window";
+import { attachImageFile, imageFileFromTransfer, pastedImageName } from "@limn/web/assets/attachImage";
 
 /** Wrapper component that sets up keyboard handling inside the Obsidian view. */
 export function LimnViewRoot({ editor, containerEl }: { editor: Editor; containerEl: HTMLElement }) {
@@ -35,6 +36,27 @@ export function LimnViewRoot({ editor, containerEl }: { editor: Editor; containe
   );
 
   useKeyboardHandler(editor, isActive);
+
+  // Image paste: attach to the selected node, or create a root. Listens on the view's own document
+  // so popout windows work; isActive keeps other leaves in the same window from reacting.
+  useEffect(() => {
+    const doc = containerEl.ownerDocument;
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!isActive()) return;
+      const file = imageFileFromTransfer(e.clipboardData);
+      if (!file) return;
+      e.preventDefault();
+      const selectedId = editor.getSelectedId();
+      attachImageFile(
+        editor, provider, file, pastedImageName(file.type, new Date()),
+        selectedId ? { nodeId: selectedId } : { x: 0, y: 0 },
+      ).catch((err: unknown) => {
+        console.error("Failed to attach image:", err);
+      });
+    };
+    doc.addEventListener("paste", handlePaste);
+    return () => doc.removeEventListener("paste", handlePaste);
+  }, [editor, provider, containerEl, isActive]);
 
   const [showKeystrokeOverlay, setShowKeystrokeOverlay] = useState(false);
   useEffect(() => {
