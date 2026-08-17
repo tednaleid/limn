@@ -13,6 +13,7 @@ import { ReparentIndicator } from "./ReparentIndicator";
 import { EasyMotionLabels } from "./EasyMotionLabels";
 import { usePersistence } from "../hooks/usePersistence";
 import { parseLimnFile } from "../persistence/file";
+import { attachImageFile } from "../assets/attachImage";
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 3;
@@ -426,50 +427,12 @@ export function MindMapCanvas() {
       const nodeGroup = target?.closest("[data-node-id]") as SVGElement | null;
       const targetNodeId = nodeGroup?.getAttribute("data-node-id") ?? null;
 
-      // Read image dimensions and create blob URL
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const assetId = `a${Date.now()}`;
-          const asset = {
-            id: assetId,
-            filename: imageFile.name,
-            mimeType: imageFile.type,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-          };
-
-          // Scale display size to reasonable dimensions
-          const maxDisplayWidth = 300;
-          const scale = Math.min(1, maxDisplayWidth / img.naturalWidth);
-          const displayWidth = Math.round(img.naturalWidth * scale);
-          const displayHeight = Math.round(img.naturalHeight * scale);
-
-          const blobUrl = URL.createObjectURL(imageFile);
-
-          if (targetNodeId) {
-            // Drop on node: attach image to that node
-            editor.setNodeImage(targetNodeId, asset, displayWidth, displayHeight);
-          } else {
-            // Drop on canvas: create new root with image
-            // setNodeImage before exitEditMode so the image prevents empty-node deletion
-            const rootId = editor.addRoot("", world.x, world.y);
-            editor.setNodeImage(rootId, asset, displayWidth, displayHeight);
-            editor.exitEditMode();
-          }
-
-          // Persist blob to IndexedDB and notify App of the blob URL
-          void provider.saveAsset(assetId, imageFile);
-          window.dispatchEvent(new CustomEvent("limn:asset-added", {
-            detail: { assetId, blobUrl },
-          }));
-        };
-        img.src = reader.result as string;
-      };
-      reader.readAsDataURL(imageFile);
+      void attachImageFile(
+        editor, provider, imageFile, imageFile.name,
+        targetNodeId ? { nodeId: targetNodeId } : { x: world.x, y: world.y },
+      );
     },
-    [editor, screenToWorld],
+    [editor, provider, screenToWorld],
   );
 
   return (

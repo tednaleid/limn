@@ -13,6 +13,13 @@ export interface PersistenceProvider {
   /** Store a binary asset (image). */
   saveAsset(assetId: string, blob: Blob): Promise<void>;
 
+  /**
+   * Store a new binary asset under an id the host derives from the suggested filename (for
+   * example a vault attachment's link text) and return that id. Hosts that generate opaque ids
+   * leave this undefined and receive saveAsset(assetId, blob) instead.
+   */
+  importAsset?(filename: string, blob: Blob): Promise<string>;
+
   /** Load a binary asset by ID. */
   loadAsset(assetId: string): Promise<Blob | undefined>;
 

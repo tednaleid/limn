@@ -22,6 +22,7 @@ import { exportSvg, serializeSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
 import { limnWindow, type AssetAddedDetail } from "./limn-window";
+import { attachImageFile, imageFileFromTransfer, pastedImageName } from "./assets/attachImage";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -524,52 +525,14 @@ export function App({ docId, initialData }: AppProps) {
   // Handle paste from clipboard
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of items) {
-        if (item.type.startsWith("image/")) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) return;
-
-          const img = new Image();
-          const blobUrl = URL.createObjectURL(file);
-          img.onload = () => {
-            const assetId = `a${Date.now()}`;
-            const asset = {
-              id: assetId,
-              filename: `pasted-${assetId}.${file.type.split("/")[1]}`,
-              mimeType: file.type,
-              width: img.naturalWidth,
-              height: img.naturalHeight,
-            };
-
-            const maxDisplayWidth = 300;
-            const scale = Math.min(1, maxDisplayWidth / img.naturalWidth);
-            const displayWidth = Math.round(img.naturalWidth * scale);
-            const displayHeight = Math.round(img.naturalHeight * scale);
-
-            const selectedId = editor.getSelectedId();
-            if (selectedId) {
-              editor.setNodeImage(selectedId, asset, displayWidth, displayHeight);
-            } else {
-              const rootId = editor.addRoot("", 0, 0);
-              editor.setNodeImage(rootId, asset, displayWidth, displayHeight);
-              editor.exitEditMode();
-            }
-
-            setAssetUrls((prev) => {
-              const next = new Map(prev);
-              next.set(assetId, blobUrl);
-              return next;
-            });
-            void provider.saveAsset(assetId, file);
-          };
-          img.src = blobUrl;
-          break;
-        }
-      }
+      const file = imageFileFromTransfer(e.clipboardData);
+      if (!file) return;
+      e.preventDefault();
+      const selectedId = editor.getSelectedId();
+      void attachImageFile(
+        editor, provider, file, pastedImageName(file.type, new Date()),
+        selectedId ? { nodeId: selectedId } : { x: 0, y: 0 },
+      );
     };
 
     window.addEventListener("paste", handlePaste);
