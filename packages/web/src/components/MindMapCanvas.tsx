@@ -427,10 +427,12 @@ export function MindMapCanvas() {
       const nodeGroup = target?.closest("[data-node-id]") as SVGElement | null;
       const targetNodeId = nodeGroup?.getAttribute("data-node-id") ?? null;
 
-      void attachImageFile(
+      attachImageFile(
         editor, provider, imageFile, imageFile.name,
         targetNodeId ? { nodeId: targetNodeId } : { x: world.x, y: world.y },
-      );
+      ).catch((err: unknown) => {
+        console.error("Failed to attach image:", err);
+      });
     },
     [editor, provider, screenToWorld],
   );

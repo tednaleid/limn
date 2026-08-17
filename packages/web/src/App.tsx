@@ -529,10 +529,12 @@ export function App({ docId, initialData }: AppProps) {
       if (!file) return;
       e.preventDefault();
       const selectedId = editor.getSelectedId();
-      void attachImageFile(
+      attachImageFile(
         editor, provider, file, pastedImageName(file.type, new Date()),
         selectedId ? { nodeId: selectedId } : { x: 0, y: 0 },
-      );
+      ).catch((err: unknown) => {
+        console.error("Failed to attach image:", err);
+      });
     };
 
     window.addEventListener("paste", handlePaste);
