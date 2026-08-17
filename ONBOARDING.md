@@ -48,9 +48,11 @@ dispatch without a browser, which is why logic tests do not need Playwright.
 - `packages/core/src/keybindings/` -- key-to-action dispatch (shared with TestEditor)
 - `packages/core/src/serialization/` -- `schema.ts`, `migration.ts`, golden fixtures
 - `packages/core/src/layout/` -- layout engine (computed positions)
+- `packages/core/src/markdown/outline.ts` -- Markdown outline codec (parse/write bullet lists)
 - `packages/web/src/App.tsx`, `packages/web/src/main.tsx` -- web entry points
 - `packages/web/src/persistence/` -- IndexedDB + BroadcastChannel cross-tab sync
 - `packages/obsidian/src/` -- `LimnView`, `ObsidianPersistenceProvider`
+- `packages/obsidian/src/markdown/` -- Markdown-backed mind map view, routing, commands
 - `packages/desktop/Limn/` -- Swift app, WKWebView bridge, DebugServer
 - `packages/desktop/project.yml` -- XcodeGen source of truth (`.xcodeproj` is generated)
 - `scripts/bump-version.ts` -- version bump + tag + release notes
