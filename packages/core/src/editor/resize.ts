@@ -2,6 +2,7 @@
 // ABOUTME: Pure functions operating on WidthResizeState and ImageResizeState.
 
 import type { MindMapNode } from "../model/types";
+import type { ImageSize } from "./imageSize";
 
 export const MIN_NODE_WIDTH = 60;
 export const MIN_IMAGE_WIDTH = 40;
@@ -45,14 +46,14 @@ export function initialImageResizeState(): ImageResizeState {
   return { active: false, nodeId: null, aspectRatio: 1, changed: false };
 }
 
-/** Initialize image resize from a node. Returns null when the node has no image or its display
- *  size is not resolved yet. */
-export function initImageResize(node: MindMapNode): ImageResizeState | null {
-  if (!node.image || node.image.width <= 0 || node.image.height <= 0) return null;
+/** Initialize image resize from a node and the size it is drawn at. Returns null when the node has
+ *  no image or its display size is not known yet. */
+export function initImageResize(node: MindMapNode, size: ImageSize | null): ImageResizeState | null {
+  if (!node.image || !size) return null;
   return {
     active: true,
     nodeId: node.id,
-    aspectRatio: node.image.height / node.image.width,
+    aspectRatio: size.height / size.width,
     changed: false,
   };
 }

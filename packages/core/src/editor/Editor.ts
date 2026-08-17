@@ -56,6 +56,8 @@ import {
 } from "./drag";
 import { FULL_CAPABILITIES } from "./capabilities";
 import type { DocumentCapabilities } from "./capabilities";
+import { imageDisplaySize } from "./imageSize";
+import type { ImageSize } from "./imageSize";
 
 export const ROOT_FONT_SIZE = 18;
 
@@ -853,10 +855,11 @@ export class Editor {
     const squashLabel = `resize:${nodeId}`;
 
     if (node.image) {
-      if (node.image.width <= 0 || node.image.height <= 0) return;
-      const aspectRatio = node.image.width / node.image.height;
-      const newImgWidth = Math.max(MIN_IMAGE_WIDTH, node.image.width + delta);
-      if (newImgWidth === node.image.width) return;
+      const size = this.getImageDisplaySize(nodeId);
+      if (!size) return;
+      const aspectRatio = size.width / size.height;
+      const newImgWidth = Math.max(MIN_IMAGE_WIDTH, size.width + delta);
+      if (newImgWidth === size.width) return;
       if (this.lastUndoLabel !== squashLabel) {
         this.pushUndo(squashLabel);
       }
@@ -1184,6 +1187,31 @@ export class Editor {
     return this.store.getAssets();
   }
 
+  /** Size the node's image is drawn at, or null when it has no image or the size is not known yet. */
+  getImageDisplaySize(nodeId: string): ImageSize | null {
+    const image = this.store.getNode(nodeId).image;
+    if (!image) return null;
+    return imageDisplaySize(image, this.store.getAssets().find((a) => a.id === image.assetId));
+  }
+
+  /**
+   * Record an asset's natural size once the host has loaded the image. Nodes drawing the asset
+   * without a stored size are remeasured. Not undoable: the size is a fact about the file, not an edit.
+   */
+  setAssetNaturalSize(assetId: string, width: number, height: number): void {
+    const asset = this.store.getAssets().find((a) => a.id === assetId);
+    if (!asset || width <= 0 || height <= 0) return;
+    if (asset.width === width && asset.height === height) return;
+    asset.width = width;
+    asset.height = height;
+    for (const node of this.store.getAllNodes()) {
+      if (node.image?.assetId !== assetId) continue;
+      this.remeasureNode(node.id);
+      relayoutFromNode(this.store, node.id);
+    }
+    this.notify();
+  }
+
   setNodeImage(nodeId: string, asset: Asset, displayWidth: number, displayHeight: number): void {
     this.pushUndo("set-image");
     this.store.setNodeImage(nodeId, asset, displayWidth, displayHeight);
@@ -1334,7 +1362,7 @@ export class Editor {
   }
 
   startImageResize(nodeId: string): void {
-    const state = initImageResize(this.store.getNode(nodeId));
+    const state = initImageResize(this.store.getNode(nodeId), this.getImageDisplaySize(nodeId));
     if (!state) return;
     this.pushUndo("resize-image");
     this.imageResize = state;
@@ -1562,6 +1590,9 @@ export class Editor {
   }
 
   private restoreState(entry: HistoryEntry): void {
+    // A natural size is a fact about the file: a snapshot taken before it was known must not
+    // forget it.
+    const known = new Map(this.store.getAssets().map((a) => [a.id, a]));
     const newStore = new MindMapStore();
     for (const node of entry.nodes.values()) {
       newStore.loadNode({ ...node, children: [...node.children] });
@@ -1570,7 +1601,13 @@ export class Editor {
       newStore.addRootId(rootId);
     }
     this.store = newStore;
-    this.store.setAssets(entry.assets.map((a) => ({ ...a })));
+    this.store.setAssets(entry.assets.map((a) => {
+      const current = known.get(a.id);
+      const unresolved = a.width <= 0 || a.height <= 0;
+      return unresolved && current && current.width > 0 && current.height > 0
+        ? { ...a, width: current.width, height: current.height }
+        : { ...a };
+    }));
 
     // Fix selection if selected node no longer exists
     if (this.selectedId !== null && !entry.nodes.has(this.selectedId)) {
@@ -1735,12 +1772,13 @@ export class Editor {
       node.height = height;
     }
     // Include image dimensions in node size
-    if (node.image) {
-      const minImageWidth = node.image.width + 2 * IMAGE_PADDING_X;
+    const imageSize = this.getImageDisplaySize(nodeId);
+    if (imageSize) {
+      const minImageWidth = imageSize.width + 2 * IMAGE_PADDING_X;
       if (node.width < minImageWidth) {
         node.width = minImageWidth;
       }
-      node.height += node.image.height + IMAGE_PADDING_X;
+      node.height += imageSize.height + IMAGE_PADDING_X;
     }
   }
 
