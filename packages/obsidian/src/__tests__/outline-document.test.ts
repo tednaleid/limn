@@ -128,6 +128,19 @@ describe("OutlineDocument.text after edits", () => {
     editor.addChild(editor.getRoots()[0]!.id, "");
     expect(doc.text()).toBe("- a\n");
   });
+
+  it("does not add a list region for a root that renders nothing", () => {
+    const { editor, doc } = makeDoc();
+    const host = fakeHost("Just prose.\n");
+    doc.attach(host);
+    doc.load("Just prose.\n", true);
+    editor.addRoot("");
+    expect(doc.text()).toBe("Just prose.\n");
+    expect(host.requestSave).not.toHaveBeenCalled();
+    editor.setText(editor.getRoots()[0]!.id, "First");
+    expect(doc.text()).toBe("Just prose.\n\n- First\n");
+    expect(host.requestSave).toHaveBeenCalled();
+  });
 });
 
 describe("OutlineDocument.attach", () => {

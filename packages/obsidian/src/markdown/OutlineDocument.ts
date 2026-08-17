@@ -2,7 +2,7 @@
 // ABOUTME: Pure TypeScript with no Obsidian or DOM dependencies so the sync rules are unit-testable.
 
 import {
-  parseOutline, writeOutline, outlineToFileNodes, fileNodesToOutline, generateNodeId,
+  parseOutline, writeOutline, writeNodes, outlineToFileNodes, fileNodesToOutline, generateNodeId,
   CURRENT_FORMAT_VERSION,
 } from "@limn/core";
 import type {
@@ -121,17 +121,24 @@ export class OutlineDocument {
   /** The note text for the current map: prose regions verbatim, list regions regenerated. */
   text(): string {
     const regions = this.parsed.regions.slice();
+    const converted = this.editor.toJSON().roots.map((root) => ({
+      region: this.regionOfRoot.get(root.id),
+      outline: fileNodesToOutline([root]),
+    }));
     const listIndexes = regions.flatMap((region, i) => (region.kind === "list" ? [i] : []));
     let lastList = listIndexes[listIndexes.length - 1];
     if (lastList === undefined) {
-      if (this.editor.getRoots().length === 0) return writeOutline(this.parsed);
+      // No list region to hold the roots yet. Only add one if a root would actually render:
+      // an empty node still being edited must not turn prose-only text into a save request.
+      const allOutlineRoots = converted.flatMap((c) => c.outline);
+      if (writeNodes(allOutlineRoots).length === 0) return writeOutline(this.parsed);
       lastList = appendListRegion(regions);
     }
     const rootsByRegion = new Map<number, OutlineNode[]>();
-    for (const root of this.editor.toJSON().roots) {
-      const index = this.regionOfRoot.get(root.id) ?? lastList;
+    for (const { region, outline } of converted) {
+      const index = region ?? lastList;
       const list = rootsByRegion.get(index) ?? [];
-      list.push(...fileNodesToOutline([root]));
+      list.push(...outline);
       rootsByRegion.set(index, list);
     }
     const out: OutlineRegion[] = regions.map((region, i) =>
