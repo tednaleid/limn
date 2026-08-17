@@ -250,6 +250,26 @@ describe("stripMarkdown", () => {
   });
 });
 
+describe("wikilinks", () => {
+  it("shows the target without brackets and keeps the raw wikilink as the link", () => {
+    expect(parseInlineMarkdown("see [[Note]] now")).toEqual([
+      plain("see "), link("Note", "[[Note]]"), plain(" now"),
+    ]);
+  });
+  it("shows the alias when there is one", () => {
+    expect(parseInlineMarkdown("[[Note|the note]]")).toEqual([link("the note", "[[Note]]")]);
+    expect(parseInlineMarkdown("[[Note#Heading|x]]")).toEqual([link("x", "[[Note#Heading]]")]);
+  });
+  it("leaves unmatched brackets, empty links, and embeds alone", () => {
+    expect(parseInlineMarkdown("[[unclosed")).toEqual([plain("[[unclosed")]);
+    expect(parseInlineMarkdown("[[]]")).toEqual([plain("[[]]")]);
+    expect(parseInlineMarkdown("![[pic.png]]")).toEqual([plain("![[pic.png]]")]);
+  });
+  it("stripMarkdown measures the displayed text", () => {
+    expect(stripMarkdown("[[Note|alias]] here")).toBe("alias here");
+  });
+});
+
 describe("isPlainSegments", () => {
   it("returns true for single unstyled segment", () => {
     expect(isPlainSegments([plain("hello")])).toBe(true);

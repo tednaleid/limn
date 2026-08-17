@@ -294,7 +294,7 @@ export function MindMapCanvas() {
           if (linkEl) {
             const href = linkEl.getAttribute("href");
             if (href) {
-              window.open(href, "_blank", "noopener,noreferrer");
+              editor.followLink(href);
             }
           } else {
             // Cmd+Click on non-link: select normally

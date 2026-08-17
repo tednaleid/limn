@@ -1383,6 +1383,17 @@ describe("Editor", () => {
       editor.openLink("n0");
       expect(urls).toEqual([]);
     });
+
+    test("followLink hands any url to the callback; openLink finds wikilinks", () => {
+      const editor = new TestEditor();
+      const opened: string[] = [];
+      editor.onOpenLink((url) => opened.push(url));
+      editor.followLink("https://example.com");
+      const id = editor.addRoot("read [[Note|it]]", 0, 0);
+      editor.exitEditMode();
+      editor.openLink(id);
+      expect(opened).toEqual(["https://example.com", "[[Note]]"]);
+    });
   });
 
   describe("applyExternalUpdate", () => {

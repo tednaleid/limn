@@ -560,9 +560,14 @@ export class Editor {
   openLink(nodeId: string): void {
     const links = this.getNodeLinks(nodeId);
     const first = links[0];
-    if (first && this.openLinkCallback) {
-      this.openLinkCallback(first.url);
+    if (first) {
+      this.followLink(first.url);
     }
+  }
+
+  /** Hand a link (a URL or a raw `[[wikilink]]`) to the host's link callback. */
+  followLink(url: string): void {
+    this.openLinkCallback?.(url);
   }
 
   // --- Subscription (for useSyncExternalStore) ---

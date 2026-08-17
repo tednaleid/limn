@@ -13,6 +13,7 @@ import { OutlineDocument } from "./OutlineDocument";
 import { ObsidianOutlineAssetProvider } from "./ObsidianOutlineAssetProvider";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "./routing";
 import { openLeafAs } from "./leafRouting";
+import { openLinkFromMap } from "../openLink";
 
 export class LimnMarkdownView extends TextFileView {
   editor!: Editor;
@@ -56,6 +57,7 @@ export class LimnMarkdownView extends TextFileView {
     }));
     this.detachDoc = this.doc.attach(this);
     this.editor.onSave(() => void this.save());
+    this.editor.onOpenLink((url) => openLinkFromMap(this.app, url, this.file?.path ?? ""));
     // The note stores no theme; the picker in the menu writes the plugin setting instead.
     this.editor.onThemeChange(() => {
       this.plugin.settings.themeMode = this.editor.getTheme();

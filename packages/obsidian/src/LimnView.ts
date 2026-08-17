@@ -11,6 +11,7 @@ import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
 import type { Root } from "react-dom/client";
 import { mountLimnRoot } from "./LimnViewRoot";
 import { applyThemeToContainer } from "./viewTheme";
+import { openLinkFromMap } from "./openLink";
 
 export const VIEW_TYPE_LIMN = "limn-view";
 
@@ -57,6 +58,8 @@ export class LimnView extends FileView {
     this.editor.onThemeChange(() => {
       applyThemeToContainer(this.contentEl, this.editor);
     });
+
+    this.editor.onOpenLink((url) => openLinkFromMap(this.app, url, this.file?.path ?? ""));
 
     // Listen for external changes to the file (e.g., sync). This only fires for
     // writes we didn't make (the isSaving guard excludes our own saves), which in

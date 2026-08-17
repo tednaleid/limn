@@ -77,6 +77,7 @@ interface Span {
   closeLen: number; // length of closing delimiter
   type: "bold" | "italic" | "bolditalic" | "code" | "strikethrough" | "link";
   linkUrl?: string;
+  displayText?: string;
 }
 
 /**
@@ -95,6 +96,16 @@ function findSpans(line: string): Span[] {
       if (close > i + 1) {
         spans.push({ start: i + 1, end: close, openLen: 1, closeLen: 1, type: "code" });
         i = close + 1;
+        continue;
+      }
+    }
+
+    // Wikilink: [[target]] or [[target|alias]]; ![[...]] is an embed and stays text
+    if (line[i] === "[" && line[i + 1] === "[" && line[i - 1] !== "!") {
+      const wikiSpan = tryParseWikilink(line, i);
+      if (wikiSpan) {
+        spans.push(wikiSpan);
+        i = wikiSpan.end + wikiSpan.closeLen;
         continue;
       }
     }
@@ -204,6 +215,26 @@ function findClosingSingleDelim(line: string, delim: string, fromIndex: number):
   return -1;
 }
 
+/** Try to parse a wikilink starting at position i (line[i] and line[i+1] are "["). */
+function tryParseWikilink(line: string, i: number): Span | null {
+  const close = line.indexOf("]]", i + 2);
+  if (close === -1 || close === i + 2) return null;
+  const inner = line.slice(i + 2, close);
+  const bar = inner.indexOf("|");
+  const target = bar === -1 ? inner : inner.slice(0, bar);
+  const alias = bar === -1 ? undefined : inner.slice(bar + 1);
+  if (target === "") return null;
+  return {
+    start: i + 2,
+    end: close,
+    openLen: 2,
+    closeLen: 2,
+    type: "link",
+    linkUrl: `[[${target}]]`,
+    displayText: alias === undefined || alias === "" ? target : alias,
+  };
+}
+
 /** Try to parse a markdown link starting at position i. */
 function tryParseLink(line: string, i: number): Span | null {
   // Find closing ]
@@ -253,7 +284,7 @@ function buildSegments(line: string, spans: Span[]): StyledSegment[] {
       });
     } else if (span.type === "link") {
       segments.push({
-        text: line.slice(span.start, span.end),
+        text: span.displayText ?? line.slice(span.start, span.end),
         style: { ...PLAIN_STYLE, link: span.linkUrl },
       });
     } else {

@@ -442,6 +442,7 @@ export function App({ docId, initialData }: AppProps) {
       }
     });
     editor.onOpenLink((url) => {
+      if (url.startsWith("[[")) return; // wikilinks have no target outside Obsidian
       window.open(url, "_blank", "noopener,noreferrer");
     });
     if (!desktop) {
