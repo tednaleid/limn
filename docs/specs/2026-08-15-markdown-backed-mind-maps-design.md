@@ -141,7 +141,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 - `setViewData(text, clear)`: `parsed = parseOutline(text)`; convert to `MindMapFileFormat` with placeholder positions; if `clear` then `editor.loadJSON(...)` else `editor.applyExternalUpdate(reconciled)`; store `parsed.frontmatter` and `parsed.regions` plus the root-to-region map; `remeasureAllNodes()`; `relayoutAll()`; kick off image size resolution (8.3). If `clear`, also reset camera to fit.
 - `getViewData()`: `writeOutline(currentParsed)` where `currentParsed` is rebuilt from the Editor's roots plus the stored prose regions and root-to-region map. Must be deterministic and cheap; called by the base class on save and on external change.
 - `clear()`: `editor.clear()`, drop regions and image cache.
-- Save wiring: subscribe to the Editor; on every notification, if `getViewData() !== this.data` call `this.requestSave()`. This keeps the base class's `dirty` flag in step with real document changes, which is what makes the base three-way merge protect in-progress edits. Camera and selection changes produce identical text and cause no write. `Cmd+S` (`editor.onSave`) calls `this.save()`.
+- Save wiring: subscribe to the Editor; on every notification compute the note text and call `this.requestSave()` when it differs from `this.data` (the text last loaded from or saved to disk) and also from the canonical form of the text last loaded. The second comparison stops a note whose only difference is formatting (5.5) from being rewritten by a selection or camera change right after opening; it lapses on the first `getViewData()` call, so once the note has been written canonically only the disk comparison matters (an undo back to the original state is then saved). Keeping `dirty` in step with real document changes is what makes the base three-way merge protect in-progress edits. `Cmd+S` (`editor.onSave`) calls `this.save()`.
 - Do not override `onModify`, `onLoadFile`, or `onUnloadFile`; the base class behavior is the sync design.
 - No `AutoSaveController` in this view; `requestSave` is the debounce.
 - Theming: `contentEl.addClass("limn-view")` as `LimnView` does; theme mode follows the plugin setting (system by default).
@@ -149,9 +149,9 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 7.2 Routing marked notes
 
-- Add `monkey-around` as a dependency (the same helper Kanban and Excalidraw use).
-- Patch `WorkspaceLeaf.prototype.setViewState`: if `plugin._loaded`, `state.type === "markdown"`, the target file has `limn-plugin` in `metadataCache.getCache(path)?.frontmatter`, the plugin setting says map, and `fileModes[leaf.id ?? path] !== "markdown"`, rewrite `state.type = "limn-markdown-view"`. Conversely, if `state.type === "limn-markdown-view"` and the file lacks the marker and `fileModes[...] !== "limn-markdown-view"`, rewrite to `"markdown"` (covers the `canAcceptExtension` shortcut where a map leaf opens an unmarked note).
-- Patch `detach` to delete the leaf's `fileModes` entry.
+- Add `monkey-around` (3.x) as a dependency (the same helper Kanban and Excalidraw use).
+- Wrap `WorkspaceLeaf.prototype.setViewState`. For a `.md` file (`state.state.file` ends in `.md`) whose requested type is `markdown` or `limn-markdown-view`: if the user made an explicit "Open as ..." choice for this note in this leaf, use it; else if the requested type is `markdown`, the note's frontmatter has a truthy `limn-plugin`, and the setting says map, rewrite to `limn-markdown-view`; else if the requested type is `limn-markdown-view` and the note has no marker, rewrite to `markdown` (covers the `canAcceptExtension` shortcut where a map leaf opens an unmarked note and workspace restore after a marker was removed). Any other type or file passes through untouched. Frontmatter comes from `metadataCache.getCache(path)?.frontmatter`.
+- Explicit choices live in `WeakMap<WorkspaceLeaf, Map<string, "markdown" | "limn-markdown-view">>` keyed by note path, so a choice lasts as long as the leaf and needs no `detach` patch and no leaf id.
 - On plugin load: sweep open leaves and re-route those showing marked notes in `MarkdownView` (deferred leaves route themselves when loaded). On unload: switch every `limn-markdown-view` leaf back to `markdown` and remove the patches (monkey-around returns uninstallers).
 
 ### 7.3 Commands, menus, settings
@@ -166,12 +166,12 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 7.4 Assets
 
-- In this view an asset id is the embed target (the attachment's basename), so `ImageRef.assetId` is exactly what gets written inside `![[...]]`.
-- `ObsidianOutlineAssetProvider` implements the asset half of `PersistenceProvider` (`load`/`save` are unused by this view) plus one extra method used only by the Obsidian paste/drop handler:
-  - `reserveAssetPath(filename): Promise<string>`: `fileManager.getAvailablePathForAttachment(filename, notePath)`, returns the chosen basename (Obsidian may add a suffix on collision).
-  - `saveAsset(assetId, blob)`: writes the blob to the reserved path for that basename with `vault.createBinary`.
-  - `loadAssetUrls(ids)`: for each id, `metadataCache.getFirstLinkpathDest(id, notePath)`; if found, `vault.getResourcePath(file)`.
-  - Paste/drop flow: read the image's natural size, `target = await reserveAssetPath(suggestedName)`, `await saveAsset(target, blob)`, `editor.setNodeImage(nodeId, {id: target, filename: target, mimeType, width, height}, displayW, displayH)`.
+- In this view an asset id is the link text inside the embed (`![[link text|WxH]]`), so `ImageRef.assetId` is exactly what gets written and what `metadataCache.getFirstLinkpathDest` resolves.
+- `PersistenceProvider` gains an optional `importAsset(filename: string, blob: Blob): Promise<string>`: store a new asset under a host-chosen id derived from the filename and return that id. Hosts that generate opaque ids (web IndexedDB, desktop, the `.limn` Obsidian view) leave it undefined and keep receiving `saveAsset(assetId, blob)`.
+- `ObsidianOutlineAssetProvider` implements `PersistenceProvider` (`load`/`save` are no-ops; `TextFileView` owns the note):
+  - `importAsset(filename, blob)`: `path = fileManager.getAvailablePathForAttachment(filename, notePath)`, `file = vault.createBinary(path, bytes)`, returns `metadataCache.fileToLinktext(file, notePath)`, which is exactly what goes inside `![[...]]` and honors the user's link format setting.
+  - `loadAssetUrls(ids)`: for each id, `metadataCache.getFirstLinkpathDest(id, notePath)`; if found, `vault.getResourcePath(file)`. `loadAsset(id)` reads the same file as a `Blob` (used by SVG export).
+  - Paste/drop flow (shared web helper `attachImageFile`): read the natural size, `assetId = await provider.importAsset(filename, blob)`, `editor.setNodeImage(nodeId, {id: assetId, filename, mimeType, width, height}, displayW, displayH)` with the display size fitted to 300 px wide, then announce the object URL with the `limn:asset-added` event. Pasted images are named `Pasted image YYYYMMDDHHmmss.ext`; dropped files keep their name.
 - Paste and drop handling for images is added to the Obsidian view (today it exists only in web `App.tsx`), sharing the image-loading helper with web.
 
 ## 8. Behavior details
@@ -179,7 +179,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 ### 8.1 Opening and switching
 
 - Click a marked note anywhere in Obsidian: opens as a map. Click an unmarked note: opens as Markdown. Same leaf, next file: routes per the marker of the new file (both-direction patch).
-- "Open as Markdown" sticks for that leaf until it is closed. Removing the marker in Markdown view changes the default for the next open; an already open map keeps working.
+- "Open as Markdown" and "Open as mind map" stick for that note in that pane until the pane is closed; other notes opened in the pane route by their marker. Removing the marker in Markdown view changes the default for the next open; an already open map keeps working.
 - Two panes on the same note (one map, one Markdown) are supported. Edits flow through the vault: Markdown to map after Obsidian's save (2 s debounce, or immediately on leaf change), map to Markdown after the map's save (2 s debounce). Concurrent divergent edits inside one window are merged by the base class; a true conflict on the same line resolves toward the incoming text (diff-match-patch patch failure leaves the incoming text), and the user sees Obsidian's "file changed" notice.
 
 ### 8.2 Editing in the map
@@ -192,8 +192,10 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 8.3 Image size resolution
 
-- On parse, an embed with `|W` only has no height, and a bare embed has neither. An unspecified dimension is stored as 0. The view resolves each image's natural size once per session (`Image` load from the resource URL, cached by target) and calls `editor.setNodeImage` with the resolved size, before the first write. The resulting write is identical text, so no save is triggered.
-- Image resize in the map updates `W` in the embed.
+- On parse, an embed with `|W` only has no height, and a bare embed has neither. An unspecified dimension is stored as 0 in the node's `ImageRef` and stays 0: the note text is never changed by the map learning an image's size.
+- Core draws and measures an image at `imageDisplaySize(imageRef, asset)`: stored dimensions win; a missing width is the asset's natural width capped at `DEFAULT_IMAGE_DISPLAY_WIDTH` (300); a missing height keeps the natural aspect ratio. While the natural size is unknown the image is not drawn and adds nothing to the node's size.
+- The view resolves each image's natural size once per session (`Image` load from the resource URL, cached by target) and calls `editor.setAssetNaturalSize(target, w, h)`, which updates the asset entry, remeasures the nodes that draw it, and is not undoable. Undo never forgets a known natural size. The cache is fed back into every later `setViewData`, so external updates draw immediately.
+- Image resize (handle or keys) starts from the display size and stores explicit dimensions, so the embed becomes `|WxH` on the next save. Resize is a no-op while the display size is unknown.
 
 ### 8.4 Empty and odd notes
 
@@ -217,7 +219,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
   - Capability tests: run the complete action inventory (every `dispatch` binding and every public mutator) against a TestEditor with `OUTLINE_CAPABILITIES`; assert blocked actions leave the document unchanged and allowed actions match `FULL_CAPABILITIES` results modulo positions.
   - `relayoutAll` determinism and root stacking; collapsed subtrees still positioned.
   - `reconcileIds` keeps ids for unchanged nodes and selection survives an external update.
-- Obsidian, vitest with the existing mocks: `setViewData`/`getViewData` round trip; `requestSave` called only when text changes (camera and selection changes do not save); routing patch decisions given a fake leaf, frontmatter, setting, and `fileModes`; commands add the marker and create notes in the right folder.
+- Obsidian, vitest with the existing mocks: `setViewData`/`getViewData` round trip; `requestSave` called only when text changes (camera and selection changes do not save); routing patch decisions given a fake leaf, frontmatter, setting, and `fileModes`; commands add the marker and create notes in the right folder. The obsidian package ships types only; vitest resolves `obsidian` to a small runtime stand-in (`packages/obsidian/src/__tests__/mocks/obsidian-module.ts`) so modules that import it can be tested.
 - Web: copy/paste through the keyboard handler with a clipboard stub.
 - Playwright: one visual regression of a map note (optional; layout is host-font dependent, so keep it to a single fixture).
 - Manual checklist added to `OBSIDIAN-PLUGIN.md`: click routing, both-direction toggle, two panes, external edit while editing a node, image paste, reading-view look of a collapsed `*` item among `-` siblings.
