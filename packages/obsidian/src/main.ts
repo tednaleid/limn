@@ -1,5 +1,5 @@
 // ABOUTME: Obsidian plugin entry point for Limn mind maps.
-// ABOUTME: Registers the .limn file extension and LimnView for viewing/editing.
+// ABOUTME: Registers the .limn file extension and LimnView, and the Markdown-backed LimnMarkdownView.
 
 import { Plugin } from "obsidian";
 import { setHost } from "@limn/core";
@@ -10,6 +10,7 @@ import { LimnSettingTab } from "./LimnSettingTab";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, hasMindMapMarker } from "./markdown/routing";
 import { installRoutingPatch, filePathOf, type LeafChoices } from "./markdown/leafRouting";
 import { LimnMarkdownView } from "./markdown/LimnMarkdownView";
+import { registerMarkdownCommands } from "./markdown/commands";
 
 export default class LimnPlugin extends Plugin {
   settings: LimnSettings = { ...DEFAULT_SETTINGS };
@@ -22,13 +23,14 @@ export default class LimnPlugin extends Plugin {
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
     this.registerView(VIEW_TYPE_LIMN_MARKDOWN, (leaf) => new LimnMarkdownView(leaf, this));
+    registerMarkdownCommands(this);
     this.addSettingTab(new LimnSettingTab(this.app, this));
     this.uninstallRouting = installRoutingPatch(this);
     this.app.workspace.onLayoutReady(() => this.routeOpenMarkedNotes());
 
     this.addCommand({
       id: "create-new",
-      name: "Create new mind map",
+      name: "Create new mind map file (.limn)",
       callback: () => void this.createNewFile(),
     });
   }
