@@ -5,12 +5,18 @@ import { Plugin } from "obsidian";
 import { setHost } from "@limn/core";
 import { LimnView, VIEW_TYPE_LIMN } from "./LimnView";
 import { obsidianHost } from "./host/obsidianHost";
+import { DEFAULT_SETTINGS, mergeSettings, type LimnSettings } from "./settings";
+import { LimnSettingTab } from "./LimnSettingTab";
 
 export default class LimnPlugin extends Plugin {
-  onload(): void {
+  settings: LimnSettings = { ...DEFAULT_SETTINGS };
+
+  async onload(): Promise<void> {
     setHost(obsidianHost);
+    this.settings = mergeSettings(await this.loadData());
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
+    this.addSettingTab(new LimnSettingTab(this.app, this));
 
     this.addCommand({
       id: "create-new",
@@ -22,6 +28,13 @@ export default class LimnPlugin extends Plugin {
   onunload() {
     // Views are cleaned up by Obsidian via onClose()
   }
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
+
+  /** Re-apply the theme setting to open Markdown mind map views (filled in with the view). */
+  applyThemeSettingToMarkdownViews(): void {}
 
   private async createNewFile(): Promise<void> {
     const folder = this.app.vault.getRoot();
