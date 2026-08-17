@@ -69,4 +69,9 @@ describe("ObsidianOutlineAssetProvider", () => {
     expect(await provider.load()).toBeNull();
     await expect(provider.save()).resolves.toBeUndefined();
   });
+
+  it("saveAsset rejects instead of writing a file: outlines choose their attachment name through importAsset", async () => {
+    await expect(provider.saveAsset("a1", new Blob([new Uint8Array([1])]))).rejects.toThrow(/importAsset/);
+    expect(app.vault.createBinary).not.toHaveBeenCalled();
+  });
 });

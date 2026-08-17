@@ -54,6 +54,7 @@ describe("pastedImageName", () => {
     const at = new Date(2026, 7, 16, 9, 5, 7);
     expect(pastedImageName("image/png", at)).toBe("Pasted image 20260816090507.png");
     expect(pastedImageName("image/jpeg", at)).toBe("Pasted image 20260816090507.jpg");
+    expect(pastedImageName("image/svg+xml", at)).toBe("Pasted image 20260816090507.svg");
   });
 });
 

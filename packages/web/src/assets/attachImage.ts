@@ -1,14 +1,9 @@
 // ABOUTME: Attaches an image file to a node (or a new root) and stores it through the persistence provider.
 // ABOUTME: Shared by web paste, canvas drop, and the Obsidian views so naming, sizing, and ids agree.
 
-import type { Editor, PersistenceProvider } from "@limn/core";
+import type { Editor, ImageSize, PersistenceProvider } from "@limn/core";
 import { DEFAULT_IMAGE_DISPLAY_WIDTH } from "@limn/core";
 import type { AssetAddedDetail } from "../limn-window";
-
-export interface ImageSize {
-  width: number;
-  height: number;
-}
 
 /** Where a new image goes: onto an existing node, or a new root at a canvas position. */
 export type ImageTarget = { nodeId: string } | { x: number; y: number };
@@ -25,7 +20,8 @@ export function pastedImageName(mimeType: string, now: Date): string {
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
     + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const subtype = mimeType.split("/")[1] ?? "png";
-  const ext = subtype === "jpeg" ? "jpg" : subtype;
+  const base = subtype.split("+")[0] ?? subtype;
+  const ext = base === "jpeg" ? "jpg" : base;
   return `Pasted image ${stamp}.${ext}`;
 }
 

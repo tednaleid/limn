@@ -155,6 +155,7 @@ After `just obsidian-install <vault>`:
 - [ ] A node containing `[[Another note]]`: shows as a link; Cmd+Enter opens that note in a new tab
 - [ ] Setting "Open notes with limn-plugin: true as: Markdown": marked notes open as Markdown; "Open as mind map" still works
 - [ ] Disable the plugin: open map panes turn back into Markdown panes
+- [ ] Open a hand-formatted marked note, close the pane without editing: the file is byte-identical
 
 ## Building for distribution
 

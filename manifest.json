@@ -2,8 +2,8 @@
   "id": "limn",
   "name": "Limn",
   "version": "0.9.23",
-  "minAppVersion": "1.5.7",
-  "description": "Keyboard-first mind mapping. Open .limn files as interactive mind map views.",
+  "minAppVersion": "1.7.2",
+  "description": "Keyboard-first mind mapping. Open .limn files and Markdown outlines as interactive mind map views.",
   "author": "Ted Naleid",
   "isDesktopOnly": false
 }

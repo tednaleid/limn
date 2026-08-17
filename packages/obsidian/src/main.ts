@@ -41,7 +41,8 @@ export default class LimnPlugin extends Plugin {
     this.uninstallRouting?.();
     this.uninstallRouting = null;
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN)) {
-      void leaf.setViewState({ type: MARKDOWN_VIEW_TYPE, state: leaf.getViewState().state });
+      leaf.setViewState({ type: MARKDOWN_VIEW_TYPE, state: leaf.getViewState().state })
+        .catch((err: unknown) => { console.error("Failed to restore Markdown view:", err); });
     }
   }
 

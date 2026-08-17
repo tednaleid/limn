@@ -184,6 +184,22 @@ describe("OutlineDocument.attach", () => {
   });
 });
 
+describe("OutlineDocument.viewData", () => {
+  beforeEach(() => resetIdCounter());
+
+  it("hands back the note exactly as loaded when nothing changed, and canonical text after a change", () => {
+    const { editor, doc } = makeDoc();
+    const raw = "+ Alpha\n    + Beta\n\n+ Gamma\n";
+    doc.load(raw, true);
+    editor.select(editor.getRoots()[0]!.id);
+    expect(doc.viewData()).toBe(raw);
+    editor.setText(editor.getRoots()[0]!.id, "Alpha!");
+    expect(doc.viewData()).toBe("- Alpha!\n  - Beta\n- Gamma\n");
+    editor.undo();
+    expect(doc.viewData()).toBe("- Alpha\n  - Beta\n- Gamma\n");
+  });
+});
+
 describe("OutlineDocument external updates", () => {
   beforeEach(() => resetIdCounter());
 

@@ -70,6 +70,8 @@ export class OutlineDocument {
   private naturalSizes = new Map<string, { width: number; height: number }>();
   /** Canonical text of the note as last loaded (see attach). */
   private baseline = "";
+  /** Exact text last loaded from or written to disk. */
+  private diskText = "";
   private loading = false;
   private readonly docId = crypto.randomUUID();
 
@@ -116,6 +118,7 @@ export class OutlineDocument {
       this.loading = false;
     }
     this.baseline = this.text();
+    this.diskText = text;
   }
 
   /** The note text for the current map: prose regions verbatim, list regions regenerated. */
@@ -147,10 +150,14 @@ export class OutlineDocument {
     return writeOutline({ ...this.parsed, regions: out });
   }
 
-  /** Text for the host to write. From here on the map counts as in step with the note. */
+  /** Text for the host to write. Unchanged maps hand back the note exactly as it was loaded or
+   *  last written, so viewing a note never rewrites it; after a change the map counts as in step
+   *  with the note. */
   viewData(): string {
     const text = this.text();
+    if (text === this.baseline) return this.diskText;
     this.baseline = text;
+    this.diskText = text;
     return text;
   }
 
@@ -171,6 +178,7 @@ export class OutlineDocument {
       this.loading = false;
     }
     this.baseline = "";
+    this.diskText = "";
   }
 
   /**

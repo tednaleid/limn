@@ -158,6 +158,7 @@ export default defineConfig(
     files: ["**/__tests__/**", "**/*.test.*"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "obsidianmd/no-global-this": "off",
       "obsidianmd/prefer-window-timers": "off",
       "no-restricted-globals": "off",

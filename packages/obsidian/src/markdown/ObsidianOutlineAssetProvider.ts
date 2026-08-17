@@ -24,9 +24,10 @@ export class ObsidianOutlineAssetProvider implements PersistenceProvider {
     return this.app.metadataCache.fileToLinktext(file, notePath);
   }
 
-  /** Callers use importAsset; this exists to satisfy the interface and stores under the given name. */
-  async saveAsset(assetId: string, blob: Blob): Promise<void> {
-    await this.importAsset(assetId, blob);
+  /** Exists to satisfy the interface; outlines store images through importAsset instead, since the
+   *  vault chooses the attachment name rather than the caller. */
+  saveAsset(_assetId: string, _blob: Blob): Promise<void> {
+    return Promise.reject(new Error("Outline maps store images through importAsset, which chooses the attachment name"));
   }
 
   async loadAsset(assetId: string): Promise<Blob | undefined> {

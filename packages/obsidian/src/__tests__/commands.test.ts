@@ -3,10 +3,16 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { TFile, WorkspaceLeaf } from "obsidian";
-import type { App } from "obsidian";
+import type { App, Command } from "obsidian";
 import type LimnPlugin from "../main";
-import { nextFreeNotePath, MARKED_NOTE_CONTENT, createMindMapNote, addMindMapMarker } from "../markdown/commands";
+import {
+  nextFreeNotePath, MARKED_NOTE_CONTENT, createMindMapNote, addMindMapMarker, registerMarkdownCommands,
+} from "../markdown/commands";
 import { VIEW_TYPE_LIMN_MARKDOWN } from "../markdown/routing";
+
+// The real obsidian typings don't declare `lastState` (it's a test-only recorder added by the
+// runtime stand-in), so a leaf that reads it is cast to this shape.
+type MockLeaf = WorkspaceLeaf & { lastState: unknown };
 
 describe("nextFreeNotePath", () => {
   it("counts up from Untitled inside the folder, and handles the vault root", () => {
@@ -67,5 +73,36 @@ describe("addMindMapMarker", () => {
     const file = Object.assign(new TFile(), { path: "a.md" });
     await addMindMapMarker(app, file);
     expect(fm).toEqual({ tags: ["x"], "limn-plugin": true });
+  });
+});
+
+describe("registerMarkdownCommands: open-as-markdown", () => {
+  it("only offers the command for a Limn map leaf, and checking never switches it", () => {
+    const leaf = new WorkspaceLeaf() as MockLeaf;
+    const commands: Command[] = [];
+    const plugin = {
+      addCommand: vi.fn((command: Command) => { commands.push(command); return command; }),
+      registerEvent: vi.fn(),
+      app: {
+        workspace: {
+          on: vi.fn(() => ({})),
+          getMostRecentLeaf: () => leaf,
+          getActiveViewOfType: () => null,
+          getActiveFile: () => null,
+        },
+      },
+    } as unknown as LimnPlugin;
+
+    registerMarkdownCommands(plugin);
+    const checkCallback = commands.find((c) => c.id === "open-as-markdown")!.checkCallback!;
+
+    leaf.view = { getViewType: () => "markdown" } as unknown as WorkspaceLeaf["view"];
+    expect(checkCallback(true)).toBe(false);
+    expect(checkCallback(false)).toBe(false);
+    expect(leaf.lastState).toBeNull();
+
+    leaf.view = { getViewType: () => VIEW_TYPE_LIMN_MARKDOWN } as unknown as WorkspaceLeaf["view"];
+    expect(checkCallback(true)).toBe(true);
+    expect(leaf.lastState).toBeNull();
   });
 });

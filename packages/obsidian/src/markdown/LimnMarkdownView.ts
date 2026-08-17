@@ -82,7 +82,10 @@ export class LimnMarkdownView extends TextFileView {
 
   setViewData(text: string, clear: boolean): void {
     this.doc.load(text, clear);
-    if (clear) this.fitCamera();
+    if (clear) {
+      this.fitCamera();
+      this.assetUrls.clear();
+    }
     applyThemeToContainer(this.contentEl, this.editor);
     if (!this.reactRoot) this.reactRoot = mountLimnRoot(this.contentEl, this.editor, this.provider);
     this.announceNewAssets();
