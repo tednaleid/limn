@@ -7,9 +7,13 @@ import { LimnView, VIEW_TYPE_LIMN } from "./LimnView";
 import { obsidianHost } from "./host/obsidianHost";
 import { DEFAULT_SETTINGS, mergeSettings, type LimnSettings } from "./settings";
 import { LimnSettingTab } from "./LimnSettingTab";
+import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, hasMindMapMarker } from "./markdown/routing";
+import { installRoutingPatch, type LeafChoices } from "./markdown/leafRouting";
 
 export default class LimnPlugin extends Plugin {
   settings: LimnSettings = { ...DEFAULT_SETTINGS };
+  leafChoices: LeafChoices = new WeakMap();
+  private uninstallRouting: (() => void) | null = null;
 
   async onload(): Promise<void> {
     setHost(obsidianHost);
@@ -17,6 +21,8 @@ export default class LimnPlugin extends Plugin {
     this.registerView(VIEW_TYPE_LIMN, (leaf) => new LimnView(leaf, this));
     this.registerExtensions(["limn"], VIEW_TYPE_LIMN);
     this.addSettingTab(new LimnSettingTab(this.app, this));
+    this.uninstallRouting = installRoutingPatch(this);
+    this.app.workspace.onLayoutReady(() => this.routeOpenMarkedNotes());
 
     this.addCommand({
       id: "create-new",
@@ -26,11 +32,30 @@ export default class LimnPlugin extends Plugin {
   }
 
   onunload() {
-    // Views are cleaned up by Obsidian via onClose()
+    // Remove the wrapper first so switching leaves back is not re-routed, then hand every map leaf
+    // back to the Markdown editor before the view type disappears.
+    this.uninstallRouting?.();
+    this.uninstallRouting = null;
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN)) {
+      void leaf.setViewState({ type: MARKDOWN_VIEW_TYPE, state: leaf.getViewState().state });
+    }
   }
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /** Marked notes already open in the Markdown editor when the plugin loads switch to the map view. */
+  private routeOpenMarkedNotes(): void {
+    if (this.settings.openMarkedNotesAs !== "mindmap") return;
+    for (const leaf of this.app.workspace.getLeavesOfType(MARKDOWN_VIEW_TYPE)) {
+      const state = leaf.getViewState();
+      const path = state.state?.file;
+      if (typeof path !== "string") continue;
+      if (!hasMindMapMarker(this.app.metadataCache.getCache(path)?.frontmatter)) continue;
+      // Re-setting the same state runs it through the wrapper, which rewrites the type.
+      void leaf.setViewState(state);
+    }
   }
 
   /** Re-apply the theme setting to open Markdown mind map views (filled in with the view). */
