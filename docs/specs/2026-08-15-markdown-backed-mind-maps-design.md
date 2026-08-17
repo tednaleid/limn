@@ -67,8 +67,8 @@ This is the contract between the note and the map. Everything else in the design
 
 ### 5.4 Images
 
-- A node with an image writes an embed as its last line (after any text lines, indented to the content column when there is text): `![[filename|WxH]]` when the height is known, `![[filename|W]]` when only the width is known, and `![[filename]]` when the size is unknown. A dimension the note did not specify is stored as 0 until the host resolves the image's natural size (see 8.3), and a stored 0 is written back as unknown. An image-only node writes the embed as the item content.
-- On parse, an item whose last line is exactly an embed `![[target]]` or `![[target|W]]` or `![[target|WxH]]` yields `image = { assetId: target, width, height }`. Height comes from `WxH` if present, otherwise from the loaded image's aspect ratio (see 8.3). Any other embed position is plain text.
+- A node with an image writes an embed as its last line (after any text lines, indented to the content column when there is text): `![[filename|WxH]]` when the height is known, `![[filename|W]]` when only the width is known, and `![[filename]]` when the size is unknown. A dimension the note did not specify is stored as 0 and stays 0; the map draws such an image from the asset's natural size (see 8.3), and a stored 0 is written back as unknown. An image-only node writes the embed as the item content.
+- On parse, an item whose last line is exactly an embed `![[target]]` or `![[target|W]]` or `![[target|WxH]]` yields `image = { assetId: target, width, height }`. Height is the `H` of `WxH` when present, otherwise 0; the drawn height then follows the image's natural aspect ratio (see 8.3). Any other embed position is plain text.
 - Only `![[...]]` wikilink embeds are recognized. Markdown-style `![alt](path)` stays text.
 
 ### 5.5 Normalizations on write
@@ -156,8 +156,8 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 ### 7.3 Commands, menus, settings
 
-- `open-as-mindmap`: for the active Markdown leaf on a `.md` file: `await view.save()`, set `fileModes[leaf.id] = "limn-markdown-view"`, `leaf.setViewState({type: "limn-markdown-view", state: leaf.view.getState()})`. Does not modify the note.
-- `open-as-markdown`: mirror image from a map leaf; sets `fileModes[leaf.id] = "markdown"`.
+- `open-as-mindmap`: for the active Markdown leaf on a `.md` file: `await view.save()`, remember the choice for this note in this leaf (7.2), `leaf.setViewState({type: "limn-markdown-view", state: leaf.getViewState().state})`. Does not modify the note.
+- `open-as-markdown`: mirror image from a map leaf; remembers `"markdown"` for this note in this leaf.
 - `create-mindmap-note`: creates `Untitled.md` (or the next free name) in `fileManager.getNewFileParent(activeFile?.path ?? "")` with content `---\nlimn-plugin: true\n---\n` and opens it in the map view.
 - `add-mindmap-marker`: `fileManager.processFrontMatter(file, fm => { fm["limn-plugin"] = true })` on the active note.
 - `file-menu` and `editor-menu`: "Open as mind map" for `.md` files; "Open as Markdown" for map leaves.
