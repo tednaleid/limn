@@ -251,6 +251,22 @@ describe("stripMarkdown", () => {
 });
 
 describe("wikilinks", () => {
+  it("does not read index syntax as a wikilink", () => {
+    const segs = parseInlineMarkdown("matrix[[0]] = 1");
+    expect(segs.map((s) => s.text).join("")).toBe("matrix[[0]] = 1");
+    expect(segs.some((s) => s.style.link)).toBe(false);
+  });
+
+  it("does not read nested brackets as a wikilink", () => {
+    expect(parseInlineMarkdown("a]][[b]]").some((s) => s.style.link)).toBe(false);
+  });
+
+  it("still reads a wikilink after a space, punctuation, or at the start", () => {
+    for (const line of ["[[Note]]", "see [[Note]]", "([[Note]])", "x: [[Note|alias]]"]) {
+      expect(parseInlineMarkdown(line).some((s) => s.style.link === "[[Note]]")).toBe(true);
+    }
+  });
+
   it("shows the target without brackets and keeps the raw wikilink as the link", () => {
     expect(parseInlineMarkdown("see [[Note]] now")).toEqual([
       plain("see "), link("Note", "[[Note]]"), plain(" now"),

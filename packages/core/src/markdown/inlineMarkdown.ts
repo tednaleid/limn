@@ -101,7 +101,7 @@ function findSpans(line: string): Span[] {
     }
 
     // Wikilink: [[target]] or [[target|alias]]; ![[...]] is an embed and stays text
-    if (line[i] === "[" && line[i + 1] === "[" && line[i - 1] !== "!") {
+    if (line[i] === "[" && line[i + 1] === "[" && canStartWikilink(line, i)) {
       const wikiSpan = tryParseWikilink(line, i);
       if (wikiSpan) {
         spans.push(wikiSpan);
@@ -213,6 +213,12 @@ function findClosingSingleDelim(line: string, delim: string, fromIndex: number):
     i++;
   }
   return -1;
+}
+
+/** A wikilink may not follow `!` (that is an embed), a word character, or `]`. */
+function canStartWikilink(line: string, i: number): boolean {
+  const prev = line[i - 1];
+  return prev === undefined || !/[\w\]!]/.test(prev);
 }
 
 /** Try to parse a wikilink starting at position i (line[i] and line[i+1] are "["). */
