@@ -2,7 +2,7 @@
 // ABOUTME: Uses the obsidian runtime stand-in so the real monkey-around wrapper is exercised.
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { WorkspaceLeaf, TFile, TextFileView } from "obsidian";
+import { WorkspaceLeaf, TFile, TextFileView, FileView } from "obsidian";
 import type LimnPlugin from "../main";
 import { resolveViewType, hasMindMapMarker, VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "../markdown/routing";
 import { installRoutingPatch, rememberChoice, openLeafAs, openFileAs, type LeafChoices } from "../markdown/leafRouting";
@@ -11,7 +11,7 @@ import { installRoutingPatch, rememberChoice, openLeafAs, openFileAs, type LeafC
 // runtime stand-in), so leaves that read or write it are cast to this shape.
 type MockLeaf = WorkspaceLeaf & { lastState: unknown };
 
-const base = { filePath: "a.md", hasMarker: true, openMarkedNotesAs: "mindmap" as const, chosenType: undefined };
+const base = { filePath: "a.md", hasMarker: true, openMarkedNotesAs: "mindmap" as const, chosenType: undefined, navigating: false };
 
 describe("resolveViewType", () => {
   it("routes marked notes to the map and unmarked notes to Markdown", () => {
@@ -29,6 +29,26 @@ describe("resolveViewType", () => {
   it("lets an explicit choice win in both directions", () => {
     expect(resolveViewType({ ...base, requestedType: MARKDOWN_VIEW_TYPE, chosenType: MARKDOWN_VIEW_TYPE })).toBe(MARKDOWN_VIEW_TYPE);
     expect(resolveViewType({ ...base, requestedType: MARKDOWN_VIEW_TYPE, hasMarker: false, chosenType: VIEW_TYPE_LIMN_MARKDOWN })).toBe(VIEW_TYPE_LIMN_MARKDOWN);
+  });
+
+  it("opens the next marked note as Markdown when the setting says so, even from a map pane", () => {
+    expect(resolveViewType({ ...base, requestedType: VIEW_TYPE_LIMN_MARKDOWN, hasMarker: true,
+      openMarkedNotesAs: "markdown", navigating: true })).toBe(MARKDOWN_VIEW_TYPE);
+  });
+
+  it("opens the next marked note as a map from a map pane when the setting is mindmap", () => {
+    expect(resolveViewType({ ...base, requestedType: VIEW_TYPE_LIMN_MARKDOWN, hasMarker: true,
+      openMarkedNotesAs: "mindmap", navigating: true })).toBe(VIEW_TYPE_LIMN_MARKDOWN);
+  });
+
+  it("keeps an explicit choice while navigating", () => {
+    expect(resolveViewType({ ...base, requestedType: MARKDOWN_VIEW_TYPE, hasMarker: false,
+      chosenType: VIEW_TYPE_LIMN_MARKDOWN, navigating: true })).toBe(VIEW_TYPE_LIMN_MARKDOWN);
+  });
+
+  it("keeps a restored map leaf of a marked note as a map under the markdown setting", () => {
+    expect(resolveViewType({ ...base, requestedType: VIEW_TYPE_LIMN_MARKDOWN, hasMarker: true,
+      openMarkedNotesAs: "markdown", navigating: false })).toBe(VIEW_TYPE_LIMN_MARKDOWN);
   });
 
   it("leaves other files and other view types alone", () => {
@@ -75,6 +95,16 @@ describe("installRoutingPatch", () => {
     uninstall();
     await leaf.setViewState({ type: "markdown", state: { file: "marked.md" } });
     expect(leaf.lastState).toEqual({ type: "markdown", state: { file: "marked.md" } });
+  });
+
+  it("routes navigation from a map pane by marker and setting", async () => {
+    plugin.settings.openMarkedNotesAs = "markdown";
+    const leaf = new WorkspaceLeaf() as MockLeaf;
+    const FileViewCtor = FileView as unknown as new (leaf: WorkspaceLeaf) => FileView;
+    leaf.view = Object.assign(new FileViewCtor(leaf), { file: Object.assign(new TFile(), { path: "plain.md" }) });
+    await leaf.setViewState({ type: VIEW_TYPE_LIMN_MARKDOWN, state: { file: "marked.md" } });
+    expect(leaf.lastState).toEqual({ type: MARKDOWN_VIEW_TYPE, state: { file: "marked.md" } });
+    uninstall();
   });
 
   it("uses the remembered choice for that note in that leaf only", async () => {

@@ -1,7 +1,7 @@
 // ABOUTME: Routes notes between the Markdown editor and the mind map view by wrapping WorkspaceLeaf.setViewState.
 // ABOUTME: Same technique as Kanban and Excalidraw; remembers explicit choices per note per leaf.
 
-import { WorkspaceLeaf, TextFileView, type TFile, type ViewState } from "obsidian";
+import { WorkspaceLeaf, FileView, TextFileView, type TFile, type ViewState } from "obsidian";
 import { around } from "monkey-around";
 import type LimnPlugin from "../main";
 import { hasMindMapMarker, resolveViewType, type NoteViewType } from "./routing";
@@ -29,6 +29,7 @@ export function installRoutingPatch(plugin: LimnPlugin): () => void {
     setViewState(next) {
       return function (this: WorkspaceLeaf, state: ViewState, eState?: unknown) {
         const filePath = filePathOf(state);
+        const current = this.view instanceof FileView ? this.view.file?.path : undefined;
         const type = resolveViewType({
           requestedType: state.type,
           filePath,
@@ -36,6 +37,7 @@ export function installRoutingPatch(plugin: LimnPlugin): () => void {
             && hasMindMapMarker(plugin.app.metadataCache.getCache(filePath)?.frontmatter),
           openMarkedNotesAs: plugin.settings.openMarkedNotesAs,
           chosenType: filePath !== undefined ? plugin.leafChoices.get(this)?.get(filePath) : undefined,
+          navigating: filePath !== undefined && current !== undefined && current !== filePath,
         });
         return next.call(this, type === state.type ? state : { ...state, type }, eState);
       };
