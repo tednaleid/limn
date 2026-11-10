@@ -92,6 +92,8 @@ export {
   parseSubtree,
   escapeLine,
   unescapeLine,
+  escapeContinuationLine,
+  unescapeContinuationLine,
   outlineToFileNodes,
   fileNodesToOutline,
   findOutlineIssues,

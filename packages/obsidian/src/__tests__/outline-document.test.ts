@@ -2,7 +2,9 @@
 // ABOUTME: Runs on Editor + stubTextMeasurer; no Obsidian or DOM involved.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Editor, stubTextMeasurer, OUTLINE_CAPABILITIES, parseOutline, writeOutline, resetIdCounter } from "@limn/core";
+import {
+  Editor, stubTextMeasurer, OUTLINE_CAPABILITIES, parseOutline, writeOutline, findOutlineIssues, resetIdCounter,
+} from "@limn/core";
 import { OutlineDocument, mimeTypeForName } from "../markdown/OutlineDocument";
 import type { SaveHost } from "../markdown/OutlineDocument";
 
@@ -140,6 +142,15 @@ describe("OutlineDocument.text after edits", () => {
     editor.setText(editor.getRoots()[0]!.id, "First");
     expect(doc.text()).toBe("Just prose.\n\n- First\n");
     expect(host.requestSave).toHaveBeenCalled();
+  });
+
+  it("separates a root whose text was cleared from the paragraph above it, so the paragraph stays a paragraph", () => {
+    const { editor, doc } = makeDoc();
+    doc.load("Intro paragraph\n- Root\n  - child\n", true);
+    editor.setText(editor.getRoots()[0]!.id, " ");
+    const text = doc.text();
+    expect(text).toBe("Intro paragraph\n\n-\n  - child\n");
+    expect(findOutlineIssues(text)).toEqual([]);
   });
 });
 

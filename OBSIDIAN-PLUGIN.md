@@ -66,10 +66,13 @@ color actions are off in this view (and hidden from the `?` shortcut help).
 ### Notes the map refuses
 
 The map only opens a note it can write back unchanged. A note with a numbered list, quote,
-heading, rule, or table directly inside a bullet, or with bullets nested under something that is
-not a bullet, is not shown as a map. A notice names the first offending lines and the note opens
-as Markdown instead; the file is not modified. Thematic breaks, `$$` math blocks, and multi-line
-HTML comments between paragraphs are prose and are preserved like code fences.
+heading, rule, table, `$$` math block, `%%` comment, or HTML block directly inside a bullet, with a
+code fence inside a bullet that is never closed or that follows an empty bullet line, with bullets
+nested under something that is not a bullet, or with a list line indented so that Markdown would
+attach it to a different item than the map does, is not shown as a map. A notice names the first
+offending lines and the note opens as Markdown instead; the file is not modified. Thematic breaks,
+`$$` math blocks, and multi-line HTML comments between paragraphs are prose and are preserved like
+code fences.
 
 If an external change makes an open map's note unsupported, unsaved map edits are discarded in
 favor of the file and the pane switches to Markdown.

@@ -12,6 +12,11 @@ describe("describeIssues", () => {
       + "Line 9: bullets are nested under something that is not a bullet.");
   });
 
+  it("describes a line whose indentation does not match its list item", () => {
+    expect(describeIssues([{ line: 3, kind: "misaligned" }])).toMatch(
+      / Line 3: a line's indentation does not match its list item\.$/);
+  });
+
   it("lists at most three lines and counts the rest", () => {
     const issues = [1, 2, 3, 4, 5].map((line) => ({ line, kind: "block-in-item" as const }));
     expect(describeIssues(issues)).toMatch(/Line 3: .* And 2 more\.$/);

@@ -8,6 +8,7 @@ const MAX_LISTED = 3;
 const DESCRIPTION: Record<OutlineIssue["kind"], string> = {
   "block-in-item": "a list item contains a numbered list, quote, heading, rule, or table",
   "indented-list": "bullets are nested under something that is not a bullet",
+  "misaligned": "a line's indentation does not match its list item",
 };
 
 export function describeIssues(issues: readonly OutlineIssue[]): string {

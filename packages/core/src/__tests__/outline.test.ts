@@ -9,6 +9,8 @@ import {
   writeOutline,
   escapeLine,
   unescapeLine,
+  escapeContinuationLine,
+  unescapeContinuationLine,
   writeSubtree,
   parseSubtree,
   outlineToFileNodes,
@@ -16,7 +18,7 @@ import {
   findOutlineIssues,
   OUTLINE_IMAGE_UNKNOWN_SIZE,
 } from "../markdown/outline";
-import type { OutlineNode } from "../markdown/outline";
+import type { OutlineNode, OutlineRegion, ParsedOutline } from "../markdown/outline";
 import { generateNodeId, DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../store/MindMapStore";
 
 function fixture(name: string): string {
@@ -193,6 +195,64 @@ describe("writeOutline", () => {
     expect(writeOutline(parsed)).toBe("-\n  - child\n");
   });
 
+  describe("a bare marker under a non-blank line", () => {
+    const node = (text: string, children: OutlineNode[] = []): OutlineNode => ({ text, collapsed: false, children });
+    const bareRoot = node("", [node("c")]);
+    test.each<[string, ParsedOutline, string]>([
+      [
+        "at depth 0 after prose",
+        { frontmatterLines: [], regions: [{ kind: "prose", lines: ["Intro"] }, { kind: "list", roots: [bareRoot] }] },
+        "Intro\n\n-\n  - c",
+      ],
+      [
+        "at depth 0 after frontmatter",
+        { frontmatterLines: ["---", "a: 1", "---"], regions: [{ kind: "list", roots: [bareRoot] }] },
+        "---\na: 1\n---\n\n-\n  - c",
+      ],
+      [
+        "as a later root",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [node("a"), bareRoot] }] },
+        "- a\n\n-\n  - c",
+      ],
+      [
+        "at depth 1",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [node("a", [bareRoot])] }] },
+        "- a\n\n  -\n    - c",
+      ],
+      [
+        "at depth 2",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [node("a", [node("b", [bareRoot])])] }] },
+        "- a\n  - b\n\n    -\n      - c",
+      ],
+      [
+        "collapsed, as a later root",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [node("a"), { ...bareRoot, collapsed: true }] }] },
+        "- a\n\n*\n  - c",
+      ],
+      [
+        "at the start of the note",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [bareRoot] }] },
+        "-\n  - c",
+      ],
+      [
+        "after a blank line",
+        { frontmatterLines: [], regions: [{ kind: "prose", lines: ["Intro", ""] }, { kind: "list", roots: [bareRoot] }] },
+        "Intro\n\n-\n  - c",
+      ],
+      [
+        "directly under another bare marker",
+        { frontmatterLines: [], regions: [{ kind: "list", roots: [node("", [bareRoot])] }] },
+        "-\n  -\n    - c",
+      ],
+    ])("%s gets a blank line before it only when needed", (_name, parsed, expected) => {
+      const out = writeOutline(parsed);
+      expect(out).toBe(expected);
+      expect(writeOutline(parseOutline(out))).toBe(out);
+      expect(detail(outlineRoots(parseOutline(out)))).toBe(detail(outlineRoots(parsed)));
+      expect(findOutlineIssues(out)).toEqual([]);
+    });
+  });
+
   test("an item with empty text and no children is dropped", () => {
     const parsed = parseOutline("- a\n-\n- b\n");
     expect(writeOutline(parsed)).toBe("- a\n- b\n");
@@ -329,6 +389,55 @@ describe("node text", () => {
     expect(back).toHaveLength(1);
     expect(back[0]?.text).toBe("a\n  - b\n  ***");
     expect(back[0]?.children).toEqual([]);
+  });
+
+  test("a continuation line that would start math, a comment, a quote, or HTML is escaped", () => {
+    const node: OutlineNode = { text: "a\n$$\n%%\n>quote\n<details>\n</div>\n<!-- c -->", collapsed: false, children: [] };
+    const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+    expect(text).toBe("- a\\\n  \\$$\\\n  \\%%\\\n  \\>quote\\\n  \\<details>\\\n  \\</div>\\\n  \\<!-- c -->");
+    expect(outlineRoots(parseOutline(text))[0]?.text).toBe(node.text);
+  });
+
+  test.each([
+    ["$$", "\\$$"],
+    ["%%", "\\%%"],
+    [">quote", "\\>quote"],
+    ["> q", "\\> q"],
+    ["<details>", "\\<details>"],
+    ["</div>", "\\</div>"],
+    ["<!-- c -->", "\\<!-- c -->"],
+    ["  <div>", "  \\<div>"],
+    ["\\$$", "\\\\$$"],
+    ["\\\\>x", "\\\\\\>x"],
+    ["- x", "\\- x"],
+    ["a < b", "a < b"],
+    ["price $5", "price $5"],
+    ["100%", "100%"],
+    ["<3", "<3"],
+  ])("escapes continuation line %j as %j and unescapes back", (raw, escaped) => {
+    expect(escapeContinuationLine(raw)).toBe(escaped);
+    expect(unescapeContinuationLine(escaped)).toBe(raw);
+  });
+
+  test.each(["<b>x</b>", ">x", "$$x$$", "%% x"])("a first line %j is written as it is", (raw) => {
+    const node: OutlineNode = { text: raw, collapsed: false, children: [] };
+    expect(writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] })).toBe(`- ${raw}`);
+  });
+
+  test.each(["a\n\\$$", "a\n\\<div>", "a\n\\\\>x", "a\n\\%%", "a\n\\- x", "a\n  \\>x"])(
+    "a continuation line that already starts with a backslash round-trips in %j",
+    (raw) => {
+      const node: OutlineNode = { text: raw, collapsed: false, children: [] };
+      const text = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: [node] }] });
+      expect(outlineRoots(parseOutline(text))[0]?.text).toBe(raw);
+      expect(findOutlineIssues(text)).toEqual([]);
+    },
+  );
+
+  test("an escaped block start on the first content line after an empty marker line stays literal", () => {
+    const text = "-\n  \\$$\n";
+    expect(findOutlineIssues(text)).toEqual([]);
+    expect(writeOutline(parseOutline(text))).toBe("- \\$$\n");
   });
 
   test("escapes apply to every line of node text and round-trip through the file", () => {
@@ -682,7 +791,8 @@ describe("findOutlineIssues", () => {
     const texts = [
       "> q", "1. one", "1) one", "# h", "---", "* * *", "- dash", "+ plus", "```", "~~~",
       "|---|---|", "| a | b |\n|---|---|", "\\> already", "plain\n> second line\n1. third",
-      "a\n```\ncode\n> x\n```",
+      "a\n```\ncode\n> x\n```", "a\n$$", "a\n%%", "a\n>q", "a\n<div>", "a\n<!-- c -->",
+      "a\n\\$$", "a\n\\<div>",
     ];
     const nodes: OutlineNode[] = texts.map((text) => ({
       text,
@@ -692,6 +802,67 @@ describe("findOutlineIssues", () => {
     const written = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: nodes }] });
     expect(findOutlineIssues(written)).toEqual([]);
     expect(outlineRoots(parseOutline(written)).map((n) => n.text)).toEqual(texts);
+
+    const node = (text: string, children: OutlineNode[] = []): OutlineNode => ({ text, collapsed: false, children });
+    const emptyParents = [
+      node("", [node("c")]),
+      node(" ", [node("c")]),
+      node("p", [node("", [node("c")]), node(" ", [node("", [node("d")])])]),
+    ];
+    const withProse = writeOutline({
+      frontmatterLines: [],
+      regions: [{ kind: "prose", lines: ["Intro"] }, { kind: "list", roots: emptyParents }],
+    });
+    expect(findOutlineIssues(withProse)).toEqual([]);
+    expect(shape(outlineRoots(parseOutline(withProse)))).toBe("[c],[c],p[[c],[[d]]]");
+  });
+  it("reports a lazy continuation line that the parser would give to an outer item", () => {
+    expect(kinds("- a\n  - b\n  wrapped\n")).toEqual(["3:misaligned"]);
+    expect(kinds("- a\n    - b\n  wrapped")).toEqual(["3:misaligned"]);
+  });
+  test.each(["- a\n - b", " - a\n  - b", "-   a\n  - b", "- a\n        - x", "- a\n\t\t- x"])(
+    "reports a child marker outside its parent's content column in %j",
+    (text) => {
+      expect(kinds(text)).toEqual(["2:misaligned"]);
+    },
+  );
+  test.each([
+    "- a\n  - b",
+    "- a\n    - b",
+    "- a\n\t- b",
+    "* a\n   - b",
+    "-   a\n    - b",
+    "- a\n\t- b\n\t\t- c",
+    "- a\n    - b\n        - c",
+    "-\n  - b",
+  ])("accepts the child marker alignment in %j", (text) => {
+    expect(kinds(text)).toEqual([]);
+  });
+  it("reports a fence that opens an item whose first line is empty", () => {
+    expect(kinds("-\n  ```\n  code\n  more\n  ```\n")).toEqual(["2:block-in-item"]);
+  });
+  it("reports an item fence that is never closed", () => {
+    expect(kinds("- a\n  ```\n  code\n\n  more\n")).toEqual(["2:block-in-item"]);
+  });
+  test.each([
+    "- f\n  $$\n  a\n  $$",
+    "- a\n  <details>\n  x\n  </details>",
+    "- a\n  %%\n  - hidden\n  %%\n- b",
+    "- a\n  >quote",
+    "- a\n  <!-- c -->",
+  ])("reports a block start on a continuation line in %j", (text) => {
+    expect(kinds(text)).toContain("2:block-in-item");
+  });
+  test.each([
+    "- a\n  a < b",
+    "- a\n  price $5",
+    "- a\n  100%",
+    "- <b>x</b>",
+    "- >x",
+    "- $$x$$",
+    "- a\n  see <b>x</b> here",
+  ])("does not report %j", (text) => {
+    expect(kinds(text)).toEqual([]);
   });
   it("reports issues in the unsupported-blocks fixture", () => {
     expect(findOutlineIssues(fixture("unsupported-blocks")).length).toBeGreaterThan(0);
@@ -705,5 +876,86 @@ describe("findOutlineIssues", () => {
     "prose-lookalikes",
   ])("%s: reports no issues", (name) => {
     expect(findOutlineIssues(fixture(name))).toEqual([]);
+  });
+});
+
+describe("writer output fuzz", () => {
+  const LINES = [
+    "plain", "", "  ", "$$", "%%", ">q", "> q", "<div>", "</div>", "<!-- c -->", "<details>",
+    "\\$$", "\\<div>", "\\\\>x", "\\%%", "a < b", "price $5", "100%", "<b>x</b>", "see <b>x</b> here",
+    "1. one", "1) one", "1\\. one", "# h", "#tag", "---", "* * *", "***", "- dash", "+ plus", "-", "*",
+    "  - indented", "```", "```js", "~~~", "  ```", "code", "|---|---|", "| a | b |", "\\> already",
+    "\\- literal", "x\\", "\\", "trailing  ", "\tx",
+  ];
+  const FENCE_RE = /^[ \t]*(```|~~~)/;
+  const pick = <T,>(random: () => number, items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
+
+  function randomText(random: () => number): string {
+    const roll = random();
+    if (roll < 0.15) return "";
+    if (roll < 0.25) return " ";
+    const count = 1 + Math.floor(random() * 4);
+    return Array.from({ length: count }, () => pick(random, LINES)).join("\n");
+  }
+
+  function randomTree(random: () => number, depth: number): OutlineNode[] {
+    const count = depth === 0 ? 1 + Math.floor(random() * 3) : Math.floor(random() * 3);
+    return Array.from({ length: count }, () => {
+      const node: OutlineNode = {
+        text: randomText(random),
+        collapsed: random() < 0.3,
+        children: depth < 3 ? randomTree(random, depth + 1) : [],
+      };
+      if (random() < 0.1) node.image = { target: "i.png", width: 10 };
+      return node;
+    });
+  }
+
+  /** The text a node reads back as after a write: leading blank lines dropped, the first line's
+   *  leading whitespace trimmed, and outside balanced fences (opened after the first line) blank
+   *  lines dropped and trailing whitespace trimmed. */
+  function normalizedText(text: string): string {
+    const all = text.split("\n");
+    const start = all.findIndex((l) => l.trim() !== "");
+    if (start === -1) return "";
+    const lines = all.slice(start);
+    const fenced = lines.map(() => false);
+    for (let i = 1; i < lines.length; i++) {
+      const marker = FENCE_RE.exec(lines[i] as string)?.[1];
+      if (marker === undefined) continue;
+      const close = lines.findIndex((l, j) => j > i && FENCE_RE.exec(l)?.[1] === marker);
+      if (close === -1) continue;
+      fenced.fill(true, i, close + 1);
+      i = close;
+    }
+    const kept = lines.flatMap((l, i) => (fenced[i] ? [l] : l.trim() === "" ? [] : [l.trimEnd()]));
+    kept[0] = (kept[0] as string).trimStart();
+    return kept.join("\n");
+  }
+
+  /** The tree a write reads back as. A node that writes nothing is dropped. */
+  function expectedTree(nodes: OutlineNode[]): OutlineNode[] {
+    return nodes.flatMap((n) => {
+      const children = expectedTree(n.children);
+      const text = normalizedText(n.text);
+      if (text === "" && !n.image && children.length === 0) return [];
+      const expected: OutlineNode = { text, collapsed: n.collapsed && children.length > 0, children };
+      if (n.image) expected.image = n.image;
+      return [expected];
+    });
+  }
+
+  it("writes random trees that read back as the same tree and report no issues", () => {
+    const random = mulberry32(0xf022);
+    for (let i = 0; i < 2000; i++) {
+      const roots = randomTree(random, 0);
+      const regions: OutlineRegion[] = random() < 0.5 ? [{ kind: "prose", lines: ["Intro paragraph"] }] : [];
+      regions.push({ kind: "list", roots });
+      const written = writeOutline({ frontmatterLines: [], regions });
+      const label = `written ${JSON.stringify(written)}`;
+      expect(findOutlineIssues(written), label).toEqual([]);
+      expect(writeOutline(parseOutline(written)), label).toBe(written);
+      expect(outlineRoots(parseOutline(written)), label).toEqual(expectedTree(roots));
+    }
   });
 });

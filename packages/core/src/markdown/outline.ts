@@ -21,7 +21,7 @@ export type OutlineRegion =
   | { kind: "prose"; lines: string[] }
   | { kind: "list"; roots: OutlineNode[] };
 
-export type OutlineIssueKind = "block-in-item" | "indented-list";
+export type OutlineIssueKind = "block-in-item" | "indented-list" | "misaligned";
 
 export interface OutlineIssue {
   /** 1-based line number in the note, frontmatter included. */
@@ -115,6 +115,31 @@ export function unescapeLine(line: string): string {
   return line;
 }
 
+/** Block starts that can interrupt a paragraph, so they matter only on a line after an item's first
+ *  line: display math, an Obsidian comment, a quote with no space after `>`, and an HTML block. */
+const CONTINUATION_BLOCK_RE = /^(?:\$\$|%%|>|<[A-Za-z/!])/;
+
+/** escapeLine for a line after the first line of node text, where CONTINUATION_BLOCK_RE also applies. */
+export function escapeContinuationLine(line: string): string {
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (CONTINUATION_BLOCK_RE.test(body)) return `${ws}\\${body}`;
+  if (body.startsWith("\\") && unescapeContinuationLine(body) !== body) return `${ws}\\${body}`;
+  return escapeLine(line);
+}
+
+/** Inverse of escapeContinuationLine. */
+export function unescapeContinuationLine(line: string): string {
+  const ws = leadingWhitespace(line);
+  const body = line.slice(ws.length);
+  if (body.startsWith("\\")) {
+    const rest = body.slice(1);
+    if (CONTINUATION_BLOCK_RE.test(rest)) return `${ws}${rest}`;
+    if (rest.startsWith("\\") && unescapeContinuationLine(rest) !== rest) return `${ws}${rest}`;
+  }
+  return unescapeLine(line);
+}
+
 /** Remove a trailing backslash and any trailing whitespace. */
 function stripHardBreak(line: string): string {
   const trimmed = line.trimEnd();
@@ -126,6 +151,12 @@ function stripHardBreak(line: string): string {
 function isBlockSyntax(body: string): boolean {
   const b = body.trimStart();
   return unescapeLine(b) === b && escapeLine(b) !== b;
+}
+
+/** isBlockSyntax for a line after an item's first line. */
+function isContinuationBlockSyntax(body: string): boolean {
+  const b = body.trimStart();
+  return unescapeContinuationLine(b) === b && escapeContinuationLine(b) !== b;
 }
 
 const EMBED_RE = /^!\[\[([^\]|]+)(?:\|(\d+)(?:x(\d+))?)?\]\]$/;
@@ -160,8 +191,22 @@ interface ListBuilder {
   roots: OutlineNode[];
   stack: OpenItem[];
   pendingBlank: string[];
-  /** Fence marker of a fenced block opened on the top item's continuation line, or null. */
-  itemFence: string | null;
+  /** A fenced block opened on the top item's continuation line: its marker and 1-based line, or null. */
+  itemFence: { marker: string; line: number } | null;
+}
+
+/** Columns past a parent's content column at which a marker becomes indented code instead of a child. */
+const CODE_INDENT = 4;
+
+/** Whether a marker at `indent` is where CommonMark reads it as a child of `parent`: at or past the
+ *  parent's content column and short of an indented code block. */
+function isChildColumn(parent: OpenItem, indent: number): boolean {
+  return indent >= parent.contentColumn && indent < parent.contentColumn + CODE_INDENT;
+}
+
+/** Whether an item has only blank lines so far, so a line added to it is its first content line. */
+function hasNoContent(item: OpenItem): boolean {
+  return item.rawLines.every((raw) => raw.trim() === "");
 }
 
 /** Canonical content column of an item at `depth`: two columns per level plus the marker and a space. */
@@ -171,14 +216,17 @@ function canonicalContentColumn(depth: number): number {
 
 /** Assemble an item's text by joining its raw lines, stripping hard breaks and escapes. Lines
  *  inside a fenced block are code and are kept verbatim, and the line before a fence opener keeps
- *  a trailing backslash because the writer never puts a hard break there.
+ *  a trailing backslash because the writer never puts a hard break there. Lines after the first
+ *  non-blank one are continuation lines, which carry the escapes of escapeContinuationLine.
  *  A trailing embed line becomes the node's image. The marker determines collapse:
  *  a star on an item with children means collapsed. */
 function finishItem(item: OpenItem): void {
+  const firstContent = item.rawLines.findIndex((raw) => raw.trim() !== "");
   const lines = item.rawLines.map((raw, i) => {
     if (item.fenced[i]) return raw;
     const keepBackslash = i === item.rawLines.length - 1 || item.fenced[i + 1] === true;
-    return unescapeLine(keepBackslash ? raw.trimEnd() : stripHardBreak(raw));
+    const unescape = i > firstContent ? unescapeContinuationLine : unescapeLine;
+    return unescape(keepBackslash ? raw.trimEnd() : stripHardBreak(raw));
   });
   const last = lines[lines.length - 1];
   const image = last !== undefined ? parseEmbedLine(last) : null;
@@ -190,7 +238,10 @@ function finishItem(item: OpenItem): void {
   item.node.collapsed = item.marker === "*" && item.node.children.length > 0;
 }
 
-function closeList(list: ListBuilder, regions: OutlineRegion[]): string[] {
+/** Finish a list region. An item fence still open here was never closed, and the writer would
+ *  escape its opener. */
+function closeList(list: ListBuilder, regions: OutlineRegion[], issues: OutlineIssue[]): string[] {
+  if (list.itemFence !== null) issues.push({ line: list.itemFence.line, kind: "block-in-item" });
   for (const item of list.stack) finishItem(item);
   regions.push({ kind: "list", roots: list.roots });
   return list.pendingBlank;
@@ -228,7 +279,9 @@ function pushProse(lines: string[], regions: OutlineRegion[]): void {
   regions.push({ kind: "prose", lines });
 }
 
-function addBullet(list: ListBuilder, m: RegExpExecArray): void {
+/** Open an item for a bullet line, reporting a child marker that CommonMark would not nest where
+ *  the parser does. */
+function addBullet(list: ListBuilder, m: RegExpExecArray, lineNumber: number, issues: OutlineIssue[]): void {
   const indent = indentWidth(m[1] ?? "");
   const marker = m[2] ?? "-";
   const content = m[3] ?? "";
@@ -237,6 +290,7 @@ function addBullet(list: ListBuilder, m: RegExpExecArray): void {
   }
   const node: OutlineNode = { text: "", collapsed: false, children: [] };
   const parent = list.stack[list.stack.length - 1];
+  if (parent && !isChildColumn(parent, indent)) issues.push({ line: lineNumber, kind: "misaligned" });
   if (parent) parent.node.children.push(node);
   else list.roots.push(node);
   const gap = leadingWhitespace(m[0].slice((m[1] ?? "").length + 1));
@@ -282,7 +336,7 @@ function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
         const item = list.stack[list.stack.length - 1] as OpenItem;
         const body = stripColumns(line, item.contentColumn);
         pushRawLine(item, body, true);
-        if (FENCE_RE.exec(body)?.[1] === list.itemFence) list.itemFence = null;
+        if (FENCE_RE.exec(body)?.[1] === list.itemFence.marker) list.itemFence = null;
         continue;
       }
       if (line.trim() === "") {
@@ -292,20 +346,25 @@ function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
       const m = matchBullet(line);
       if (m) {
         if (isBlockSyntax(stripHardBreak(m[3] ?? ""))) issues.push({ line: lineNumber, kind: "block-in-item" });
-        addBullet(list, m);
+        addBullet(list, m, lineNumber, issues);
         continue;
       }
+      const deepest = list.stack[list.stack.length - 1];
       const item = list.pendingBlank.length === 0 ? continuedItem(list, line) : null;
       if (item) {
+        if (item !== deepest) issues.push({ line: lineNumber, kind: "misaligned" });
         const body = stripColumns(line, item.contentColumn);
-        list.itemFence = FENCE_RE.exec(body)?.[1] ?? null;
-        if (list.itemFence === null && isBlockSyntax(stripHardBreak(body))) {
+        const fenceMarker = FENCE_RE.exec(body)?.[1];
+        if (fenceMarker !== undefined) {
+          if (hasNoContent(item)) issues.push({ line: lineNumber, kind: "block-in-item" });
+          list.itemFence = { marker: fenceMarker, line: lineNumber };
+        } else if (isContinuationBlockSyntax(stripHardBreak(body))) {
           issues.push({ line: lineNumber, kind: "block-in-item" });
         }
-        pushRawLine(item, body, list.itemFence !== null);
+        pushRawLine(item, body, fenceMarker !== undefined);
         continue;
       }
-      prose = closeList(list, regions);
+      prose = closeList(list, regions, issues);
       list = null;
     }
 
@@ -341,14 +400,14 @@ function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
         if (indentWidth(m[1] ?? "") >= 2) issues.push({ line: lineNumber, kind: "indented-list" });
         if (isBlockSyntax(stripHardBreak(m[3] ?? ""))) issues.push({ line: lineNumber, kind: "block-in-item" });
         list = { roots: [], stack: [], pendingBlank: [], itemFence: null };
-        addBullet(list, m);
+        addBullet(list, m, lineNumber, issues);
         continue;
       }
     }
     prose.push(line);
   }
 
-  if (list) prose = closeList(list, regions);
+  if (list) prose = closeList(list, regions, issues);
   pushProse(prose, regions);
   const parsed: ParsedOutline = { frontmatterLines, regions };
   if (text.includes("\r\n")) parsed.lineEnding = "\r\n";
@@ -407,38 +466,54 @@ function contentLines(node: OutlineNode): { lines: string[]; fenced: boolean[] }
     fenced.push(inFence);
   });
   if (lines[0] !== undefined) lines[0] = lines[0].trimStart();
-  return { lines: lines.map((l, i) => (fenced[i] ? l : escapeLine(l))), fenced };
+  const escaped = lines.map((l, i) => {
+    if (fenced[i]) return l;
+    return i === 0 ? escapeLine(l) : escapeContinuationLine(l);
+  });
+  return { lines: escaped, fenced };
 }
 
-function writeNode(node: OutlineNode, depth: number, out: string[]): void {
+const BARE_MARKER_RE = /^ *[-*]$/;
+
+/** Append written lines to `out`. A bare marker directly under a non-blank line would be read as a
+ *  setext heading underline or as part of that paragraph, so a blank line goes between them. */
+function appendLines(out: string[], lines: string[]): void {
+  const previous = out[out.length - 1];
+  const first = lines[0];
+  if (first !== undefined && BARE_MARKER_RE.test(first) && previous !== undefined && previous.trim() !== "") {
+    out.push("");
+  }
+  out.push(...lines);
+}
+
+/** A node's written lines followed by its children's, or none when it has no text, image, or
+ *  written children. A node with no text but with children is a bare marker; its first child
+ *  follows with no blank line, since an item that opens with a blank line ends at a second one. */
+function nodeLines(node: OutlineNode, depth: number): string[] {
   const { lines, fenced } = contentLines(node);
   if (node.image) {
     lines.push(embedLine(node.image));
     fenced.push(false);
   }
-  const childLines: string[] = [];
-  for (const child of node.children) writeNode(child, depth + 1, childLines);
-  const hasBody = lines.length > 0 || childLines.length > 0;
-  if (!hasBody) return;
+  const childLines = writeNodes(node.children, depth + 1);
+  if (lines.length === 0 && childLines.length === 0) return [];
   const indent = INDENT.repeat(depth);
   const marker = node.collapsed && childLines.length > 0 ? "*" : "-";
-  if (lines.length === 0) {
-    out.push(`${indent}${marker}`);
-  } else {
-    const contentIndent = indent + INDENT;
-    lines.forEach((line, i) => {
-      const hardBreak = i < lines.length - 1 && !fenced[i] && !fenced[i + 1];
-      const suffix = hardBreak ? "\\" : "";
-      if (i === 0) out.push(`${indent}${marker} ${line}${suffix}`);
-      else out.push(line === "" ? "" : `${contentIndent}${line}${suffix}`);
-    });
-  }
-  out.push(...childLines);
+  if (lines.length === 0) return [`${indent}${marker}`, ...childLines];
+  const contentIndent = indent + INDENT;
+  const out = lines.map((line, i) => {
+    const hardBreak = i < lines.length - 1 && !fenced[i] && !fenced[i + 1];
+    const suffix = hardBreak ? "\\" : "";
+    if (i === 0) return `${indent}${marker} ${line}${suffix}`;
+    return line === "" ? "" : `${contentIndent}${line}${suffix}`;
+  });
+  appendLines(out, childLines);
+  return out;
 }
 
 export function writeNodes(nodes: OutlineNode[], depth = 0): string[] {
   const out: string[] = [];
-  for (const node of nodes) writeNode(node, depth, out);
+  for (const node of nodes) appendLines(out, nodeLines(node, depth));
   return out;
 }
 
@@ -446,7 +521,7 @@ export function writeOutline(parsed: ParsedOutline): string {
   const out: string[] = [...parsed.frontmatterLines];
   for (const region of parsed.regions) {
     if (region.kind === "prose") out.push(...region.lines);
-    else out.push(...writeNodes(region.roots));
+    else appendLines(out, writeNodes(region.roots));
   }
   return out.join(parsed.lineEnding ?? "\n");
 }
