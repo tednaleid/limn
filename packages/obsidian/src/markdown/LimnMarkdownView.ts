@@ -102,6 +102,7 @@ export class LimnMarkdownView extends TextFileView {
     new Notice(describeIssues(this.doc.blockedBy), 10000);
     const leaf = this.leaf;
     window.setTimeout(() => {
+      if (leaf.view !== this || this.doc.blockedBy.length === 0) return;
       void openLeafAs(this.plugin, leaf, MARKDOWN_VIEW_TYPE)
         .catch((err: unknown) => { console.error("Failed to open note as Markdown:", err); });
     }, 0);
