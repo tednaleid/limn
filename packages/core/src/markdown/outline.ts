@@ -194,6 +194,12 @@ function pushRawLine(item: OpenItem, body: string, fenced: boolean): void {
   item.fenced.push(fenced);
 }
 
+/** A bullet match for a line, or null. A thematic break (`* * *`, `- - -`) is not a bullet. */
+function matchBullet(line: string): RegExpExecArray | null {
+  if (THEMATIC_BREAK_RE.test(line.trim())) return null;
+  return BULLET_RE.exec(line);
+}
+
 function pushProse(lines: string[], regions: OutlineRegion[]): void {
   if (lines.length === 0) return;
   regions.push({ kind: "prose", lines });
@@ -242,6 +248,8 @@ export function parseOutline(text: string): ParsedOutline {
   let list: ListBuilder | null = null;
   let fence: string | null = null;
   let inComment = false;
+  let inMath = false;
+  let inHtmlComment = false;
 
   for (const line of rest) {
     if (list && fence === null && !inComment) {
@@ -256,7 +264,7 @@ export function parseOutline(text: string): ParsedOutline {
         list.pendingBlank.push(line);
         continue;
       }
-      const m = BULLET_RE.exec(line);
+      const m = matchBullet(line);
       if (m) {
         addBullet(list, m);
         continue;
@@ -282,8 +290,23 @@ export function parseOutline(text: string): ParsedOutline {
     if (fence === null && line.trim() === "%%") inComment = !inComment;
 
     if (fence === null && !inComment) {
-      const m = BULLET_RE.exec(line);
-      if (m) {
+      const trimmed = line.trim();
+      if (!inHtmlComment && trimmed.startsWith("$$") && !(trimmed.length > 2 && trimmed.endsWith("$$"))) {
+        inMath = !inMath;
+      }
+      if (!inMath) {
+        const open = trimmed.indexOf("<!--");
+        if (!inHtmlComment && open !== -1 && !trimmed.includes("-->", open)) inHtmlComment = true;
+        else if (inHtmlComment && trimmed.includes("-->")) inHtmlComment = false;
+      }
+    }
+
+    if (fence === null && !inComment && !inMath && !inHtmlComment) {
+      const m = matchBullet(line);
+      const lastProse = prose[prose.length - 1];
+      const setextUnderline =
+        m !== null && (m[3] ?? "") === "" && m[2] === "-" && lastProse !== undefined && lastProse.trim() !== "";
+      if (m && !setextUnderline) {
         pushProse(prose, regions);
         prose = [];
         list = { roots: [], stack: [], pendingBlank: [], itemFence: null };

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for the Markdown outline codec (nested list <-> tree).
 // ABOUTME: Covers parsing, writing, escapes, collapse, embeds, and round-trip laws.
 
-import { describe, test, expect } from "vitest";
+import { describe, test, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   parseOutline,
@@ -151,6 +151,7 @@ describe("writeOutline", () => {
     "fenced-and-comments",
     "frontmatter-only",
     "collapse-and-images",
+    "prose-lookalikes",
   ];
 
   test.each(FIXTURES)("%s: writing a parse is idempotent", (name) => {
@@ -578,5 +579,56 @@ describe("subtree helpers and file-node conversion", () => {
     const b = generateNodeId();
     expect(a).toMatch(/^n\d+$/);
     expect(b).not.toBe(a);
+  });
+});
+
+describe("prose that looks like bullets", () => {
+  const unchanged = (text: string) => expect(writeOutline(parseOutline(text))).toBe(text);
+  const rootTexts = (text: string) => outlineRoots(parseOutline(text)).map((n) => n.text);
+
+  it("keeps a spaced star rule as prose", () => {
+    const text = "para\n\n* * *\n\nmore\n";
+    expect(rootTexts(text)).toEqual([]);
+    unchanged(text);
+  });
+  it("keeps a spaced dash rule as prose", () => {
+    const text = "para\n\n- - -\n\nmore\n";
+    expect(rootTexts(text)).toEqual([]);
+    unchanged(text);
+  });
+  it("ends a list at a spaced rule", () => {
+    const text = "- a\n\n* * *\n\n- b\n";
+    expect(parseOutline(text).regions.map((r) => r.kind)).toEqual(["list", "prose", "list", "prose"]);
+    expect(rootTexts(text)).toEqual(["a", "b"]);
+    unchanged(text);
+  });
+  it("keeps a setext underline as prose", () => {
+    const text = "Title\n-\n\nbody\n";
+    expect(rootTexts(text)).toEqual([]);
+    unchanged(text);
+  });
+  it("still reads a lone dash after a blank line as an empty bullet", () => {
+    expect(parseOutline("para\n\n-\n").regions.some((r) => r.kind === "list")).toBe(true);
+  });
+  it("keeps bullets inside a math block as prose", () => {
+    const text = "$$\na\n- b + c\n$$\n\n- real\n";
+    expect(rootTexts(text)).toEqual(["real"]);
+    unchanged(text);
+  });
+  it("does not open a math block on a one-line formula", () => {
+    expect(rootTexts("$$x$$\n- real\n")).toEqual(["real"]);
+  });
+  it("keeps bullets inside a multi-line HTML comment as prose", () => {
+    const text = "<!--\n- hidden\n-->\n\n- real\n";
+    expect(rootTexts(text)).toEqual(["real"]);
+    unchanged(text);
+  });
+  it("does not open an HTML comment that closes on its own line", () => {
+    expect(rootTexts("<!-- note -->\n- real\n")).toEqual(["real"]);
+  });
+  it("round-trips the prose-lookalikes fixture and reads only the real bullets", () => {
+    const text = fixture("prose-lookalikes");
+    expect(rootTexts(text)).toEqual(["first", "second", "third"]);
+    unchanged(text);
   });
 });
