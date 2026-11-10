@@ -63,6 +63,17 @@ blank lines between items. Positions, side, width, and colors are not stored in 
 is always computed, with all children on the right, and the nudge, side flip, width resize, and
 color actions are off in this view (and hidden from the `?` shortcut help).
 
+### Notes the map refuses
+
+The map only opens a note it can write back unchanged. A note with a numbered list, quote,
+heading, rule, or table directly inside a bullet, or with bullets nested under something that is
+not a bullet, is not shown as a map. A notice names the first offending lines and the note opens
+as Markdown instead; the file is not modified. Thematic breaks, `$$` math blocks, and multi-line
+HTML comments between paragraphs are prose and are preserved like code fences.
+
+If an external change makes an open map's note unsupported, unsaved map edits are discarded in
+favor of the file and the pane switches to Markdown.
+
 ### Links
 
 `[[wikilinks]]`, with or without an alias, render as links in the map. `Cmd+Enter` on the
@@ -143,7 +154,6 @@ After `just obsidian-install <vault>`:
 - [ ] Edit mind map (add nodes, move, delete), close file, reopen -- verify persistence
 - [ ] Cmd+Z / Cmd+Shift+Z undo/redo works
 - [ ] Keyboard navigation (arrows, Enter, Tab) works
-- [ ] Paste image, verify sidecar `.limn-assets/` folder created
 - [ ] Open same file in two panes, verify no conflicts
 - [ ] File renamed in vault sidebar -- verify view updates
 - [ ] Click a note with `limn-plugin: true`: opens as a map. Click an unmarked note: opens as Markdown.
@@ -156,6 +166,11 @@ After `just obsidian-install <vault>`:
 - [ ] Setting "Open notes with limn-plugin: true as: Markdown": marked notes open as Markdown; "Open as mind map" still works
 - [ ] Disable the plugin: open map panes turn back into Markdown panes
 - [ ] Open a hand-formatted marked note, close the pane without editing: the file is byte-identical
+- [ ] Open a note with a numbered list inside a bullet as a mind map: a notice appears, the note opens as Markdown, the file is byte-identical
+- [ ] With "open marked notes as: Markdown", use "Open as mind map" on note A, then click marked note B in the same pane: B opens as Markdown
+- [ ] With a map open and an edit made less than two seconds ago, disable the plugin: the pane becomes a Markdown pane (not blank) and the edit is in the file
+- [ ] Update the plugin (re-run `just obsidian-install`, reload) with a map pane open: the pane is usable afterwards
+- [ ] A note with `* * *` between paragraphs and a `$$` block containing `- x`: open as a map, edit a node, the rule and the math block are unchanged
 
 ## Building for distribution
 
