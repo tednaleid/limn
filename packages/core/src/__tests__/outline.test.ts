@@ -13,6 +13,7 @@ import {
   parseSubtree,
   outlineToFileNodes,
   fileNodesToOutline,
+  findOutlineIssues,
   OUTLINE_IMAGE_UNKNOWN_SIZE,
 } from "../markdown/outline";
 import type { OutlineNode } from "../markdown/outline";
@@ -630,5 +631,79 @@ describe("prose that looks like bullets", () => {
     const text = fixture("prose-lookalikes");
     expect(rootTexts(text)).toEqual(["first", "second", "third"]);
     unchanged(text);
+  });
+});
+
+describe("findOutlineIssues", () => {
+  const kinds = (text: string) => findOutlineIssues(text).map((i) => `${i.line}:${i.kind}`);
+
+  it("reports nothing for a plain outline", () => {
+    expect(kinds("- a\n  - b\n* c\n  - d\n")).toEqual([]);
+  });
+  it("reports an ordered list inside a bullet", () => {
+    expect(kinds("- parent\n  1. one\n  2. two\n")).toEqual(["2:block-in-item", "3:block-in-item"]);
+  });
+  it("reports a quote, heading, and rule inside a bullet", () => {
+    expect(kinds("- p\n  > q\n- p2\n  # h\n- p3\n  ---\n")).toEqual([
+      "2:block-in-item",
+      "4:block-in-item",
+      "6:block-in-item",
+    ]);
+  });
+  it("reports block syntax on a bullet's first line", () => {
+    expect(kinds("- > quote\n- 1. one\n- # h\n")).toEqual([
+      "1:block-in-item",
+      "2:block-in-item",
+      "3:block-in-item",
+    ]);
+  });
+  it("reports a table under a bullet at its delimiter row", () => {
+    expect(kinds("- p\n  | a | b |\n  |---|---|\n  | 1 | 2 |\n")).toEqual(["3:block-in-item"]);
+  });
+  it("reports bullets nested under an ordered item", () => {
+    expect(kinds("1. one\n   - sub a\n   - sub b\n2. two\n")).toEqual(["2:indented-list"]);
+  });
+  it("reports an indented bullet after a second paragraph", () => {
+    expect(kinds("- item\n\n  second para\n  - child\n")).toEqual(["4:indented-list"]);
+  });
+  it("counts frontmatter lines", () => {
+    expect(kinds("---\nlimn-plugin: true\n---\n- p\n  > q\n")).toEqual(["5:block-in-item"]);
+  });
+  it("ignores block syntax inside an item fence", () => {
+    expect(kinds("- code\n  ```\n  > not a quote\n  1. not a list\n  ```\n")).toEqual([]);
+  });
+  it("ignores escaped lines the writer produced", () => {
+    expect(kinds("- p\\\n  \\> q\\\n  1\\. one\n")).toEqual([]);
+  });
+  it("reports a table delimiter row that ends in a hard break", () => {
+    expect(kinds("- p\\\n  |---|---|\\\n  x\n")).toEqual(["2:block-in-item"]);
+  });
+  it("never reports the writer's own output", () => {
+    const texts = [
+      "> q", "1. one", "1) one", "# h", "---", "* * *", "- dash", "+ plus", "```", "~~~",
+      "|---|---|", "| a | b |\n|---|---|", "\\> already", "plain\n> second line\n1. third",
+      "a\n```\ncode\n> x\n```",
+    ];
+    const nodes: OutlineNode[] = texts.map((text) => ({
+      text,
+      collapsed: false,
+      children: [{ text, collapsed: false, children: [] }],
+    }));
+    const written = writeOutline({ frontmatterLines: [], regions: [{ kind: "list", roots: nodes }] });
+    expect(findOutlineIssues(written)).toEqual([]);
+    expect(outlineRoots(parseOutline(written)).map((n) => n.text)).toEqual(texts);
+  });
+  it("reports issues in the unsupported-blocks fixture", () => {
+    expect(findOutlineIssues(fixture("unsupported-blocks")).length).toBeGreaterThan(0);
+  });
+  test.each([
+    "basic-nested",
+    "prose-and-lists",
+    "fenced-and-comments",
+    "frontmatter-only",
+    "collapse-and-images",
+    "prose-lookalikes",
+  ])("%s: reports no issues", (name) => {
+    expect(findOutlineIssues(fixture(name))).toEqual([]);
   });
 });

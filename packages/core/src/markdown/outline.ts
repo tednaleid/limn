@@ -21,6 +21,14 @@ export type OutlineRegion =
   | { kind: "prose"; lines: string[] }
   | { kind: "list"; roots: OutlineNode[] };
 
+export type OutlineIssueKind = "block-in-item" | "indented-list";
+
+export interface OutlineIssue {
+  /** 1-based line number in the note, frontmatter included. */
+  line: number;
+  kind: OutlineIssueKind;
+}
+
 export interface ParsedOutline {
   frontmatterLines: string[];
   regions: OutlineRegion[];
@@ -67,8 +75,13 @@ function stripColumns(line: string, columns: number): string {
 
 const ESCAPE_PREFIX_RE = /^(?:[-*+](?: |$)|#{1,6}(?: |$)|>(?: |$)|```|~~~)/;
 const THEMATIC_BREAK_RE = /^([-*_])(?: *\1){2,} *$/;
+const TABLE_DELIMITER_RE = /^\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?$/;
 const ORDERED_PREFIX_RE = /^(\d+)([.)])(?: |$)/;
 const ESCAPED_ORDERED_RE = /^(\d+)\\+([.)])(?: |$)/;
+
+function isTableDelimiter(body: string): boolean {
+  return body.includes("|") && TABLE_DELIMITER_RE.test(body.trimEnd());
+}
 
 /** Backslash-escape a line of node text that would otherwise be read as list, heading, quote,
  *  fence, or rule syntax, or as an escape the parser would strip. The line's own leading
@@ -76,7 +89,9 @@ const ESCAPED_ORDERED_RE = /^(\d+)\\+([.)])(?: |$)/;
 export function escapeLine(line: string): string {
   const ws = leadingWhitespace(line);
   const body = line.slice(ws.length);
-  if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body)) return `${ws}\\${body}`;
+  if (ESCAPE_PREFIX_RE.test(body) || THEMATIC_BREAK_RE.test(body) || isTableDelimiter(body)) {
+    return `${ws}\\${body}`;
+  }
   if (body.startsWith("\\") && unescapeLine(body) !== body) return `${ws}\\${body}`;
   const ordered = ORDERED_PREFIX_RE.exec(body) ?? ESCAPED_ORDERED_RE.exec(body);
   if (ordered) return `${ws}${ordered[1]}\\${body.slice((ordered[1] ?? "").length)}`;
@@ -89,7 +104,9 @@ export function unescapeLine(line: string): string {
   const body = line.slice(ws.length);
   if (body.startsWith("\\")) {
     const rest = body.slice(1);
-    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest)) return `${ws}${rest}`;
+    if (ESCAPE_PREFIX_RE.test(rest) || THEMATIC_BREAK_RE.test(rest) || isTableDelimiter(rest)) {
+      return `${ws}${rest}`;
+    }
     if (rest.startsWith("\\") && unescapeLine(rest) !== rest) return `${ws}${rest}`;
     return line;
   }
@@ -103,6 +120,12 @@ function stripHardBreak(line: string): string {
   const trimmed = line.trimEnd();
   if (line.endsWith("\\")) return line.slice(0, -1).trimEnd();
   return trimmed;
+}
+
+/** True when Markdown would read this line of item text as block syntax rather than text. */
+function isBlockSyntax(body: string): boolean {
+  const b = body.trimStart();
+  return unescapeLine(b) === b && escapeLine(b) !== b;
 }
 
 const EMBED_RE = /^!\[\[([^\]|]+)(?:\|(\d+)(?:x(\d+))?)?\]\]$/;
@@ -241,8 +264,9 @@ function splitFrontmatter(lines: string[]): { frontmatterLines: string[]; rest: 
   return { frontmatterLines: [], rest: lines };
 }
 
-export function parseOutline(text: string): ParsedOutline {
+function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
   const { frontmatterLines, rest } = splitFrontmatter(text.split(/\r?\n/));
+  const issues: OutlineIssue[] = [];
   const regions: OutlineRegion[] = [];
   let prose: string[] = [];
   let list: ListBuilder | null = null;
@@ -251,7 +275,8 @@ export function parseOutline(text: string): ParsedOutline {
   let inMath = false;
   let inHtmlComment = false;
 
-  for (const line of rest) {
+  for (const [index, line] of rest.entries()) {
+    const lineNumber = frontmatterLines.length + index + 1;
     if (list && fence === null && !inComment) {
       if (list.itemFence !== null) {
         const item = list.stack[list.stack.length - 1] as OpenItem;
@@ -266,6 +291,7 @@ export function parseOutline(text: string): ParsedOutline {
       }
       const m = matchBullet(line);
       if (m) {
+        if (isBlockSyntax(stripHardBreak(m[3] ?? ""))) issues.push({ line: lineNumber, kind: "block-in-item" });
         addBullet(list, m);
         continue;
       }
@@ -273,6 +299,9 @@ export function parseOutline(text: string): ParsedOutline {
       if (item) {
         const body = stripColumns(line, item.contentColumn);
         list.itemFence = FENCE_RE.exec(body)?.[1] ?? null;
+        if (list.itemFence === null && isBlockSyntax(stripHardBreak(body))) {
+          issues.push({ line: lineNumber, kind: "block-in-item" });
+        }
         pushRawLine(item, body, list.itemFence !== null);
         continue;
       }
@@ -309,6 +338,8 @@ export function parseOutline(text: string): ParsedOutline {
       if (m && !setextUnderline) {
         pushProse(prose, regions);
         prose = [];
+        if (indentWidth(m[1] ?? "") >= 2) issues.push({ line: lineNumber, kind: "indented-list" });
+        if (isBlockSyntax(stripHardBreak(m[3] ?? ""))) issues.push({ line: lineNumber, kind: "block-in-item" });
         list = { roots: [], stack: [], pendingBlank: [], itemFence: null };
         addBullet(list, m);
         continue;
@@ -321,7 +352,16 @@ export function parseOutline(text: string): ParsedOutline {
   pushProse(prose, regions);
   const parsed: ParsedOutline = { frontmatterLines, regions };
   if (text.includes("\r\n")) parsed.lineEnding = "\r\n";
-  return parsed;
+  return { parsed, issues };
+}
+
+export function parseOutline(text: string): ParsedOutline {
+  return scan(text).parsed;
+}
+
+/** Constructs in a note that the writer would not reproduce. Empty for any text the writer produced. */
+export function findOutlineIssues(text: string): OutlineIssue[] {
+  return scan(text).issues;
 }
 
 export function outlineRoots(parsed: ParsedOutline): OutlineNode[] {
