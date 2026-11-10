@@ -736,6 +736,18 @@ describe("prose that looks like bullets", () => {
   it("does not open an HTML comment that closes on its own line", () => {
     expect(rootTexts("<!-- note -->\n- real\n")).toEqual(["real"]);
   });
+  it("does not open an HTML comment from the middle of a bullet", () => {
+    const text = "- a <!-- c\n- b\n";
+    expect(rootTexts(text)).toEqual(["a <!-- c", "b"]);
+    unchanged(text);
+  });
+  it("keeps a lone star or plus under a paragraph as prose", () => {
+    for (const marker of ["*", "+"]) {
+      const text = `Intro\n${marker}\n\nbody\n`;
+      expect(rootTexts(text)).toEqual([]);
+      unchanged(text);
+    }
+  });
   it("round-trips the prose-lookalikes fixture and reads only the real bullets", () => {
     const text = fixture("prose-lookalikes");
     expect(rootTexts(text)).toEqual(["first", "second", "third"]);

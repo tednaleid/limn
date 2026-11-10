@@ -383,8 +383,7 @@ function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
         inMath = !inMath;
       }
       if (!inMath) {
-        const open = trimmed.indexOf("<!--");
-        if (!inHtmlComment && open !== -1 && !trimmed.includes("-->", open)) inHtmlComment = true;
+        if (!inHtmlComment && trimmed.startsWith("<!--") && !trimmed.includes("-->")) inHtmlComment = true;
         else if (inHtmlComment && trimmed.includes("-->")) inHtmlComment = false;
       }
     }
@@ -392,9 +391,9 @@ function scan(text: string): { parsed: ParsedOutline; issues: OutlineIssue[] } {
     if (fence === null && !inComment && !inMath && !inHtmlComment) {
       const m = matchBullet(line);
       const lastProse = prose[prose.length - 1];
-      const setextUnderline =
-        m !== null && (m[3] ?? "") === "" && m[2] === "-" && lastProse !== undefined && lastProse.trim() !== "";
-      if (m && !setextUnderline) {
+      const emptyMarkerAfterText =
+        m !== null && (m[3] ?? "") === "" && lastProse !== undefined && lastProse.trim() !== "";
+      if (m && !emptyMarkerAfterText) {
         pushProse(prose, regions);
         prose = [];
         if (indentWidth(m[1] ?? "") >= 2) issues.push({ line: lineNumber, kind: "indented-list" });
