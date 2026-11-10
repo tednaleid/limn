@@ -26,6 +26,8 @@ export default class LimnPlugin extends Plugin {
     registerMarkdownCommands(this);
     this.addSettingTab(new LimnSettingTab(this.app, this));
     this.uninstallRouting = installRoutingPatch(this);
+    // Registered after the view type so it runs before the type is unregistered.
+    this.register(() => this.handBackMapLeaves());
     this.app.workspace.onLayoutReady(() => this.routeOpenMarkedNotes());
 
     this.addCommand({
@@ -35,9 +37,8 @@ export default class LimnPlugin extends Plugin {
     });
   }
 
-  onunload() {
-    // Remove the wrapper first so switching leaves back is not re-routed, then hand every map leaf
-    // back to the Markdown editor before the view type disappears.
+  /** Remove the wrapper first so switching leaves back is not re-routed, then hand every map leaf back to the Markdown editor. */
+  private handBackMapLeaves(): void {
     this.uninstallRouting?.();
     this.uninstallRouting = null;
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN)) {

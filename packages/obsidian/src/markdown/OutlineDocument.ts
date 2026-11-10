@@ -84,6 +84,7 @@ export class OutlineDocument {
    * elsewhere and is merged into the current map, keeping ids (and so selection) where nodes match.
    */
   load(text: string, clear: boolean): void {
+    if (clear) this.naturalSizes.clear();
     this.issues = findOutlineIssues(text);
     if (this.issues.length > 0) {
       if (clear) this.emptyEditor();
@@ -176,6 +177,7 @@ export class OutlineDocument {
 
   /** Forget the note; the map becomes empty. */
   clear(): void {
+    this.naturalSizes.clear();
     this.parsed = { frontmatterLines: [], regions: [] };
     this.regionOfRoot = new Map();
     this.issues = [];

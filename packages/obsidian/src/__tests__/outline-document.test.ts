@@ -324,3 +324,23 @@ describe("OutlineDocument with a note it cannot round-trip", () => {
     expect(doc.blockedBy).toEqual([]);
   });
 });
+
+describe("OutlineDocument natural sizes", () => {
+  beforeEach(() => resetIdCounter());
+
+  it("forgets natural sizes when a different note is loaded", () => {
+    const { doc } = makeDoc();
+    doc.load("- a\n  ![[image.png]]\n", true);
+    doc.setImageNaturalSize("image.png", 800, 600);
+    doc.load("- b\n  ![[image.png]]\n", true);
+    expect(doc.hasNaturalSize("image.png")).toBe(false);
+  });
+
+  it("keeps natural sizes across an external update of the same note", () => {
+    const { doc } = makeDoc();
+    doc.load("- a\n  ![[image.png]]\n", true);
+    doc.setImageNaturalSize("image.png", 800, 600);
+    doc.load("- a2\n  ![[image.png]]\n", false);
+    expect(doc.hasNaturalSize("image.png")).toBe(true);
+  });
+});
