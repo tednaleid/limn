@@ -3,7 +3,7 @@
 
 import { TFile, MarkdownView, type App, type Menu } from "obsidian";
 import type LimnPlugin from "../main";
-import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, MARKER_KEY } from "./routing";
+import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, MARKER_KEY, hasMindMapMarker, type NoteViewType } from "./routing";
 import { openLeafAs, openFileAs } from "./leafRouting";
 
 /** Body of a brand-new mind map note: the marker and nothing else. */
@@ -31,6 +31,17 @@ export async function addMindMapMarker(app: App, file: TFile): Promise<void> {
   await app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
     frontmatter[MARKER_KEY] = true;
   });
+}
+
+/**
+ * The views a note's file menu offers. A pane showing the note offers the other view. With no pane
+ * (the file browser), a marked note offers both, since it opens as either depending on the setting;
+ * an unmarked note opens as Markdown already, so it offers only the map.
+ */
+export function fileMenuViewTypes(leafViewType: string | undefined, hasMarker: boolean): NoteViewType[] {
+  if (leafViewType === VIEW_TYPE_LIMN_MARKDOWN) return [MARKDOWN_VIEW_TYPE];
+  if (leafViewType === undefined && hasMarker) return [VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE];
+  return [VIEW_TYPE_LIMN_MARKDOWN];
 }
 
 function addMenuItem(menu: Menu, title: string, icon: string, onClick: () => void): void {
@@ -82,10 +93,10 @@ export function registerMarkdownCommands(plugin: LimnPlugin): void {
 
   plugin.registerEvent(app.workspace.on("file-menu", (menu, file, _source, leaf) => {
     if (!(file instanceof TFile) || file.extension !== "md") return;
-    if (leaf?.view.getViewType() === VIEW_TYPE_LIMN_MARKDOWN) {
-      addMenuItem(menu, "Open as Markdown", "file-text", () => void openLeafAs(plugin, leaf, MARKDOWN_VIEW_TYPE));
-    } else {
-      addMenuItem(menu, "Open as mind map", "git-branch", () => void openFileAs(plugin, file, leaf, VIEW_TYPE_LIMN_MARKDOWN));
+    const hasMarker = hasMindMapMarker(app.metadataCache.getFileCache(file)?.frontmatter);
+    for (const type of fileMenuViewTypes(leaf?.view.getViewType(), hasMarker)) {
+      const [title, icon] = type === MARKDOWN_VIEW_TYPE ? ["Open as Markdown", "file-text"] : ["Open as mind map", "git-branch"];
+      addMenuItem(menu, title, icon, () => void openFileAs(plugin, file, leaf, type));
     }
   }));
 

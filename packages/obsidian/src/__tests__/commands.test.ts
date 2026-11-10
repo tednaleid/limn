@@ -7,8 +7,9 @@ import type { App, Command } from "obsidian";
 import type LimnPlugin from "../main";
 import {
   nextFreeNotePath, MARKED_NOTE_CONTENT, createMindMapNote, addMindMapMarker, registerMarkdownCommands,
+  fileMenuViewTypes,
 } from "../markdown/commands";
-import { VIEW_TYPE_LIMN_MARKDOWN } from "../markdown/routing";
+import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "../markdown/routing";
 
 // The real obsidian typings don't declare `lastState` (it's a test-only recorder added by the
 // runtime stand-in), so a leaf that reads it is cast to this shape.
@@ -104,5 +105,21 @@ describe("registerMarkdownCommands: open-as-markdown", () => {
     leaf.view = { getViewType: () => VIEW_TYPE_LIMN_MARKDOWN } as unknown as WorkspaceLeaf["view"];
     expect(checkCallback(true)).toBe(true);
     expect(leaf.lastState).toBeNull();
+  });
+});
+
+describe("fileMenuViewTypes", () => {
+  it("offers Markdown for a pane that shows the note as a map", () => {
+    expect(fileMenuViewTypes(VIEW_TYPE_LIMN_MARKDOWN, true)).toEqual([MARKDOWN_VIEW_TYPE]);
+    expect(fileMenuViewTypes(VIEW_TYPE_LIMN_MARKDOWN, false)).toEqual([MARKDOWN_VIEW_TYPE]);
+  });
+  it("offers the map for a pane that shows the note as Markdown", () => {
+    expect(fileMenuViewTypes(MARKDOWN_VIEW_TYPE, true)).toEqual([VIEW_TYPE_LIMN_MARKDOWN]);
+  });
+  it("offers both for a marked note picked in the file browser", () => {
+    expect(fileMenuViewTypes(undefined, true)).toEqual([VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE]);
+  });
+  it("offers only the map for an unmarked note picked in the file browser", () => {
+    expect(fileMenuViewTypes(undefined, false)).toEqual([VIEW_TYPE_LIMN_MARKDOWN]);
   });
 });

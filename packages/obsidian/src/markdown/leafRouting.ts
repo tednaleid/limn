@@ -59,6 +59,7 @@ export async function openLeafAs(plugin: LimnPlugin, leaf: WorkspaceLeaf, type: 
 /** Open a note in the given leaf (or a new one) as the requested view, remembering the choice. */
 export async function openFileAs(plugin: LimnPlugin, file: TFile, leaf: WorkspaceLeaf | undefined, type: NoteViewType): Promise<void> {
   const target = leaf ?? plugin.app.workspace.getLeaf(false);
+  if (target.view instanceof FileView && target.view.file === file) return openLeafAs(plugin, target, type);
   rememberChoice(plugin.leafChoices, target, file.path, type);
   await target.openFile(file);
 }
