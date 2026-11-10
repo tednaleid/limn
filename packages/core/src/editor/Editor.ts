@@ -408,8 +408,8 @@ export class Editor {
     return { minX, minY, maxX, maxY };
   }
 
-  /** Zoom to fit all visible nodes in the given viewport dimensions. */
-  zoomToFit(viewportWidth: number, viewportHeight: number): void {
+  /** Zoom to fit all visible nodes in the given viewport dimensions, magnifying no further than `maxZoom`. */
+  zoomToFit(viewportWidth: number, viewportHeight: number, maxZoom = 3): void {
     const bounds = this.getContentBounds();
     if (!bounds) {
       this.camera = { x: 0, y: 0, zoom: 1 };
@@ -422,7 +422,7 @@ export class Editor {
     const contentH = maxY - minY;
     const padding = 40;
     const zoom = Math.min(
-      3,
+      maxZoom,
       Math.max(0.1, Math.min(
         (viewportWidth - padding * 2) / contentW,
         (viewportHeight - padding * 2) / contentH,

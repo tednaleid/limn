@@ -148,7 +148,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 
 - `getViewType()` returns `limn-markdown-view`; `canAcceptExtension(ext)` returns `ext === "md"`; icon `git-branch`; display text is the note's basename.
 - Owns one `Editor` created with `OUTLINE_CAPABILITIES`, the shared `ObsidianTextMeasurer`, and mounts the shared `LimnViewRoot` (extracted from `LimnView.ts` into its own module so both views use it).
-- `setViewData(text, clear)`: `parsed = parseOutline(text)`; convert to `MindMapFileFormat` with placeholder positions; if `clear` then `editor.loadJSON(...)` else `editor.applyExternalUpdate(reconciled)`; store `parsed.frontmatter` and `parsed.regions` plus the root-to-region map; `remeasureAllNodes()`; `relayoutAll()`; kick off image size resolution (8.3). If `clear`, also reset camera to fit.
+- `setViewData(text, clear)`: `parsed = parseOutline(text)`; convert to `MindMapFileFormat` with placeholder positions; if `clear` then `editor.loadJSON(...)` else `editor.applyExternalUpdate(reconciled)`; store `parsed.frontmatter` and `parsed.regions` plus the root-to-region map; `remeasureAllNodes()`; `relayoutAll()`; kick off image size resolution (8.3). If `clear`, also center the map, zoomed out to fit when it is larger than the pane and at 100% otherwise.
 - `getViewData()`: `writeOutline(currentParsed)` where `currentParsed` is rebuilt from the Editor's roots plus the stored prose regions and root-to-region map. Must be deterministic and cheap; called by the base class on save and on external change.
 - `clear()`: `editor.clear()`, drop regions and image cache.
 - Blocked documents: when `findOutlineIssues` reports issues, `OutlineDocument` does not parse the note into the map. On a fresh load the Editor is emptied; on an external update the Editor is left as it is and the view switches the pane away (8.4). While blocked, the document never requests a save and `getViewData()` returns the on-disk text unchanged. Loading supported text, or `clear()`, unblocks it.
@@ -158,7 +158,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 - Do not override `onModify`, `onLoadFile`, or `onUnloadFile`; the base class behavior is the sync design.
 - No `AutoSaveController` in this view; `requestSave` is the debounce.
 - Theming: `contentEl.addClass("limn-view")` as `LimnView` does; theme mode follows the plugin setting (system by default).
-- Pane menu (`onPaneMenu`): "Open as Markdown".
+- Pane menu: "Open as Markdown" comes from the `file-menu` handler (7.3), which Obsidian runs for the pane menu too.
 
 ### 7.2 Routing marked notes
 

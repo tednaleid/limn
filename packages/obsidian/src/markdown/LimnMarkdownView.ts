@@ -1,7 +1,7 @@
 // ABOUTME: TextFileView that shows a Markdown note's nested bullet lists as an editable mind map.
 // ABOUTME: Obsidian's TextFileView owns loading, saving, echo suppression, and merging; this view converts.
 
-import { Notice, TextFileView, type WorkspaceLeaf, type Menu } from "obsidian";
+import { Notice, TextFileView, type WorkspaceLeaf } from "obsidian";
 import type { Root } from "react-dom/client";
 import { Editor, OUTLINE_CAPABILITIES } from "@limn/core";
 import type { AssetAddedDetail } from "@limn/web/limn-window";
@@ -113,22 +113,15 @@ export class LimnMarkdownView extends TextFileView {
     this.assetUrls.clear();
   }
 
-  onPaneMenu(menu: Menu, source: string): void {
-    super.onPaneMenu(menu, source);
-    menu.addItem((item) => item
-      .setTitle("Open as Markdown")
-      .setIcon("file-text")
-      .onClick(() => void openLeafAs(this.plugin, this.leaf, MARKDOWN_VIEW_TYPE)));
-  }
-
   /** Apply the theme from plugin settings (used when the setting changes in the settings tab). */
   applyThemeSetting(): void {
     this.editor.setTheme(this.plugin.settings.themeMode);
   }
 
+  /** A freshly opened map is centered at its natural size, shrinking only when it does not fit. */
   private fitCamera(): void {
     const { clientWidth, clientHeight } = this.contentEl;
-    if (clientWidth > 0 && clientHeight > 0) this.editor.zoomToFit(clientWidth, clientHeight);
+    if (clientWidth > 0 && clientHeight > 0) this.editor.zoomToFit(clientWidth, clientHeight, 1);
     else this.editor.setCamera(40, 40, 1);
   }
 

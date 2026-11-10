@@ -637,6 +637,21 @@ describe("Editor", () => {
       expect(cam.zoom).toBeLessThanOrEqual(3);
     });
 
+    test("zoomToFit with a zoom cap centers small content without magnifying it", () => {
+      const bounds = editor.getContentBounds();
+      if (!bounds) throw new Error("expected content");
+      editor.zoomToFit(8000, 6000, 1);
+      const cam = editor.getCamera();
+      expect(cam.zoom).toBe(1);
+      expect(cam.x + (bounds.minX + bounds.maxX) / 2).toBeCloseTo(4000);
+      expect(cam.y + (bounds.minY + bounds.maxY) / 2).toBeCloseTo(3000);
+    });
+
+    test("zoomToFit with a zoom cap still zooms out for large content", () => {
+      editor.zoomToFit(200, 150, 1);
+      expect(editor.getCamera().zoom).toBeLessThan(1);
+    });
+
     test("zoomToNode centers on the given node", () => {
       editor.setCamera(0, 0, 1);
       editor.zoomToNode("n3", 800, 600);
