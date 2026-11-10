@@ -2,11 +2,11 @@
 // ABOUTME: Pure TypeScript with no Obsidian or DOM dependencies so the sync rules are unit-testable.
 
 import {
-  parseOutline, writeOutline, writeNodes, outlineToFileNodes, fileNodesToOutline, generateNodeId,
+  parseOutline, writeOutline, findOutlineIssues, writeNodes, outlineToFileNodes, fileNodesToOutline, generateNodeId,
   CURRENT_FORMAT_VERSION,
 } from "@limn/core";
 import type {
-  Editor, Asset, MindMapFileFormat, MindMapFileNode, OutlineNode, OutlineRegion, ParsedOutline,
+  Editor, Asset, MindMapFileFormat, MindMapFileNode, OutlineIssue, OutlineNode, OutlineRegion, ParsedOutline,
 } from "@limn/core";
 
 /** Theme the map is drawn with; the note stores none, so the host supplies it. */
@@ -73,6 +73,8 @@ export class OutlineDocument {
   /** Exact text last loaded from or written to disk. */
   private diskText = "";
   private loading = false;
+  /** Markdown in the note that the map cannot round-trip; while non-empty the note is untouched. */
+  private issues: OutlineIssue[] = [];
   private readonly docId = crypto.randomUUID();
 
   constructor(readonly editor: Editor, private readonly theme: () => OutlineTheme) {}
@@ -82,6 +84,12 @@ export class OutlineDocument {
    * elsewhere and is merged into the current map, keeping ids (and so selection) where nodes match.
    */
   load(text: string, clear: boolean): void {
+    this.issues = findOutlineIssues(text);
+    if (this.issues.length > 0) {
+      if (clear) this.emptyEditor();
+      this.diskText = text;
+      return;
+    }
     if (!clear) this.rememberNaturalSizes();
     const parsed = parseOutline(text);
     const roots: MindMapFileNode[] = [];
@@ -121,6 +129,10 @@ export class OutlineDocument {
     this.diskText = text;
   }
 
+  get blockedBy(): readonly OutlineIssue[] {
+    return this.issues;
+  }
+
   /** The note text for the current map: prose regions verbatim, list regions regenerated. */
   text(): string {
     const regions = this.parsed.regions.slice();
@@ -154,6 +166,7 @@ export class OutlineDocument {
    *  last written, so viewing a note never rewrites it; after a change the map counts as in step
    *  with the note. */
   viewData(): string {
+    if (this.issues.length > 0) return this.diskText;
     const text = this.text();
     if (text === this.baseline) return this.diskText;
     this.baseline = text;
@@ -165,6 +178,13 @@ export class OutlineDocument {
   clear(): void {
     this.parsed = { frontmatterLines: [], regions: [] };
     this.regionOfRoot = new Map();
+    this.issues = [];
+    this.emptyEditor();
+    this.baseline = "";
+    this.diskText = "";
+  }
+
+  private emptyEditor(): void {
     this.loading = true;
     try {
       this.editor.loadJSON({
@@ -177,8 +197,6 @@ export class OutlineDocument {
     } finally {
       this.loading = false;
     }
-    this.baseline = "";
-    this.diskText = "";
   }
 
   /**
@@ -188,7 +206,7 @@ export class OutlineDocument {
    */
   attach(host: SaveHost): () => void {
     return this.editor.subscribe(() => {
-      if (this.loading) return;
+      if (this.loading || this.issues.length > 0) return;
       const text = this.text();
       if (text !== host.data && text !== this.baseline) host.requestSave();
     });

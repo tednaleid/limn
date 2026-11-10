@@ -1,7 +1,7 @@
 // ABOUTME: TextFileView that shows a Markdown note's nested bullet lists as an editable mind map.
 // ABOUTME: Obsidian's TextFileView owns loading, saving, echo suppression, and merging; this view converts.
 
-import { TextFileView, type WorkspaceLeaf, type Menu } from "obsidian";
+import { Notice, TextFileView, type WorkspaceLeaf, type Menu } from "obsidian";
 import type { Root } from "react-dom/client";
 import { Editor, OUTLINE_CAPABILITIES } from "@limn/core";
 import type { AssetAddedDetail } from "@limn/web/limn-window";
@@ -9,6 +9,7 @@ import type LimnPlugin from "../main";
 import { createDomTextMeasurer } from "../ObsidianTextMeasurer";
 import { mountLimnRoot } from "../LimnViewRoot";
 import { applyThemeToContainer } from "../viewTheme";
+import { describeIssues } from "./unsupportedNotice";
 import { OutlineDocument } from "./OutlineDocument";
 import { ObsidianOutlineAssetProvider } from "./ObsidianOutlineAssetProvider";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "./routing";
@@ -82,6 +83,10 @@ export class LimnMarkdownView extends TextFileView {
 
   setViewData(text: string, clear: boolean): void {
     this.doc.load(text, clear);
+    if (this.doc.blockedBy.length > 0) {
+      this.refuse();
+      return;
+    }
     if (clear) {
       this.fitCamera();
       this.assetUrls.clear();
@@ -89,6 +94,17 @@ export class LimnMarkdownView extends TextFileView {
     applyThemeToContainer(this.contentEl, this.editor);
     if (!this.reactRoot) this.reactRoot = mountLimnRoot(this.contentEl, this.editor, this.provider);
     this.announceNewAssets();
+  }
+
+  /** Tell the user why and hand the pane to the Markdown editor. Deferred because Obsidian is
+   *  still loading the file into this view when setViewData runs. */
+  private refuse(): void {
+    new Notice(describeIssues(this.doc.blockedBy), 10000);
+    const leaf = this.leaf;
+    window.setTimeout(() => {
+      void openLeafAs(this.plugin, leaf, MARKDOWN_VIEW_TYPE)
+        .catch((err: unknown) => { console.error("Failed to open note as Markdown:", err); });
+    }, 0);
   }
 
   clear(): void {

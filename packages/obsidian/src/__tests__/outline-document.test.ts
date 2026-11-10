@@ -277,3 +277,50 @@ describe("OutlineDocument.clear", () => {
     expect(doc.text()).toBe("");
   });
 });
+
+describe("OutlineDocument with a note it cannot round-trip", () => {
+  beforeEach(() => resetIdCounter());
+  const UNSUPPORTED = "---\nlimn-plugin: true\n---\n- parent\n  1. one\n  2. two\n";
+
+  it("blocks the note and hands back the exact text", () => {
+    const { editor, doc } = makeDoc();
+    doc.load(UNSUPPORTED, true);
+    expect(doc.blockedBy.map((i) => i.line)).toEqual([5, 6]);
+    expect(editor.getRoots()).toEqual([]);
+    expect(doc.viewData()).toBe(UNSUPPORTED);
+  });
+
+  it("never requests a save while blocked", () => {
+    const { editor, doc } = makeDoc();
+    const host = fakeHost(UNSUPPORTED);
+    doc.attach(host);
+    doc.load(UNSUPPORTED, true);
+    editor.addRoot("typed");
+    expect(host.requestSave).not.toHaveBeenCalled();
+    expect(doc.viewData()).toBe(UNSUPPORTED);
+  });
+
+  it("drops unsaved map edits when an external change makes the note unsupported", () => {
+    const { editor, doc } = makeDoc();
+    doc.load("- a\n", true);
+    editor.addRoot("dirty");
+    doc.load(UNSUPPORTED, false);
+    expect(doc.blockedBy.length).toBe(2);
+    expect(doc.viewData()).toBe(UNSUPPORTED);
+  });
+
+  it("unblocks when supported text is loaded", () => {
+    const { editor, doc } = makeDoc();
+    doc.load(UNSUPPORTED, true);
+    doc.load("- a\n", true);
+    expect(doc.blockedBy).toEqual([]);
+    expect(editor.getRoots()).toHaveLength(1);
+  });
+
+  it("unblocks on clear", () => {
+    const { doc } = makeDoc();
+    doc.load(UNSUPPORTED, true);
+    doc.clear();
+    expect(doc.blockedBy).toEqual([]);
+  });
+});
