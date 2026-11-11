@@ -71,6 +71,11 @@ blank lines between items. Positions, side, width, and colors are not stored in 
 is always computed, with all children on the right, and the nudge, side flip, width resize, and
 color actions are off in this view (and hidden from the `?` shortcut help).
 
+The backslash on a continued line is part of that line for plugins that read the note line by
+line. A Dataview or Tasks inline field (`key:: value`) on a continuation line that is not the
+item's last gains a trailing backslash in its value. This is accepted and documented in the README;
+such notes are not refused.
+
 ### Notes the map refuses
 
 The map only opens a note it can write back unchanged. A note with a numbered list, quote,

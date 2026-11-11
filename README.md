@@ -24,7 +24,7 @@ just serve       # starts Vite dev server at http://localhost:5173
 ```
 packages/core/       # Framework-agnostic TS library (no React, no browser APIs)
 packages/web/        # React web app (rendering, input handling, persistence)
-packages/obsidian/   # Obsidian plugin (opens .limn files inside Obsidian)
+packages/obsidian/   # Obsidian plugin (opens .limn files and marked Markdown notes as mind maps)
 ```
 
 ## Development commands
@@ -167,7 +167,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 
 ## Obsidian plugin
 
-Limn is available as an [Obsidian community plugin](https://community.obsidian.md/plugins/limn) that opens `.limn` files as interactive mind map views.
+Limn is available as an [Obsidian community plugin](https://community.obsidian.md/plugins/limn) that opens `.limn` files as interactive mind map views. It can also show an ordinary Markdown note as a mind map.
 
 ### Install from the Community Plugins directory
 
@@ -184,6 +184,27 @@ If you want the latest unreleased build, install via [BRAT](https://github.com/T
 3. Enable "Limn" in Settings -> Community plugins
 
 BRAT will install the latest release and keep it updated automatically.
+
+### Markdown notes as mind maps
+
+A Markdown note whose content is a bulleted list can be opened as a mind map. Each top-level bullet is a root, nested bullets are its children, and edits in the map are written back to the note as Markdown.
+
+```markdown
+---
+limn-plugin: true
+---
+- Release
+  - Write the notes
+  - Tag the build
+```
+
+- **Marking a note:** a note with `limn-plugin: true` in its frontmatter opens as a map when you click it. The commands "Create new mind map note" and "Add mind map marker to note" add the marker for you. The setting "Open notes with limn-plugin: true as" turns this off.
+- **Switching views:** "Open as mind map" and "Open as Markdown" are in the command palette, the pane menu, and the right-click menu of a note. They work on any note, marked or not. Both views can be open side by side and each follows edits made in the other.
+- **What is kept:** text outside the list (frontmatter, paragraphs, numbered lists, code blocks) is left as it is. `[[wikilinks]]` work as links in the map, and images are stored as `![[image.png]]` embeds.
+- **What is not kept:** the note holds no layout. Node positions, sides, widths, and colors are computed each time, and the actions that change them are off in this view. Use a `.limn` file when you need those.
+- **Formatting changes on save:** the first map edit rewrites the list with consistent indentation, bullet markers, and blank lines. `-` marks an open bullet and `*` a collapsed one. A bullet with several lines of text gets a trailing `\` on every line but the last.
+- **Dataview and Tasks fields:** because of that trailing `\`, an inline field on a continuation line of a bullet (a line such as `due:: 2026-11-12` under the bullet's first line) gains a backslash at the end of its value, which can break queries that read it. Fields on the bullet's own line, in frontmatter, or outside the list are not affected.
+- **Notes the map will not open:** if a bullet contains something the map cannot write back unchanged, such as a heading, table, quote, or numbered list inside the bullet, the note opens as Markdown with a notice naming the lines. The note is not modified.
 
 ### Development
 
