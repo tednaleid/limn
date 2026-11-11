@@ -22,11 +22,15 @@ async function createMap(): Promise<void> {
   await addChild("Root", "Two");
 }
 
-/** Close the pane, which saves, then open the file again. */
+/**
+ * Close the pane, which saves, then open the file again. The closing pane's save can land after the
+ * file is reopened, in which case the new view loads it when it arrives, so wait for the nodes.
+ */
 async function reopen(): Promise<void> {
   await closePane(0);
   await openNote(FILE);
   await browser.waitUntil(async () => (await viewTypes())[0] === LIMN_VIEW, { timeoutMsg: "the file never reopened as a map" });
+  await browser.waitUntil(async () => (await mapTexts()).length > 0, { timeoutMsg: "the saved map never appeared" });
 }
 
 describe(".limn files", function () {
@@ -111,6 +115,7 @@ describe(".limn files", function () {
     expect(await fileExists(FILE)).toBe(false);
     await openNote("Renamed.limn");
     await browser.waitUntil(async () => (await viewTypes())[0] === LIMN_VIEW, { timeoutMsg: "the renamed file never reopened as a map" });
+    await browser.waitUntil(async () => (await mapTexts()).length > 0, { timeoutMsg: "the saved map never appeared" });
     expect(await mapTexts()).toEqual(["Root", "One", "Two", "After rename"]);
   });
 
