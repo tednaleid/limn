@@ -35,16 +35,11 @@ jobs:
           path: packages/obsidian/.obsidian-cache
           key: obsidian-cache-${{ runner.os }}-${{ steps.week.outputs.week }}
 
-      # Obsidian needs a display and a window manager; the runner has neither.
-      - name: Set up virtual display
+      # Obsidian needs a display; the runner has none. Xvfb is part of the runner image.
+      - name: Start virtual display
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -q -y herbstluftwm x11-xserver-utils
-          export DISPLAY=:99
-          echo "DISPLAY=$DISPLAY" >> "$GITHUB_ENV"
-          Xvfb $DISPLAY -screen 0 1280x1024x24 +extension GLX -noreset &
-          sleep 1
-          herbstluftwm &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+          Xvfb :99 -screen 0 1280x1024x24 +extension GLX -noreset &
           sleep 1
 
       - name: Run end-to-end tests
