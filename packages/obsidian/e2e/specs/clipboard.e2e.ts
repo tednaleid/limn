@@ -3,8 +3,8 @@
 
 import { browser, expect, $ } from "@wdio/globals";
 import {
-  LIMN_VIEW, MAP_VIEW, MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector, mapTexts, clickNode,
-  typeIntoNode, addChild, readNote, waitForNote, copyFromMap, pasteTextIntoMap,
+  LIMN_VIEW, MAP_VIEW, MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector, mapTexts,
+  waitForMapTexts, clickNode, typeIntoNode, addChild, readNote, waitForNote, copyFromMap, pasteTextIntoMap,
 } from "../helpers";
 
 const FILE = "Untitled.limn";
@@ -39,7 +39,7 @@ describe("Copy, cut, and paste in a .limn file", function () {
 
     await clickNode("Root");
     await pasteTextIntoMap("- A\n  - A1");
-    expect(await mapTexts()).toEqual(["Root", "A", "A1", "A", "A1"]);
+    await waitForMapTexts(["Root", "A", "A1", "A", "A1"]);
 
     await reopen();
     expect(await mapTexts()).toEqual(["Root", "A", "A1", "A", "A1"]);
@@ -50,11 +50,11 @@ describe("Copy, cut, and paste in a .limn file", function () {
     await clickNode("A");
     const cut = await copyFromMap("cut");
     expect(cut).toBe("- A\n  - A1");
-    expect(await mapTexts()).toEqual(["Root"]);
+    await waitForMapTexts(["Root"]);
 
     await clickNode("Root");
     await pasteTextIntoMap(cut);
-    expect(await mapTexts()).toEqual(["Root", "A", "A1"]);
+    await waitForMapTexts(["Root", "A", "A1"]);
   });
 
   it("copies and pastes with the real keys", async function () {
@@ -63,8 +63,7 @@ describe("Copy, cut, and paste in a .limn file", function () {
     await browser.keys([MOD, "c"]);
     await clickNode("Root");
     await browser.keys([MOD, "v"]);
-    await browser.waitUntil(async () => (await mapTexts()).length === 5, { timeoutMsg: "the pasted subtree never appeared" });
-    expect(await mapTexts()).toEqual(["Root", "A", "A1", "A", "A1"]);
+    await waitForMapTexts(["Root", "A", "A1", "A", "A1"]);
   });
 });
 
@@ -81,13 +80,30 @@ describe("Copy, cut, and paste in a Markdown-backed map", function () {
     );
   });
 
-  it("copies a node with its children as the note's own lines", async function () {
-    await openNote("marked.md");
-    await clickNode("Root");
+  it("copies a nested node with its children as the note's own lines without their indent", async function () {
+    await openNote("nested.md");
+    await clickNode("Branch");
     const copied = await copyFromMap("copy");
-    const note = await readNote("marked.md");
-    expect(copied).toBe("- Root\n  - First\n  - Second");
-    expect(note).toContain(`\n${copied}\n`);
+    const note = await readNote("nested.md");
+    expect(copied).toBe("- Branch\n  - Leaf one\n  - Leaf two");
+    const indented = copied.split("\n").map((line) => `  ${line}`).join("\n");
+    expect(note).toContain(`\n${indented}\n`);
+  });
+
+  it("cuts a node with its children out of the note and pastes them under another item", async function () {
+    await openNote("nested.md");
+    await clickNode("Branch");
+    const cut = await copyFromMap("cut");
+    expect(cut).toBe("- Branch\n  - Leaf one\n  - Leaf two");
+    const afterCut = await waitForNote("nested.md", (t) => !t.includes("Branch"), "the cut lines never left the note");
+    expect(afterCut).toBe("---\nlimn-plugin: true\n---\n# A nested note\n\n- Root\n  - Other\n");
+
+    await clickNode("Other");
+    await pasteTextIntoMap(cut);
+    const afterPaste = await waitForNote("nested.md", (t) => t.includes("Branch"), "the pasted lines never reached the note");
+    expect(afterPaste).toBe(
+      "---\nlimn-plugin: true\n---\n# A nested note\n\n- Root\n  - Other\n    - Branch\n      - Leaf one\n      - Leaf two\n",
+    );
   });
 
   it("pastes only into the active pane", async function () {
@@ -99,7 +115,7 @@ describe("Copy, cut, and paste in a Markdown-backed map", function () {
     await clickNode("Root", 0);
     await clickNode("Other map", 1);
     await pasteTextIntoMap("- Only here");
-    expect(await mapTexts(1)).toContain("Only here");
+    await browser.waitUntil(async () => (await mapTexts(1)).includes("Only here"), { timeoutMsg: "the paste never reached the active pane" });
     expect(await mapTexts(0)).toEqual(before);
   });
 });

@@ -153,6 +153,15 @@ export function mapTexts(pane = 0): Promise<string[]> {
   }, pane);
 }
 
+/** Wait until a pane's map holds exactly the given node texts, depth first. */
+export async function waitForMapTexts(expected: string[], pane = 0): Promise<void> {
+  let texts: string[] = [];
+  await browser.waitUntil(async () => {
+    texts = await mapTexts(pane);
+    return JSON.stringify(texts) === JSON.stringify(expected);
+  }, { timeoutMsg: `pane ${pane} never showed ${JSON.stringify(expected)}; it showed ${JSON.stringify(texts)}` });
+}
+
 /** How a pane's map is drawn: the zoom, the widest node as laid out, and how many nodes are in the DOM. */
 export function mapDrawing(pane = 0): Promise<{ zoom: number; widestNode: number; drawnNodes: number }> {
   return browser.executeObsidian(({ app }, i) => {
