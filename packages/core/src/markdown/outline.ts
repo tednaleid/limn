@@ -2,6 +2,7 @@
 // ABOUTME: Line-based parser and writer over prose regions and list regions.
 
 import type { MindMapFileNode } from "../serialization/schema";
+import type { ImageRef } from "../model/types";
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from "../store/MindMapStore";
 
 export interface OutlineImage {
@@ -549,16 +550,20 @@ export function outlineToFileNodes(nodes: OutlineNode[], nextId: () => string): 
       children: [],
     };
     if (node.collapsed) file.collapsed = true;
-    if (node.image) {
-      file.image = {
-        assetId: node.image.target,
-        width: node.image.width ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
-        height: node.image.height ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
-      };
-    }
+    if (node.image) file.image = outlineImageToRef(node.image);
     file.children = outlineToFileNodes(node.children, nextId);
     return file;
   });
+}
+
+/** Stored image reference for an outline image; a dimension the note did not specify is
+ *  OUTLINE_IMAGE_UNKNOWN_SIZE. */
+export function outlineImageToRef(image: OutlineImage): ImageRef {
+  return {
+    assetId: image.target,
+    width: image.width ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
+    height: image.height ?? OUTLINE_IMAGE_UNKNOWN_SIZE,
+  };
 }
 
 /** Outline image for a stored image reference, keeping only the dimensions the note specified. */

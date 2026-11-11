@@ -389,6 +389,22 @@ export function resolveTreeOverlap(
 }
 
 /**
+ * Lay out a root's tree from structure alone with the root at (x, y): children to the
+ * right of their parent, each subtree centered on its parent, collapsed subtrees included.
+ */
+export function layoutTreeAt(store: MindMapStore, rootId: string, x: number, y: number): void {
+  store.setNodePosition(rootId, x, y);
+  reflowSubtree(store, rootId, 1);
+  relayoutSubtree(store, rootId, true);
+}
+
+/** Shift a root's tree so its visible bounding box starts TREE_PADDING below `bottom`. */
+export function placeTreeBelow(store: MindMapStore, rootId: string, bottom: number): void {
+  const box = treeBoundingBox(store, rootId);
+  shiftSubtree(store, rootId, bottom + TREE_PADDING - box.minY);
+}
+
+/**
  * Lay out every tree from structure alone: children to the right of their parent,
  * each subtree centered on its parent, roots stacked top to bottom in root order
  * with TREE_PADDING between visible bounding boxes. Deterministic for a given set
@@ -397,14 +413,11 @@ export function resolveTreeOverlap(
 export function relayoutAll(store: MindMapStore): void {
   let previousBottom: number | null = null;
   for (const root of store.getRoots()) {
-    store.setNodePosition(root.id, 0, root.y);
-    reflowSubtree(store, root.id, 1);
-    relayoutSubtree(store, root.id, true);
+    layoutTreeAt(store, root.id, 0, root.y);
     if (previousBottom === null) {
       shiftSubtree(store, root.id, -store.getNode(root.id).y);
     } else {
-      const box = treeBoundingBox(store, root.id);
-      shiftSubtree(store, root.id, previousBottom + TREE_PADDING - box.minY);
+      placeTreeBelow(store, root.id, previousBottom);
     }
     previousBottom = treeBoundingBox(store, root.id).maxY;
   }

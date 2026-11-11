@@ -9,6 +9,8 @@ import { reconcileIds } from "../serialization/reconcile";
 import {
   branchDirection,
   childXFromParent,
+  layoutTreeAt,
+  placeTreeBelow,
   positionNewChild,
   positionNewSibling,
   reflowSubtree,
@@ -17,7 +19,9 @@ import {
   relayoutFromNode,
   relayoutSubtree,
   resolveTreeOverlap,
+  treeBoundingBox,
 } from "../layout/layout";
+import { type OutlineNode, outlineImageToRef, parseSubtree } from "../markdown/outline";
 import { nextBranchColorIndex } from "../theme/palette";
 import { resolveTheme, DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME, BRANCH_COUNT } from "../theme/theme";
 import type { ThemeDefinition } from "../theme/theme";
@@ -633,8 +637,9 @@ export class Editor {
       refX = sel.x + sel.width / 2;
       refY = sel.y + sel.height / 2;
     } else {
-      refX = (this.viewportWidth / 2 - this.camera.x) / this.camera.zoom;
-      refY = (this.viewportHeight / 2 - this.camera.y) / this.camera.zoom;
+      const center = this.viewportCenterInWorld();
+      refX = center.x;
+      refY = center.y;
     }
 
     const newState = enterEasyMotion(this.store.getVisibleNodes(), this.selectedId, refX, refY);
@@ -762,13 +767,7 @@ export class Editor {
   addRoot(text = "", x = 0, y = 0): string {
     this.pushUndo("add-root");
     const id = this.store.addRoot(text, x, y);
-    // Auto-assign a branch colorIndex from the palette
-    const existingIndices = this.store.getRoots()
-      .filter((r) => r.id !== id)
-      .map((r) => r.style?.colorIndex)
-      .filter((c): c is number => c !== undefined);
-    const node = this.store.getNode(id);
-    node.style = { ...node.style, colorIndex: nextBranchColorIndex(existingIndices) };
+    this.assignNextRootColor(id);
     this.remeasureNode(id);
     this.selectedId = id;
     this.editing = true;
@@ -820,13 +819,7 @@ export class Editor {
     this.pushUndo("detach-to-root");
     this.store.detachToRoot(nodeId);
     this.remeasureNode(nodeId);
-    // Auto-assign a branch colorIndex like new roots get
-    const existingIndices = this.store.getRoots()
-      .filter((r) => r.id !== nodeId)
-      .map((r) => r.style?.colorIndex)
-      .filter((c): c is number => c !== undefined);
-    const detached = this.store.getNode(nodeId);
-    detached.style = { ...detached.style, colorIndex: nextBranchColorIndex(existingIndices) };
+    this.assignNextRootColor(nodeId);
     this.resolveOverlapForNode(nodeId);
     this.notify();
   }
@@ -1563,6 +1556,88 @@ export class Editor {
     this.notify();
   }
 
+  /**
+   * Add the bullet lists in `text` as nodes: children of the selected node, or roots when nothing
+   * is selected. Text without any bullet becomes a single node. Returns the top-level node ids.
+   */
+  pasteMarkdown(text: string): string[] {
+    let outline = parseSubtree(text);
+    if (outline.length === 0) {
+      const plain = text.trim();
+      if (plain === "") return [];
+      outline = [{ text: plain, collapsed: false, children: [] }];
+    }
+
+    this.pushUndo("paste");
+    const parentId = this.selectedId;
+    if (parentId !== null && this.store.getNode(parentId).collapsed) {
+      this.store.toggleCollapse(parentId);
+      relayoutFromNode(this.store, parentId);
+    }
+
+    const pasted = parentId !== null
+      ? this.pasteAsChildren(parentId, outline)
+      : this.pasteAsRoots(outline);
+
+    this.selectedId = pasted[0] ?? null;
+    this.editing = false;
+    if (this.selectedId !== null) this.ensureNodeVisible(this.selectedId);
+    this.notify();
+    return pasted;
+  }
+
+  /** Add outline nodes as the parent's last children, each subtree placed the way addChild places a child. */
+  private pasteAsChildren(parentId: string, outline: OutlineNode[]): string[] {
+    const sideHint = this.capabilities.sides ? undefined : 1;
+    const pasted = outline.map((node) => {
+      const id = this.store.addChild(parentId, node.text);
+      this.addOutlineContent(id, node);
+      positionNewChild(this.store, id, sideHint);
+      reflowSubtree(this.store, id);
+      relayoutSubtree(this.store, id, true);
+      return id;
+    });
+    relayoutFromNode(this.store, parentId);
+    this.resolveOverlapForNode(parentId);
+    return pasted;
+  }
+
+  /** Add outline nodes as roots at the viewport center, each tree stacked below the one before. */
+  private pasteAsRoots(outline: OutlineNode[]): string[] {
+    const center = this.viewportCenterInWorld();
+    const pasted: string[] = [];
+    let previousBottom: number | null = null;
+    for (const node of outline) {
+      const id = this.store.addRoot(node.text);
+      this.assignNextRootColor(id);
+      this.addOutlineContent(id, node);
+      layoutTreeAt(this.store, id, center.x, center.y);
+      if (previousBottom !== null) placeTreeBelow(this.store, id, previousBottom);
+      previousBottom = treeBoundingBox(this.store, id).maxY;
+      this.resolveOverlapForNode(id);
+      pasted.push(id);
+    }
+    return pasted;
+  }
+
+  /**
+   * Give a pasted node its image, size, descendants, and collapse state from the outline. The image
+   * is kept only when the document already has its asset.
+   */
+  private addOutlineContent(id: string, node: OutlineNode): void {
+    const image = node.image;
+    const asset = image && this.store.getAssets().find((a) => a.id === image.target);
+    if (image && asset) {
+      const ref = outlineImageToRef(image);
+      this.store.setNodeImage(id, asset, ref.width, ref.height);
+    }
+    this.remeasureNode(id);
+    for (const child of node.children) {
+      this.addOutlineContent(this.store.addChild(id, child.text), child);
+    }
+    if (node.collapsed && node.children.length > 0) this.store.toggleCollapse(id);
+  }
+
   toMarkdown(): string {
     return storeToMarkdown(this.store);
   }
@@ -1750,6 +1825,24 @@ export class Editor {
       this.selectedId = best;
       this.notify();
     }
+  }
+
+  /** The point in world coordinates at the center of the viewport. */
+  private viewportCenterInWorld(): { x: number; y: number } {
+    return {
+      x: (this.viewportWidth / 2 - this.camera.x) / this.camera.zoom,
+      y: (this.viewportHeight / 2 - this.camera.y) / this.camera.zoom,
+    };
+  }
+
+  /** Give a root the next branch colorIndex no other root uses, cycling when all are used. */
+  private assignNextRootColor(rootId: string): void {
+    const existingIndices = this.store.getRoots()
+      .filter((r) => r.id !== rootId)
+      .map((r) => r.style?.colorIndex)
+      .filter((c): c is number => c !== undefined);
+    const root = this.store.getNode(rootId);
+    root.style = { ...root.style, colorIndex: nextBranchColorIndex(existingIndices) };
   }
 
   /** Clear style.colorIndex from a node and all its descendants so they
