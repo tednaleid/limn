@@ -290,6 +290,25 @@ describe("serialization", () => {
       const result = validateFileFormat(invalid);
       expect(result.success).toBe(false);
     });
+
+    test("names the field and the type it expected", () => {
+      const invalid = {
+        ...sampleFile,
+        roots: [{ id: "bad", text: "t", x: "left", y: 0, width: 100, height: 32, children: [] }],
+      };
+      const issues = JSON.parse(validateFileFormat(invalid).error ?? "[]") as { path: unknown[]; expected: string }[];
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.path).toEqual(["roots", 0, "x"]);
+      expect(issues[0]?.expected).toBe("number");
+    });
+
+    test("accepts optional node fields and unknown style keys, and rejects a wrong optional type", () => {
+      const node = { id: "n", text: "t", x: 0, y: 0, width: 100, height: 32, children: [] };
+      const withOptional = { ...node, collapsed: true, widthConstrained: false, style: { color: "red", future: 1 } };
+      expect(validateFileFormat({ ...sampleFile, roots: [{ ...node, children: [withOptional] }] }).success).toBe(true);
+      expect(validateFileFormat({ ...sampleFile, roots: [{ ...node, collapsed: "yes" }] }).success).toBe(false);
+      expect(validateFileFormat({ ...sampleFile, roots: [{ ...node, children: [{ id: "deep" }] }] }).success).toBe(false);
+    });
   });
 
   describe("toMarkdown", () => {

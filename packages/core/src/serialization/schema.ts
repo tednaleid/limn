@@ -1,7 +1,8 @@
 // ABOUTME: Zod schema for the .limn file format.
 // ABOUTME: Validates file structure on load; defines file format types.
 
-import { z } from "zod/v4";
+// zod/mini is the tree-shakeable build: only the checks used here reach the bundle.
+import * as z from "zod/mini";
 
 /** Current file format version. Increment when the schema changes. */
 export const CURRENT_FORMAT_VERSION = 1;
@@ -14,17 +15,17 @@ const imageRefSchema = z.object({
 
 const nodeStyleSchema = z.looseObject({});
 
-const fileNodeSchema: z.ZodType<MindMapFileNode> = z.object({
+const fileNodeSchema: z.ZodMiniType<MindMapFileNode> = z.object({
   id: z.string(),
   text: z.string(),
   x: z.number(),
   y: z.number(),
   width: z.number(),
   height: z.number(),
-  widthConstrained: z.boolean().optional(),
-  collapsed: z.boolean().optional(),
-  style: nodeStyleSchema.optional(),
-  image: imageRefSchema.optional(),
+  widthConstrained: z.optional(z.boolean()),
+  collapsed: z.optional(z.boolean()),
+  style: z.optional(nodeStyleSchema),
+  image: z.optional(imageRefSchema),
   children: z.lazy(() => z.array(fileNodeSchema)),
 });
 
