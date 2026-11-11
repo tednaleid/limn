@@ -142,6 +142,8 @@ just obsidian-install <vault>  # Symlink dist/ into vault
 just obsidian-test      # Run obsidian package unit tests
 just obsidian-e2e       # Run end-to-end tests against a real Obsidian
 just check              # Run all tests + lint + typecheck (includes obsidian)
+just lint-obsidian      # Run the community scanner's lint rules; warnings fail
+just scorecard          # Scanner lint, dependency audit, and bundle checks
 ```
 
 ## Testing
@@ -218,6 +220,50 @@ Produces three files in `packages/obsidian/dist/`:
 - `main.js` -- bundled plugin
 - `manifest.json` -- plugin metadata
 - `styles.css` -- plugin styling
+
+### Keeping the scorecard green
+
+The plugin's page on community.obsidian.md shows a Review rating. It comes from automated
+scans of each release: a lint of the whole repository, a dependency audit, a rebuild that must
+match the released `main.js` byte for byte, and pattern checks on the bundle. A release with new
+findings drops the rating from Passed to Caution. The scan runs after the release, so the
+findings have to be caught here first.
+
+Before a release:
+
+1. `just scorecard`. It runs `just lint-obsidian`, `bun audit`, and the bundle checks.
+   - The lint must print nothing. Every warning is one finding on the scorecard. `just check`
+     and the pre-commit hook run it too.
+   - `bun audit` should list only the accepted advisories below. Fix a new one by raising the
+     dependency, or, for a transitive one, the entry in `overrides` in the root `package.json`.
+2. `just obsidian-e2e`.
+3. Check that `eslint-plugin-obsidianmd` is the latest release (`bun outdated`). The scanner
+   uses the current rule set; an older local copy misses rules the scanner applies.
+
+After the release, open the plugin in the developer dashboard at community.obsidian.md, start a
+scan, and read the Review section of the scorecard once it finishes. Record the result in the
+tracking table in `docs/specs/obsidian-plugin-review.md`.
+
+What the local lint cannot see, and how it is covered:
+
+- The scanner resolves every file against Obsidian's typings, so it reports
+  `document.createElement` in `packages/web` and `packages/core`, where the local typed rule is
+  silent. A `no-restricted-syntax` entry in `eslint.obsidian.config.js` reports the same calls.
+  Shared code creates elements with `getHost().newElement(tag)`.
+- The scanner lints `packages/obsidian/e2e`. The preset treats that folder as tests and skips
+  its Obsidian-runtime rules, so the config switches them back on there.
+- Never silence an `obsidianmd/*` rule with an `eslint-disable` comment: the scanner counts the
+  comment itself as an error and the rating drops to Failed.
+
+Accepted findings, which stay on the scorecard:
+
+- `Limn-X.Y.Z.dmg` listed as an extra release file. The desktop app shares the release;
+  Obsidian does not download it. A separate tag for the desktop app sent the plugin to manual
+  review, so the shared release stays.
+- `deepmerge` advisory, through `vite-plugin-pwa`. No fixed version exists, and it is build
+  tooling for the web app that never ships in the plugin.
+- The notes that the plugin writes vault files and calls `atob`/`btoa`. Both are disclosures;
+  the base64 calls are in the desktop app's bridge to its native side.
 
 ### GitHub release
 

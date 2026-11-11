@@ -229,6 +229,8 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 
 ## Pre-release checklist (run before each scorecard-refresh release)
 
+The standing checklist for every release is "Keeping the scorecard green" in `OBSIDIAN-PLUGIN.md`. The list below is the one used during the original cleanup.
+
 - [ ] All in-flight phase items checked.
 - [ ] `bunx tsc --noEmit` clean across the workspace.
 - [ ] `bunx eslint` clean for `packages/obsidian/src` and `packages/web/src`.
@@ -248,3 +250,4 @@ Current `just lint-obsidian` baseline (2026-05-12, before Phase 2 work):
 | 2026-05-13 | 0.9.16  | tbd     | tbd       | Completed | 2W        | root build → Obsidian plugin; !important removed via `.limn-view.limn-view`; dropped `text-indent` override. CSS warnings cleared; build still fails (esbuild needs git) |
 | 2026-05-13 | 0.9.17  | tbd     | tbd       | Completed | 2W        | esbuild gitSha fallback (build succeeds) but scanner expects main.js in repo-root `dist/` |
 | 2026-05-13 | 0.9.18  | tbd     | tbd       | Completed | 2W        | root `build` copies artifacts to repo-root `dist/`; scanner now runs a reproducibility byte-diff which fails (likely esbuild/bun version drift between release CI and scanner image). Stopping here — no confident, durable fix; accept as the residual build-verification warning. |
+| 2026-11-11 | 0.10.0  | n/a     | Excellent | Caution | 55          | Markdown-backed maps release. New source warnings: e2e specs linted by the scanner (extraneous `webdriverio`, `Vault.delete`, unneeded assertion), settings tab without `getSettingDefinitions`, plugin name in a command name, `createElement` in shared code; plus dependency advisories. Local lint was on plugin 0.3.0 and did not cover `e2e/`. |

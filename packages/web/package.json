@@ -29,7 +29,7 @@
   "dependencies": {
     "@limn/core": "workspace:*",
     "browser-fs-access": "^0.38.0",
-    "fflate": "^0.8.2",
+    "fflate": "^0.8.3",
     "idb-keyval": "^6.2.2",
     "preact": "^10.29.3",
     "react": "^19.0.0",

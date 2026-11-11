@@ -50,8 +50,8 @@ build:
 build-web:
     bun run build:web
 
-# Run tests, lint, type-check, and build Obsidian plugin (CI check)
-check: coverage lint typecheck obsidian-build
+# Run tests, both lints, type-check, and build Obsidian plugin (CI check)
+check: coverage lint lint-obsidian typecheck obsidian-build
 
 # Install pre-commit hook that runs `just check`
 install-hooks:
@@ -67,13 +67,17 @@ typecheck:
 obsidian-build:
     cd packages/obsidian && bun run build
 
-# Reproduce the Obsidian scorecard's failing automated checks locally, against
-# the BUILT bundle (what the server-side scanner inspects), so we can iterate
-# without pushing a release. See docs/specs/obsidian-plugin-review.md.
-scorecard: obsidian-build
+# Reproduce the Obsidian scorecard's automated checks locally: the scanner's
+# lint over the source, the dependency audit, and two checks against the BUILT
+# bundle (what the server-side scanner inspects). Run before every release.
+# See "Keeping the scorecard green" in OBSIDIAN-PLUGIN.md.
+scorecard: lint-obsidian obsidian-build
     #!/usr/bin/env bash
     set -uo pipefail
     bundle=packages/obsidian/dist/main.js
+    echo "== Source code (scanner: SOURCE CODE) =="
+    echo "   just lint-obsidian passed with no warnings"
+    echo
     echo "== Dependencies (scanner: DEPENDENCIES) =="
     bun audit || true
     echo
