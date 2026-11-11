@@ -176,6 +176,9 @@ file gets its own Obsidian on a throwaway copy of `packages/obsidian/e2e/vaults/
 the plugin loaded from `packages/obsidian/dist`. The run takes about half a minute and is not
 part of `just check`.
 
+GitHub Actions runs the suite on Linux for every push to `main` and every pull request
+(`.github/workflows/e2e.yml`), under a virtual display.
+
 Specs are in `packages/obsidian/e2e/specs/`:
 
 - `limn-files`: create a `.limn` file; add, edit, and delete nodes with the keyboard, close,

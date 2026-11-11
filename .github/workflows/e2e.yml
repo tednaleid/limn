@@ -2,7 +2,7 @@ name: End-to-end
 
 on:
   push:
-    branches: [main, e2e-ci]
+    branches: [main]
   pull_request:
     branches: [main]
 
