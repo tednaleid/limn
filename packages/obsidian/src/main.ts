@@ -10,7 +10,7 @@ import { LimnSettingTab } from "./LimnSettingTab";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE, hasMindMapMarker } from "./markdown/routing";
 import { installRoutingPatch, filePathOf, type LeafChoices } from "./markdown/leafRouting";
 import { LimnMarkdownView } from "./markdown/LimnMarkdownView";
-import { registerMarkdownCommands } from "./markdown/commands";
+import { registerMarkdownCommands, nextFreePath } from "./markdown/commands";
 
 export default class LimnPlugin extends Plugin {
   settings: LimnSettings = { ...DEFAULT_SETTINGS };
@@ -82,16 +82,11 @@ export default class LimnPlugin extends Plugin {
   }
 
   private async createNewFile(): Promise<void> {
-    const folder = this.app.vault.getRoot();
-    let name = "Untitled.limn";
-    let i = 1;
-    while (this.app.vault.getAbstractFileByPath(`${folder.path}${name}`)) {
-      name = `Untitled ${i}.limn`;
-      i++;
-    }
+    const root = this.app.vault.getRoot().path;
+    const path = nextFreePath(root, "limn", (p) => this.app.vault.getAbstractFileByPath(p) !== null);
     // Empty file; LimnView opens it as a blank document and writes a real
     // ZIP on first save (see loadLimnDocument).
-    const file = await this.app.vault.create(`${folder.path}${name}`, "");
+    const file = await this.app.vault.create(path, "");
     const leaf = this.app.workspace.getLeaf(false);
     await leaf.openFile(file);
   }

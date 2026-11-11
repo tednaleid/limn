@@ -6,7 +6,7 @@ import { TFile, WorkspaceLeaf } from "obsidian";
 import type { App, Command } from "obsidian";
 import type LimnPlugin from "../main";
 import {
-  nextFreeNotePath, MARKED_NOTE_CONTENT, createMindMapNote, addMindMapMarker, registerMarkdownCommands,
+  nextFreePath, MARKED_NOTE_CONTENT, createMindMapNote, addMindMapMarker, registerMarkdownCommands,
   fileMenuViewTypes,
 } from "../markdown/commands";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "../markdown/routing";
@@ -15,14 +15,20 @@ import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "../markdown/routing
 // runtime stand-in), so a leaf that reads it is cast to this shape.
 type MockLeaf = WorkspaceLeaf & { lastState: unknown };
 
-describe("nextFreeNotePath", () => {
+describe("nextFreePath", () => {
   it("counts up from Untitled inside the folder, and handles the vault root", () => {
     const taken = new Set(["Untitled.md", "Untitled 1.md", "notes/Untitled.md"]);
     const exists = (p: string) => taken.has(p);
-    expect(nextFreeNotePath("/", exists)).toBe("Untitled 2.md");
-    expect(nextFreeNotePath("", exists)).toBe("Untitled 2.md");
-    expect(nextFreeNotePath("notes", exists)).toBe("notes/Untitled 1.md");
-    expect(nextFreeNotePath("other", exists)).toBe("other/Untitled.md");
+    expect(nextFreePath("/", "md", exists)).toBe("Untitled 2.md");
+    expect(nextFreePath("", "md", exists)).toBe("Untitled 2.md");
+    expect(nextFreePath("notes", "md", exists)).toBe("notes/Untitled 1.md");
+    expect(nextFreePath("other", "md", exists)).toBe("other/Untitled.md");
+  });
+
+  it("counts each extension separately", () => {
+    const exists = (p: string) => p === "Untitled.limn";
+    expect(nextFreePath("/", "limn", exists)).toBe("Untitled 1.limn");
+    expect(nextFreePath("/", "md", exists)).toBe("Untitled.md");
   });
 });
 

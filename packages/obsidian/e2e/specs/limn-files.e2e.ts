@@ -40,6 +40,14 @@ describe(".limn files", function () {
     await expect($(`${await paneSelector(0)} [data-limn-canvas]`)).toExist();
   });
 
+  it("creates a second file beside the first", async function () {
+    await browser.executeObsidianCommand("limn:create-new");
+    await browser.waitUntil(() => fileExists(FILE), { timeoutMsg: "the first file was never created" });
+    await browser.executeObsidianCommand("limn:create-new");
+    await browser.waitUntil(() => fileExists("Untitled 1.limn"), { timeoutMsg: "the second file was never created" });
+    expect(await panePaths()).toEqual(["Untitled 1.limn"]);
+  });
+
   it("keeps nodes added, edited, and deleted with the keyboard after the file is closed and reopened", async function () {
     await createMap();
     expect(await mapTexts()).toEqual(["Root", "One", "Two"]);
@@ -104,5 +112,21 @@ describe(".limn files", function () {
     await openNote("Renamed.limn");
     await browser.waitUntil(async () => (await viewTypes())[0] === LIMN_VIEW, { timeoutMsg: "the renamed file never reopened as a map" });
     expect(await mapTexts()).toEqual(["Root", "One", "Two", "After rename"]);
+  });
+
+  it("leaves a file deleted when it is deleted while open with unsaved edits", async function () {
+    await createMap();
+    await browser.executeObsidian(async ({ app }, path) => {
+      const file = app.vault.getFileByPath(path);
+      if (!file) throw new Error(`No such file: ${path}`);
+      await app.vault.delete(file);
+    }, FILE);
+    await browser.waitUntil(async () => (await viewTypes()).every((type) => type !== LIMN_VIEW), {
+      timeoutMsg: "the map pane stayed open on a deleted file",
+    });
+    // Longer than the closing view takes to write a pending save.
+    await browser.pause(1000);
+    expect(await fileExists(FILE)).toBe(false);
+    expect(await browser.executeObsidian(({ app }, path) => app.vault.adapter.exists(path), FILE)).toBe(false);
   });
 });

@@ -136,6 +136,8 @@ export class LimnView extends FileView {
   /** Save the current document as a ZIP to the vault. */
   async saveToDisk(): Promise<void> {
     if (!this.file) return;
+    // A deleted file's view saves once more as it closes; writing then would bring the file back.
+    if (this.app.vault.getAbstractFileByPath(this.file.path) !== this.file) return;
     const data = this.editor.toJSON();
     const assetBlobs = this.provider.getAssetBlobs();
     const zipBlob = await buildLimnZip(data, assetBlobs);

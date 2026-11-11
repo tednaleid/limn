@@ -10,10 +10,10 @@ import { openLeafAs, openFileAs } from "./leafRouting";
 export const MARKED_NOTE_CONTENT = `---\n${MARKER_KEY}: true\n---\n`;
 
 /** "Untitled.md", then "Untitled 1.md", ... inside the folder, whichever does not exist yet. */
-export function nextFreeNotePath(folder: string, exists: (path: string) => boolean): string {
+export function nextFreePath(folder: string, extension: string, exists: (path: string) => boolean): string {
   const prefix = folder === "" || folder === "/" ? "" : `${folder}/`;
-  let candidate = `${prefix}Untitled.md`;
-  for (let i = 1; exists(candidate); i++) candidate = `${prefix}Untitled ${i}.md`;
+  let candidate = `${prefix}Untitled.${extension}`;
+  for (let i = 1; exists(candidate); i++) candidate = `${prefix}Untitled ${i}.${extension}`;
   return candidate;
 }
 
@@ -21,7 +21,7 @@ export function nextFreeNotePath(folder: string, exists: (path: string) => boole
 export async function createMindMapNote(plugin: LimnPlugin): Promise<void> {
   const { app } = plugin;
   const folder = app.fileManager.getNewFileParent(app.workspace.getActiveFile()?.path ?? "");
-  const path = nextFreeNotePath(folder.path, (p) => app.vault.getAbstractFileByPath(p) !== null);
+  const path = nextFreePath(folder.path, "md", (p) => app.vault.getAbstractFileByPath(p) !== null);
   const file = await app.vault.create(path, MARKED_NOTE_CONTENT);
   await openFileAs(plugin, file, undefined, VIEW_TYPE_LIMN_MARKDOWN);
 }
