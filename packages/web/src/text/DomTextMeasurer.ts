@@ -20,7 +20,7 @@ function getMeasureElement(): HTMLDivElement {
 }
 
 function createMeasureElement(container: HTMLElement): HTMLDivElement {
-  const el = getHost().doc.createElement("div");
+  const el = getHost().newElement("div");
   el.className = "limn-measure";
   // Static base styles (position, visibility, white-space: pre, width: auto,
   // box-sizing, font-family) live in the .limn-measure CSS class in
@@ -65,14 +65,14 @@ function populateWithMarkdown(el: HTMLDivElement, text: string): void {
     for (const seg of segments) {
       let node: Node = doc.createTextNode(seg.text);
       if (seg.style.code) {
-        const code = doc.createElement("code");
+        const code = getHost().newElement("code");
         code.className = "limn-code";
         code.appendChild(node);
         node = code;
       }
-      if (seg.style.bold) { const b = doc.createElement("b"); b.appendChild(node); node = b; }
-      if (seg.style.italic) { const em = doc.createElement("i"); em.appendChild(node); node = em; }
-      if (seg.style.strikethrough) { const s = doc.createElement("s"); s.appendChild(node); node = s; }
+      if (seg.style.bold) { const b = getHost().newElement("b"); b.appendChild(node); node = b; }
+      if (seg.style.italic) { const em = getHost().newElement("i"); em.appendChild(node); node = em; }
+      if (seg.style.strikethrough) { const s = getHost().newElement("s"); s.appendChild(node); node = s; }
       el.appendChild(node);
     }
   });

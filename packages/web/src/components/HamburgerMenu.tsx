@@ -322,7 +322,7 @@ export function HamburgerMenu({ items, showTheme = true, showShare = true, keyst
                   <MenuItem label="Export SVG" shortcut="Shift+Cmd+E" onClick={handleExport} active={focusIndex === idx++} />
                   {showShare && <MenuItem label="Copy Share Link" onClick={handleShare} active={focusIndex === idx++} />}
                   <MenuDivider />
-                  <MenuItem label="New" onClick={handleNew} active={focusIndex === idx++} />
+                  <MenuItem label="New" onClick={handleNew} active={focusIndex === idx} />
                 </>
               );
             })()

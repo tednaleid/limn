@@ -32,7 +32,7 @@ export default class LimnPlugin extends Plugin {
 
     this.addCommand({
       id: "create-new",
-      name: "Create new mind map file (.limn)",
+      name: "Create new mind map file",
       callback: () => void this.createNewFile(),
     });
   }

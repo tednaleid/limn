@@ -199,10 +199,10 @@ export async function clickNode(text: string, pane = 0): Promise<void> {
     app.workspace.iterateRootLeaves((leaf) => { views.push(leaf.view); });
     const view = views[i] as MapViewLike | undefined;
     if (!view?.editor) throw new Error(`Pane ${i} is not a map`);
-    let found: string | null = null;
-    const visit = (node: MapNode) => { if (found === null && node.text === t) found = node.id; node.children.forEach(visit); };
+    const ids: string[] = [];
+    const visit = (node: MapNode) => { if (node.text === t) ids.push(node.id); node.children.forEach(visit); };
     view.editor.toJSON().roots.forEach(visit);
-    return found as string | null;
+    return ids[0] ?? null;
   }, pane, text);
   if (id === null) throw new Error(`No node with text "${text}" in pane ${pane}`);
   await $(`${await paneSelector(pane)} [data-node-id="${id}"]`).click();

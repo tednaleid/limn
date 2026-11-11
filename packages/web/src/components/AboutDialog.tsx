@@ -33,7 +33,7 @@ export function AboutDialog({ onClose, variant = "web" }: AboutDialogProps) {
       const body = bodyRef.current;
       if (!body) return;
 
-      let delta = 0;
+      let delta: number;
       switch (e.key) {
         case "j":
         case "ArrowDown":

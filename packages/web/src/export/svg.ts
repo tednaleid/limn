@@ -225,7 +225,7 @@ export async function exportPng(
       ? (bounds.maxY - bounds.minY + 40)
       : svgEl.clientHeight;
 
-    const canvas = getHost().doc.createElement("canvas");
+    const canvas = getHost().newElement("canvas");
     canvas.width = width * 2; // 2x for retina
     canvas.height = height * 2;
     const ctx = canvas.getContext("2d");
@@ -245,7 +245,7 @@ export async function exportPng(
 /** Trigger a browser download for a blob. */
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = getHost().doc.createElement("a");
+  const a = getHost().newElement("a");
   a.href = url;
   a.download = filename;
   a.click();

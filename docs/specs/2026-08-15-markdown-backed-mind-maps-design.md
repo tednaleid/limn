@@ -176,7 +176,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 - `add-mindmap-marker`: `fileManager.processFrontMatter(file, fm => { fm["limn-plugin"] = true })` on the active note.
 - `file-menu` and `editor-menu`: "Open as mind map" for `.md` files; "Open as Markdown" for map leaves. In the file browser, where no pane is involved, a marked note offers both and an unmarked note offers only "Open as mind map".
 - Settings tab (new): "Open notes with `limn-plugin: true` as" (Mind map / Markdown, default Mind map) and "Theme" (System / Light / Dark, default System). The existing `.limn` view keeps its per-file theme behavior.
-- Existing `create-new` (`.limn`) command is renamed in the palette to "Create new mind map file (.limn)" so the two are distinguishable.
+- Existing `create-new` (`.limn`) command is renamed in the palette to "Create new mind map file" so the two are distinguishable.
 
 ### 7.4 Assets
 

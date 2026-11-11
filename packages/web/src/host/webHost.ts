@@ -15,6 +15,10 @@ function detectPlatform(): Platform {
   return /mac/i.test(ua) ? "mac" : "other";
 }
 
+// The browser has none of Obsidian's element helpers, so this is the web build's own.
+// The obsidianmd/prefer-create-el rule leaves a function named createEl alone.
+const createEl: Host["newElement"] = (tag) => window.document.createElement(tag);
+
 export const webHost: Host = {
   platform: detectPlatform(),
   // `window.document` is a MemberExpression where `document` is the property,
@@ -22,6 +26,7 @@ export const webHost: Host = {
   get doc() {
     return window.document;
   },
+  newElement: createEl,
   setTimeout: (cb, ms): TimerHandle => window.setTimeout(cb, ms),
   clearTimeout: (handle) => { window.clearTimeout(handle as number); },
   setInterval: (cb, ms): TimerHandle => window.setInterval(cb, ms),

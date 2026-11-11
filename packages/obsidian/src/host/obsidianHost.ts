@@ -12,6 +12,9 @@ export const obsidianHost: Host = {
   get doc() {
     return activeDocument;
   },
+  // Obsidian's global helper. The element belongs to the main window's document
+  // until it is attached, and is adopted by a popout's document when attached there.
+  newElement: (tag) => createEl(tag),
   // The obsidianmd/prefer-window-timers rule explicitly rejects
   // `activeWindow.setTimeout` in favor of `window.setTimeout` for both web and
   // Obsidian builds. window.setTimeout is the canonical form per the rule.

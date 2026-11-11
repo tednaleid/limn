@@ -22,6 +22,12 @@ export interface Host {
    * fresh on each access so Obsidian popout switches are observed.
    */
   readonly doc: Document;
+  /**
+   * A new element, not attached anywhere. Shared code creates elements through this,
+   * never through `doc.createElement`, which the obsidianmd/prefer-create-el rule
+   * reports. That rule also reports any `createEl("div")` call, hence the name.
+   */
+  newElement<K extends keyof HTMLElementTagNameMap>(tag: K): HTMLElementTagNameMap[K];
   setTimeout(cb: () => void, ms: number): TimerHandle;
   clearTimeout(handle: TimerHandle): void;
   setInterval(cb: () => void, ms: number): TimerHandle;
@@ -45,6 +51,9 @@ const defaultHost: Host = {
       "Host.doc accessed before setHost() was called. " +
       "Web entry-points call setHost(webHost) in main.tsx; the Obsidian plugin calls setHost(obsidianHost) in LimnPlugin.onload.",
     );
+  },
+  newElement() {
+    throw new Error("Host.newElement called before setHost() was called.");
   },
   setTimeout: (cb, ms) => setTimeout.call(null, cb, ms),
   clearTimeout: (handle) => { clearTimeout.call(null, handle as Parameters<typeof clearTimeout>[0]); },

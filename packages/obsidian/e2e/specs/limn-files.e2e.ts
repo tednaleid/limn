@@ -124,7 +124,7 @@ describe(".limn files", function () {
     await browser.executeObsidian(async ({ app }, path) => {
       const file = app.vault.getFileByPath(path);
       if (!file) throw new Error(`No such file: ${path}`);
-      await app.vault.delete(file);
+      await app.fileManager.trashFile(file);
     }, FILE);
     await browser.waitUntil(async () => (await viewTypes()).every((type) => type !== LIMN_VIEW), {
       timeoutMsg: "the map pane stayed open on a deleted file",
