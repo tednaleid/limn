@@ -23,6 +23,9 @@
   --edge-default: var(--background-modifier-border);
   --reparent-bg: rgba(245, 158, 11, 0.15);
   --reparent-border: #f59e0b;
+
+  /* Read by stylesLoaded.ts to tell when this stylesheet is in force. */
+  --limn-stylesheet: loaded;
 }
 
 /* React root container fills the view */

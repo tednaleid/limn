@@ -3,7 +3,7 @@
 
 import { Notice, TextFileView, type WorkspaceLeaf } from "obsidian";
 import type { Root } from "react-dom/client";
-import { Editor, OUTLINE_CAPABILITIES } from "@limn/core";
+import { Editor, OUTLINE_CAPABILITIES, type Camera } from "@limn/core";
 import type { AssetAddedDetail } from "@limn/web/limn-window";
 import type LimnPlugin from "../main";
 import { createDomTextMeasurer } from "../ObsidianTextMeasurer";
@@ -15,6 +15,11 @@ import { ObsidianOutlineAssetProvider } from "./ObsidianOutlineAssetProvider";
 import { VIEW_TYPE_LIMN_MARKDOWN, MARKDOWN_VIEW_TYPE } from "./routing";
 import { openLeafAs } from "./leafRouting";
 import { openLinkFromMap } from "../openLink";
+import { claimMapKeys } from "../mapKeys";
+import { whenStylesLoaded } from "../stylesLoaded";
+
+/** Reported by a map view between the plugin's unload and the pane's switch to the Markdown editor. */
+const VIEW_TYPE_HANDING_BACK = "limn-markdown-view-handing-back";
 
 export class LimnMarkdownView extends TextFileView {
   editor!: Editor;
@@ -24,13 +29,24 @@ export class LimnMarkdownView extends TextFileView {
   private detachDoc: (() => void) | null = null;
   /** Resource URLs already announced to the React tree, by asset id. */
   private assetUrls = new Map<string, string>();
+  private handingBack = false;
+  /** Where the opening fit put the camera. */
+  private openingCamera: Camera | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: LimnPlugin) {
     super(leaf);
   }
 
   getViewType(): string {
-    return VIEW_TYPE_LIMN_MARKDOWN;
+    return this.handingBack ? VIEW_TYPE_HANDING_BACK : VIEW_TYPE_LIMN_MARKDOWN;
+  }
+
+  /**
+   * Called as the plugin unloads. Obsidian closes every pane whose view reports a type that is being
+   * unregistered; reporting another type keeps this pane open so it can be switched to the Markdown editor.
+   */
+  prepareHandBack(): void {
+    this.handingBack = true;
   }
 
   getDisplayText(): string {
@@ -48,6 +64,7 @@ export class LimnMarkdownView extends TextFileView {
   async onOpen(): Promise<void> {
     await super.onOpen();
     this.contentEl.addClass("limn-view");
+    claimMapKeys(this.app, this);
     this.editor = new Editor(createDomTextMeasurer(this.contentEl));
     this.editor.setCapabilities(OUTLINE_CAPABILITIES);
     this.provider = new ObsidianOutlineAssetProvider(this.app, () => this.file?.path ?? "");
@@ -57,6 +74,7 @@ export class LimnMarkdownView extends TextFileView {
       darkTheme: this.plugin.settings.darkTheme,
     }));
     this.detachDoc = this.doc.attach(this);
+    this.register(whenStylesLoaded(this.contentEl, () => this.restyle()));
     this.editor.onSave(() => void this.save());
     this.editor.onOpenLink((url) => openLinkFromMap(this.app, url, this.file?.path ?? ""));
     // The note stores no theme; the picker in the menu writes the plugin setting instead.
@@ -123,6 +141,22 @@ export class LimnMarkdownView extends TextFileView {
     const { clientWidth, clientHeight } = this.contentEl;
     if (clientWidth > 0 && clientHeight > 0) this.editor.zoomToFit(clientWidth, clientHeight, 1);
     else this.editor.setCamera(40, 40, 1);
+    this.openingCamera = { ...this.editor.getCamera() };
+  }
+
+  /**
+   * Node sizes are measured with the plugin's stylesheet, which Obsidian loads after the plugin's code.
+   * A map drawn before it arrived is measured and laid out again once it has. A camera still where
+   * the opening fit left it is fitted again to the new sizes.
+   */
+  private restyle(): void {
+    if (!this.reactRoot || this.doc.blockedBy.length > 0) return;
+    const camera = this.editor.getCamera();
+    const opening = this.openingCamera;
+    const untouched = opening !== null && camera.x === opening.x && camera.y === opening.y && camera.zoom === opening.zoom;
+    this.editor.remeasureAllNodes();
+    this.editor.relayoutAll();
+    if (untouched) this.fitCamera();
   }
 
   /** Resolve resource URLs for images the React tree has not seen, then learn their natural sizes. */

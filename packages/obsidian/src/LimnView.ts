@@ -12,6 +12,7 @@ import type { Root } from "react-dom/client";
 import { mountLimnRoot } from "./LimnViewRoot";
 import { applyThemeToContainer } from "./viewTheme";
 import { openLinkFromMap } from "./openLink";
+import { claimMapKeys } from "./mapKeys";
 
 export const VIEW_TYPE_LIMN = "limn-view";
 
@@ -47,6 +48,7 @@ export class LimnView extends FileView {
   async onOpen(): Promise<void> {
     await super.onOpen();
     this.contentEl.addClass("limn-view");
+    claimMapKeys(this.app, this);
     const measurer = createDomTextMeasurer(this.contentEl);
     this.editor = new Editor(measurer);
     this.provider = new ObsidianPersistenceProvider(this);

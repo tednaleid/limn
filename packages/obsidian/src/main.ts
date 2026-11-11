@@ -26,7 +26,7 @@ export default class LimnPlugin extends Plugin {
     registerMarkdownCommands(this);
     this.addSettingTab(new LimnSettingTab(this.app, this));
     this.uninstallRouting = installRoutingPatch(this);
-    // Registered after the view type so it runs before the type is unregistered.
+    // Registered after the view type so it runs while the map panes can still be found by type.
     this.register(() => this.handBackMapLeaves());
     this.app.workspace.onLayoutReady(() => this.routeOpenMarkedNotes());
 
@@ -37,14 +37,24 @@ export default class LimnPlugin extends Plugin {
     });
   }
 
-  /** Remove the wrapper first so switching leaves back is not re-routed, then hand every map leaf back to the Markdown editor. */
+  /**
+   * Remove the wrapper so switching leaves back is not re-routed, then hand every map leaf back to the
+   * Markdown editor. Switching a leaf's view is asynchronous and the unload is not, so each map view is
+   * first told to keep its pane open through the unload, and the switch happens once the unload is over.
+   */
   private handBackMapLeaves(): void {
     this.uninstallRouting?.();
     this.uninstallRouting = null;
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN)) {
-      leaf.setViewState({ type: MARKDOWN_VIEW_TYPE, state: leaf.getViewState().state })
-        .catch((err: unknown) => { console.error("Failed to restore Markdown view:", err); });
-    }
+    const panes = this.app.workspace.getLeavesOfType(VIEW_TYPE_LIMN_MARKDOWN).map((leaf) => {
+      if (leaf.view instanceof LimnMarkdownView) leaf.view.prepareHandBack();
+      return { leaf, state: leaf.getViewState().state };
+    });
+    window.setTimeout(() => {
+      for (const { leaf, state } of panes) {
+        leaf.setViewState({ type: MARKDOWN_VIEW_TYPE, state })
+          .catch((err: unknown) => { console.error("Failed to restore Markdown view:", err); });
+      }
+    }, 0);
   }
 
   async saveSettings(): Promise<void> {

@@ -73,3 +73,7 @@ export class Notice {
 export class Menu extends Component {}
 
 export const Platform = { isMacOS: false };
+
+export class Scope {
+  register(): void {}
+}

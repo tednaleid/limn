@@ -57,17 +57,20 @@ export function MindMapCanvas() {
   // Track viewport dimensions for culling and keyboard zoom-to-fit
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
     const updateSize = () => {
-      if (svgRef.current) {
-        const w = svgRef.current.clientWidth;
-        const h = svgRef.current.clientHeight;
-        setViewportSize({ width: w, height: h });
-        editor.setViewportSize(w, h);
-      }
+      const w = svg.clientWidth;
+      const h = svg.clientHeight;
+      setViewportSize({ width: w, height: h });
+      editor.setViewportSize(w, h);
     };
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    // The canvas can change size while the window does not: a host application resizes the pane
+    // it sits in, or styles that size it arrive after it is mounted.
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(svg);
+    return () => observer.disconnect();
   }, [editor]);
 
   // Viewport culling: only render nodes within the visible area (with padding)
