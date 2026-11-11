@@ -20,3 +20,6 @@ obsidian_vault
 # Xcode build artifacts
 packages/desktop/build/
 DerivedData/
+
+# Obsidian builds downloaded for end-to-end tests
+.obsidian-cache/

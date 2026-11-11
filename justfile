@@ -112,6 +112,10 @@ obsidian-install vault_path: (obsidian-clean vault_path)
 obsidian-test:
     bun run test -- --run 'packages/obsidian/'
 
+# Run end-to-end tests against a real Obsidian (downloaded on first run into packages/obsidian/.obsidian-cache)
+obsidian-e2e: obsidian-build
+    cd packages/obsidian && bunx wdio run ./wdio.conf.mts
+
 # Build release assets for GitHub Release (main.js, manifest.json, styles.css)
 release: obsidian-build
     mkdir -p release
