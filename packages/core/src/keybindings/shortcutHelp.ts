@@ -84,6 +84,9 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     entries: [
       { keys: ["Cmd", "Z"], description: "Undo" },
       { keys: ["Cmd", "Shift", "Z"], description: "Redo" },
+      { keys: ["Cmd", "C"], description: "Copy subtree as Markdown" },
+      { keys: ["Cmd", "X"], description: "Cut subtree" },
+      { keys: ["Cmd", "V"], description: "Paste Markdown list or image" },
       { keys: ["Cmd", "S"], description: "Save" },
       { keys: ["Cmd", "Shift", "S"], description: "Save As" },
       { keys: ["Cmd", "O"], description: "Open file" },

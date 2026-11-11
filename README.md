@@ -141,6 +141,7 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Key | Action |
 |-----|--------|
 | Cmd+Z / Cmd+Shift+Z | Undo / Redo |
+| Cmd+C / Cmd+X / Cmd+V | Copy / Cut / Paste (see Copy and paste) |
 | Cmd+S / Cmd+Shift+S | Save / Save As |
 | Cmd+O | Open file |
 | Cmd+Shift+E | Export SVG |
@@ -164,6 +165,12 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 | Drag node | Move node (reparent when dropped on another node) |
 
 **Note:** On macOS, Ctrl+Arrow keys are bound to Mission Control by default (switching desktops). To use Ctrl+Arrow nudge and resize bindings, disable these in System Settings > Keyboard > Keyboard Shortcuts > Mission Control, or use the hjkl equivalents instead.
+
+## Copy and paste
+
+`Cmd+C` copies the selected node and its descendants to the clipboard as a Markdown bullet list, so it pastes into any text editor. `Cmd+X` copies the same list and then deletes the node. `Cmd+V` turns a Markdown bullet list on the clipboard into nodes: they become the last children of the selected node, or roots when nothing is selected. Text with no bullets pastes as one node. Copy, cut, and paste do nothing while a node is being edited.
+
+Images go on the clipboard as `![[image.png|WxH]]` embeds. They come back as images only when pasted into a map that already holds that image, so images survive inside one map but not between maps or into other apps. Pasting an image from the system clipboard attaches it to the selected node.
 
 ## Obsidian plugin
 

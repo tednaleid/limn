@@ -103,6 +103,15 @@ gets `![[Pasted image ....png|WxH]]`. A bare embed (no size given in the note) d
 image's natural size, capped at 300 px wide, without changing the note; resizing the image in
 the map writes the size.
 
+### Copy, cut, and paste
+
+`Cmd+C`, `Cmd+X`, and `Cmd+V` work in both map views (`.limn` files and Markdown-backed notes)
+with the same behavior as the web app: the selected subtree travels as a Markdown bullet list,
+and a pasted list becomes children of the selected node, or roots when nothing is selected. An
+image embed is kept on paste only if the map already has that image. In a `.limn` file a pasted
+embed without a size is stored at the size it draws at; in a note it stays unsized, so the note
+is not rewritten with a size.
+
 ### Two panes
 
 The same note can be open as Markdown and as a map at once. Changes made on one side cross over
@@ -193,6 +202,8 @@ Specs are in `packages/obsidian/e2e/specs/`:
   being edited; image paste creates an attachment that shows after reopening; collapsing writes
   `*`; Cmd+Enter opens a wikilink in a new tab; a rule and a math block survive an edit; a note
   the map cannot round-trip is refused with a notice and left untouched
+- `clipboard`: copy, cut, and paste of subtrees as Markdown in a `.limn` map (including with
+  the real keys) and in a Markdown-backed map; paste reaches only the active pane
 - `plugin-lifecycle`: disabling the plugin turns map panes into Markdown panes, with an edit
   made just before; turning it back on restores the map, drawn and editable
 
@@ -207,6 +218,10 @@ After `just obsidian-install <vault>`, look at what the tests cannot judge:
 - [ ] A map and a `.limn` file look right in the light and dark themes
 - [ ] Reading view of a note with a collapsed `*` item among `-` siblings renders one list
 - [ ] Paste an image from the real clipboard into a map node
+- [ ] Cmd+C, Cmd+X, Cmd+V with the real keys in both map views (the end-to-end spec drives
+      `.limn` maps with real keys; the Markdown-backed view and your own vault are unchecked)
+- [ ] Copy, cut, and paste in the desktop app (the Edit menu's pasteboard commands are not
+      overridden by `MenuCommands.swift`, so the events should arrive; unverified)
 - [ ] Update the plugin (re-run `just obsidian-install`, then "Reload app without saving") with
       a map pane open: the map comes back
 

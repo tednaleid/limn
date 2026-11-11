@@ -73,6 +73,23 @@ describe("shortcut help data", () => {
     expect(positioning?.entries.some((e) => e.description.includes("(fine)"))).toBe(false);
   });
 
+  test("Global lists copy, cut, and paste with no capability requirement", () => {
+    const expected = [
+      { keys: ["Cmd", "C"], description: "Copy subtree as Markdown" },
+      { keys: ["Cmd", "X"], description: "Cut subtree" },
+      { keys: ["Cmd", "V"], description: "Paste Markdown list or image" },
+    ];
+    const global = SHORTCUT_GROUPS.find((g) => g.title === "Global");
+    const clipboard = expected.map((want) =>
+      global?.entries.find((e) => e.description === want.description));
+    expect(clipboard.map((e) => ({ keys: e?.keys, description: e?.description }))).toEqual(expected);
+    expect(clipboard.every((e) => e?.requires === undefined)).toBe(true);
+
+    const filtered = filterShortcutGroups(SHORTCUT_GROUPS, OUTLINE_CAPABILITIES);
+    const descriptions = filtered.flatMap((g) => g.entries.map((e) => e.description));
+    for (const want of expected) expect(descriptions).toContain(want.description);
+  });
+
   test("exports types correctly", () => {
     // Type-level checks -- these just need to compile
     const group: ShortcutGroup = SHORTCUT_GROUPS[0];

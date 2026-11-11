@@ -4,7 +4,7 @@ Status: draft for review. Origin: GitHub issue #8. Findings brief: `.llm/issue-8
 
 ## 1. Summary
 
-Let a Limn mind map be a live, bidirectional view over an ordinary Obsidian note. The note's nested bullet lists are the map; text, hierarchy, and order round-trip losslessly; presentation is computed on load. The map view is a `TextFileView` subclass in the Obsidian plugin; notes marked `limn-plugin: true` in frontmatter open in it by default, and any note can be opened in it on demand. Core gains a Markdown outline codec, a deterministic full layout, and a `DocumentCapabilities` descriptor that turns off the handful of actions a plain list cannot hold. Web and desktop get copy/paste of Markdown outlines from the same codec.
+Let a Limn mind map be a live, bidirectional view over an ordinary Obsidian note. The note's nested bullet lists are the map; text, hierarchy, and order round-trip losslessly; presentation is computed on load. The map view is a `TextFileView` subclass in the Obsidian plugin; notes marked `limn-plugin: true` in frontmatter open in it by default, and any note can be opened in it on demand. Core gains a Markdown outline codec, a deterministic full layout, and a `DocumentCapabilities` descriptor that turns off the handful of actions a plain list cannot hold. Copy, cut, and paste of Markdown outlines work in the web app, the desktop app, and both Obsidian map views.
 
 ## 2. Decisions (settled in discussion, 2026-08-15)
 
@@ -18,7 +18,7 @@ Let a Limn mind map be a live, bidirectional view over an ordinary Obsidian note
 | Images | In v1. Vault attachments plus `![[file.png|width]]` embeds. |
 | Mode surface | Blocked: free drag offsets, nudge, side flip, width resize, node color cycling. Session-only: camera, selection. Unchanged: all structural and text actions, undo/redo, image paste/drop and image resize, reflow. Theme is a plugin-level setting. |
 | Concurrency | Rely on `TextFileView`'s built-in echo suppression and three-way merge (verified in Obsidian 1.13.7 source). No CRDT. |
-| Web/desktop | Copy subtree as Markdown and paste a Markdown list as a subtree ship with this work. Import/export follow. No live `.md` maps in desktop. |
+| Web/desktop | Copy, cut, and paste of subtrees as Markdown ship with this work, shared by all four hosts. Import/export follow. No live `.md` maps in desktop. |
 | Naming | View type `limn-markdown-view`. Commands "Open as mind map", "Open as Markdown", "Create new mind map note", "Add mind map marker to note". Setting "Open notes with `limn-plugin: true` as: Mind map / Markdown". Core type `DocumentCapabilities`. Codec in `packages/core/src/markdown/outline.ts`. |
 
 ## 3. Non-goals
@@ -220,11 +220,15 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
 - A note with unsupported content (5.7) shows a notice and opens as Markdown; the file is not modified. The notice names the first three offending lines and counts the rest.
 - An external change that makes the note unsupported while the map has unsaved edits discards those edits in favor of the file: the pane switches to Markdown and the file is not written.
 
-## 9. Web and desktop (`packages/web`, `packages/desktop`)
+## 9. Copy, cut, and paste (all hosts)
 
-- `Cmd+C` with a selected node and not editing: clipboard `text/plain` is `serializeSubtree(node)`. Nested `.limn` JSON is not put on the clipboard in this work.
-- `Cmd+V` with `text/plain` and not editing: if the text parses to at least one bullet line, parse and add the resulting nodes as children of the selected node (or as roots at the paste position when nothing is selected), with new ids and computed positions. Plain text without bullets pastes as a single child node whose text is the pasted text. Image clipboard items keep their current behavior and take precedence.
-- Both hosts keep `FULL_CAPABILITIES`; nothing else changes for `.limn` documents.
+The web app, the desktop app (the same web code in a WKWebView), and both Obsidian map views share one handler, `handleClipboardEvent` in `packages/web/src/input/clipboard.ts`, and the Editor methods `copyMarkdown(nodeId)` and `pasteMarkdown(text)`.
+
+- `Cmd+C` with a selected node: clipboard `text/plain` is `Editor.copyMarkdown(nodeId)`, the node and its descendants as a Markdown bullet list. Nested `.limn` JSON is not put on the clipboard. `Cmd+X` copies the same text and then deletes the node.
+- `Cmd+V` with `text/plain`: every bullet list in the text becomes nodes with new ids and computed positions. With a node selected, the top-level items become its last children (a collapsed parent is expanded); with nothing selected, each becomes a root at the centre of the view, stacked downward. Text outside the lists is dropped. Text with no bullet line pastes as one node whose text is the trimmed pasted text, and blank text pastes nothing. The first pasted top-level node is selected afterward, and one paste is one undo step.
+- Images: copy writes the `![[assetId|WxH]]` embed. An embed is read as an image only when it is the whole last line of an item. Paste keeps the image when the document already has an asset with that id; otherwise the image is dropped and the node keeps its text. In a `.limn` document an embed without a size is stored at the size it draws at; in a Markdown-backed note it stays unsized, so the note is not rewritten with a size. Image clipboard items keep their previous behavior and take precedence over text; they attach even while a node is being edited.
+- Copy, cut, and text paste do nothing while a node is being edited or while focus is in another input. Copy and cut also do nothing while the page has a non-empty text selection, so the browser's own copy applies.
+- `.limn` documents keep `FULL_CAPABILITIES`. In a Markdown-backed note, pasted children go on the right like every other child.
 - Markdown import (open a `.md` outline as a new `.limn`) and export (hamburger menu) are follow-ups and reuse the codec unchanged.
 
 ## 10. Testing
@@ -236,7 +240,7 @@ export const OUTLINE_CAPABILITIES: DocumentCapabilities = { freePosition: false,
   - `relayoutAll` determinism and root stacking; collapsed subtrees still positioned.
   - `reconcileIds` keeps ids for unchanged nodes and selection survives an external update.
 - Obsidian, vitest with the existing mocks: `setViewData`/`getViewData` round trip; `requestSave` called only when text changes (camera and selection changes do not save); routing patch decisions given a fake leaf, frontmatter, setting, and `fileModes`; commands add the marker and create notes in the right folder. The obsidian package ships types only; vitest resolves `obsidian` to a small runtime stand-in (`packages/obsidian/src/__tests__/mocks/obsidian-module.ts`) so modules that import it can be tested.
-- Web: copy/paste through the keyboard handler with a clipboard stub.
+- Web: copy, cut, and paste through `handleClipboardEvent` with a clipboard stub.
 - Playwright: one visual regression of a map note (optional; layout is host-font dependent, so keep it to a single fixture).
 - Obsidian, end to end (`just obsidian-e2e`): WebdriverIO with `wdio-obsidian-service` drives a real Obsidian on a throwaway copy of the fixture vault in `packages/obsidian/e2e/vaults/basic`, with the plugin loaded from `dist`. Specs in `packages/obsidian/e2e/specs/` cover routing and the menus, edits reaching the note, a map beside a Markdown editor, image paste, collapse markers, wikilinks, refusal, and disabling and re-enabling the plugin with a map open.
 - Manual checklist in `OBSIDIAN-PLUGIN.md`, now only what needs eyes; it began as: click routing, both-direction toggle, two panes, external edit while editing a node, image paste, reading-view look of a collapsed `*` item among `-` siblings.
@@ -258,5 +262,5 @@ Suggested phase order for the implementation plan (each phase green and committe
 2. `DocumentCapabilities`, Editor enforcement, dispatch and shortcut-help gating, `relayoutAll`, `reconcileIds`, tests.
 3. Obsidian `LimnMarkdownView` with `setViewData`/`getViewData`, save wiring, shared `LimnViewRoot`; routing patch; commands, menus, settings; tests and manual checklist.
 4. Images: asset provider, paste/drop in the Obsidian view, size resolution.
-5. Web/desktop copy and paste.
+5. Copy, cut, and paste in the web app, the desktop app, and both Obsidian views.
 6. Docs: README, OBSIDIAN-PLUGIN.md, release notes; reply on issue #8 (Ted).
