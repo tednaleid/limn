@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 import { TestEditor } from "../test-editor/TestEditor";
-import { OUTLINE_CAPABILITIES } from "../editor/capabilities";
+import { FULL_CAPABILITIES, OUTLINE_CAPABILITIES, type DocumentCapabilities } from "../editor/capabilities";
 import type { Asset } from "../model/types";
 
 /** A root "Root" with children "A" (children "A1", "A2") and "B". Returns the ids. */
@@ -246,5 +246,55 @@ describe("pasteMarkdown", () => {
     editor.select(a);
     const pasted = editor.pasteMarkdown(copied);
     expect(editor.getNode(pasted[0] as string).image).toEqual({ assetId: "known.png", width: 40, height: 30 });
+  });
+
+  /** An editor with the given capabilities whose selected root holds KNOWN_ASSET. */
+  function editorWithAsset(capabilities: DocumentCapabilities): TestEditor {
+    const editor = new TestEditor();
+    editor.setCapabilities(capabilities);
+    const root = editor.addRoot("Root");
+    editor.exitEditMode();
+    editor.setNodeImage(root, KNOWN_ASSET, 40, 30);
+    editor.select(root);
+    return editor;
+  }
+
+  it("stores the display size for an embed without a size in a .limn document", () => {
+    const editor = editorWithAsset(FULL_CAPABILITIES);
+    const [pic] = editor.pasteMarkdown("- pic\\\n  ![[known.png]]") as [string];
+    const image = editor.getNode(pic).image;
+    const size = editor.getImageDisplaySize(pic);
+    expect(image?.width).toBeGreaterThan(0);
+    expect(image?.height).toBeGreaterThan(0);
+    expect({ width: image?.width, height: image?.height }).toEqual(size);
+  });
+
+  it("keeps an embed without a size unsized in a Markdown outline", () => {
+    const editor = editorWithAsset(OUTLINE_CAPABILITIES);
+    const [pic] = editor.pasteMarkdown("- pic\\\n  ![[known.png]]") as [string];
+    expect(editor.getNode(pic).image).toEqual({ assetId: "known.png", width: 0, height: 0 });
+    expect(editor.copyMarkdown(pic)).toBe("- pic\\\n  ![[known.png]]");
+  });
+
+  it.each([
+    ["a .limn document", FULL_CAPABILITIES],
+    ["a Markdown outline", OUTLINE_CAPABILITIES],
+  ])("stores an embed's explicit size as given in %s", (_name, capabilities) => {
+    const editor = editorWithAsset(capabilities);
+    const [pic] = editor.pasteMarkdown("- pic\\\n  ![[known.png|20x15]]") as [string];
+    expect(editor.getNode(pic).image).toEqual({ assetId: "known.png", width: 20, height: 15 });
+  });
+
+  it("undoes and redoes a root paste as one step", () => {
+    const editor = new TestEditor();
+    sampleMap(editor);
+    editor.deselect();
+    const rootsBefore = editor.getRoots().map((r) => r.id);
+    const pasted = editor.pasteMarkdown(LIST);
+    editor.undo();
+    expect(editor.getRoots().map((r) => r.id)).toEqual(rootsBefore);
+    editor.redo();
+    expect(editor.getRoots().map((r) => r.id)).toEqual([...rootsBefore, ...pasted]);
+    expect(editor.getRoots().map((r) => r.text)).toEqual(["Root", "X", "Y"]);
   });
 });

@@ -1622,14 +1622,18 @@ export class Editor {
 
   /**
    * Give a pasted node its image, size, descendants, and collapse state from the outline. The image
-   * is kept only when the document already has its asset.
+   * is kept only when the document already has its asset. A Markdown outline keeps a dimension the
+   * embed left out as unknown so the note is written back as it was; a document with free
+   * positioning stores every image at the size it draws at.
    */
   private addOutlineContent(id: string, node: OutlineNode): void {
     const image = node.image;
     const asset = image && this.store.getAssets().find((a) => a.id === image.target);
     if (image && asset) {
       const ref = outlineImageToRef(image);
-      this.store.setNodeImage(id, asset, ref.width, ref.height);
+      const resolved = this.capabilities.freePosition ? imageDisplaySize(ref, asset) : null;
+      const size = resolved ?? ref;
+      this.store.setNodeImage(id, asset, size.width, size.height);
     }
     this.remeasureNode(id);
     for (const child of node.children) {
