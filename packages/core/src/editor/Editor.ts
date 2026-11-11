@@ -3,7 +3,7 @@
 
 import type { MindMapNode, NodeStyle, TextMeasurer, MindMapMeta, Camera, Asset } from "../model/types";
 import { MindMapStore } from "../store/MindMapStore";
-import { deserialize, serialize, toMarkdown as storeToMarkdown } from "../serialization/serialization";
+import { deserialize, serialize, subtreeToMarkdown, toMarkdown as storeToMarkdown } from "../serialization/serialization";
 import type { MindMapFileFormat, MindMapFileNode } from "../serialization/schema";
 import { reconcileIds } from "../serialization/reconcile";
 import {
@@ -1565,6 +1565,11 @@ export class Editor {
 
   toMarkdown(): string {
     return storeToMarkdown(this.store);
+  }
+
+  /** The node and its descendants as a Markdown bullet list, for the clipboard. */
+  copyMarkdown(nodeId: string): string {
+    return subtreeToMarkdown(this.store, nodeId);
   }
 
   toJSON(): MindMapFileFormat {

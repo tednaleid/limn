@@ -94,16 +94,22 @@ export function validateFileFormat(data: unknown): {
   return { success: false, error: result.error.message };
 }
 
+function nodeToOutline(store: MindMapStore, node: MindMapNode): OutlineNode {
+  const outline: OutlineNode = {
+    text: node.text,
+    collapsed: node.collapsed && node.children.length > 0,
+    children: store.getChildren(node.id).map((child) => nodeToOutline(store, child)),
+  };
+  if (node.image) outline.image = imageRefToOutline(node.image);
+  return outline;
+}
+
 /** Nested bullet outline of the store in the Limn Markdown dialect. */
 export function toMarkdown(store: MindMapStore): string {
-  const toOutline = (node: MindMapNode): OutlineNode => {
-    const outline: OutlineNode = {
-      text: node.text,
-      collapsed: node.collapsed && node.children.length > 0,
-      children: store.getChildren(node.id).map(toOutline),
-    };
-    if (node.image) outline.image = imageRefToOutline(node.image);
-    return outline;
-  };
-  return writeSubtree(store.getRoots().map(toOutline));
+  return writeSubtree(store.getRoots().map((root) => nodeToOutline(store, root)));
+}
+
+/** Nested bullet outline of one node and its descendants. */
+export function subtreeToMarkdown(store: MindMapStore, nodeId: string): string {
+  return writeSubtree([nodeToOutline(store, store.getNode(nodeId))]);
 }
