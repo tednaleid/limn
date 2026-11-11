@@ -3,7 +3,7 @@
 
 import { browser, expect, $ } from "@wdio/globals";
 import {
-  LIMN_VIEW, MAP_VIEW, MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector, mapTexts,
+  LIMN_VIEW, MAP_VIEW, CLIPBOARD_MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector, mapTexts,
   waitForMapTexts, clickNode, typeIntoNode, addChild, readNote, waitForNote, copyFromMap, pasteTextIntoMap,
 } from "../helpers";
 
@@ -60,9 +60,9 @@ describe("Copy, cut, and paste in a .limn file", function () {
   it("copies and pastes with the real keys", async function () {
     await createMap();
     await clickNode("A");
-    await browser.keys([MOD, "c"]);
+    await browser.keys([CLIPBOARD_MOD, "c"]);
     await clickNode("Root");
-    await browser.keys([MOD, "v"]);
+    await browser.keys([CLIPBOARD_MOD, "v"]);
     await waitForMapTexts(["Root", "A", "A1", "A", "A1"]);
   });
 });

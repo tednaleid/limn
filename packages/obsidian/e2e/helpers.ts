@@ -12,6 +12,9 @@ export const MARKDOWN_VIEW = "markdown";
 /** The modifier the map's key bindings use: the meta key on every platform. */
 export const MOD = Key.Command;
 
+/** The modifier the operating system's own copy, cut, and paste chords use. */
+export const CLIPBOARD_MOD = process.platform === "darwin" ? Key.Command : Key.Ctrl;
+
 interface MapNode {
   id: string;
   text: string;
