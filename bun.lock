@@ -16,7 +16,7 @@
     },
     "packages/core": {
       "name": "@limn/core",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "lz-string": "^1.5.0",
         "zod": "^4.6.6",
@@ -27,7 +27,7 @@
     },
     "packages/obsidian": {
       "name": "@limn/obsidian",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@limn/core": "workspace:*",
         "@limn/web": "workspace:*",
@@ -54,7 +54,7 @@
     },
     "packages/web": {
       "name": "@limn/web",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@limn/core": "workspace:*",
         "browser-fs-access": "^0.38.0",
@@ -78,6 +78,7 @@
     "baseline-browser-mapping": "^2.11.0",
     "brace-expansion": "^5.0.8",
     "browserslist": "^4.28.7",
+    "deepmerge": "4.1.2",
     "esbuild": "^0.28.1",
     "fast-uri": "^3.1.6",
     "flatted": "^3.4.2",
@@ -860,7 +861,7 @@
 
     "deep-is": ["deep-is@0.1.4", "", {}, "sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ=="],
 
-    "deepmerge": ["deepmerge@4.3.1", "", {}, "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="],
+    "deepmerge": ["deepmerge@4.1.2", "", {}, "sha512-9ZXh/8Fp+ggcscoRg324S1aNdGSCl2X1P8F1FPTHbtq3RAxy9ECbU2Wgy2J12r6x/O0BStDlkzcpKK/HptX+Kg=="],
 
     "deepmerge-ts": ["deepmerge-ts@8.0.2", "", {}, "sha512-uqbvqLUMrc6p0MO+WBRtTxY55hmyh94WRwI5a++PZe54X+bfVh59FSN7uWCBCW1CCVjzjnrwzfI8zidE2obMMw=="],
 

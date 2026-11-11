@@ -29,11 +29,6 @@ export default defineConfig(
     },
   },
   {
-    // The host adapters are where newElement is implemented.
-    files: ["packages/*/src/host/*.ts"],
-    rules: { "no-restricted-syntax": "off" },
-  },
-  {
     // The preset treats end-to-end specs as tests and skips its Obsidian-runtime
     // rules there; the scanner applies them, so they are switched back on.
     files: ["packages/obsidian/e2e/**/*.ts"],

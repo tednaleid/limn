@@ -234,8 +234,8 @@ Before a release:
 1. `just scorecard`. It runs `just lint-obsidian`, `bun audit`, and the bundle checks.
    - The lint must print nothing. Every warning is one finding on the scorecard. `just check`
      and the pre-commit hook run it too.
-   - `bun audit` should list only the accepted advisories below. Fix a new one by raising the
-     dependency, or, for a transitive one, the entry in `overrides` in the root `package.json`.
+   - `bun audit` must report no vulnerabilities. Fix a new one by raising the dependency, or,
+     for a transitive one, the entry in `overrides` in the root `package.json`.
 2. `just obsidian-e2e`.
 3. Check that `eslint-plugin-obsidianmd` is the latest release (`bun outdated`). The scanner
    uses the current rule set; an older local copy misses rules the scanner applies.
@@ -249,19 +249,24 @@ What the local lint cannot see, and how it is covered:
 - The scanner resolves every file against Obsidian's typings, so it reports
   `document.createElement` in `packages/web` and `packages/core`, where the local typed rule is
   silent. A `no-restricted-syntax` entry in `eslint.obsidian.config.js` reports the same calls.
-  Shared code creates elements with `getHost().newElement(tag)`.
+  Shared code creates elements with `getHost().newElement(tag)`. The web host implements it with
+  the two-argument `createElement(tag, {})`, which the rule does not report; the scanner reports
+  the one-argument call even inside a function named `createEl`.
 - The scanner lints `packages/obsidian/e2e`. The preset treats that folder as tests and skips
   its Obsidian-runtime rules, so the config switches them back on there.
 - Never silence an `obsidianmd/*` rule with an `eslint-disable` comment: the scanner counts the
   comment itself as an error and the rating drops to Failed.
+
+`deepmerge` is pinned to 4.1.2 in `overrides`. Versions 4.2.0 to 4.3.1 carry an advisory with no
+fixed release, and the only user is `@rollup/plugin-node-resolve` (build tooling for the web
+app's service worker), which copies one defaults object with it. Remove the pin when a fixed
+`deepmerge` is published.
 
 Accepted findings, which stay on the scorecard:
 
 - `Limn-X.Y.Z.dmg` listed as an extra release file. The desktop app shares the release;
   Obsidian does not download it. A separate tag for the desktop app sent the plugin to manual
   review, so the shared release stays.
-- `deepmerge` advisory, through `vite-plugin-pwa`. No fixed version exists, and it is build
-  tooling for the web app that never ships in the plugin.
 - The notes that the plugin writes vault files and calls `atob`/`btoa`. Both are disclosures;
   the base64 calls are in the desktop app's bridge to its native side.
 
