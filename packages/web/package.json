@@ -10,6 +10,7 @@
     "./hooks/usePersistence": "./src/hooks/usePersistence.ts",
     "./hooks/useAssetUrls": "./src/hooks/useAssetUrls.ts",
     "./input/useKeyboardHandler": "./src/input/useKeyboardHandler.ts",
+    "./input/clipboard": "./src/input/clipboard.ts",
     "./text/DomTextMeasurer": "./src/text/DomTextMeasurer.ts",
     "./components/ToolbarOverlay": "./src/components/ToolbarOverlay.tsx",
     "./components/HamburgerMenu": "./src/components/HamburgerMenu.tsx",

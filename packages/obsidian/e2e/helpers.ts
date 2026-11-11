@@ -271,3 +271,27 @@ export async function waitForNote(path: string, predicate: (text: string) => boo
   }, { timeout: 10000, timeoutMsg: `${path}: ${what}` });
   return text;
 }
+
+/** Obsidian's global for the document of the focused window; used inside code run in the app. */
+declare const activeDocument: Document;
+
+/**
+ * Raise a copy or cut event on the focused window's document and return the text/plain the map's
+ * handler put on the clipboard. The handler writes during dispatch, so the data is read back there.
+ */
+export function copyFromMap(kind: "copy" | "cut"): Promise<string> {
+  return browser.execute((k: "copy" | "cut") => {
+    const data = new DataTransfer();
+    activeDocument.dispatchEvent(new ClipboardEvent(k, { clipboardData: data, bubbles: true, cancelable: true }));
+    return data.getData("text/plain");
+  }, kind);
+}
+
+/** Raise a paste event carrying the given text/plain on the focused window's document. */
+export async function pasteTextIntoMap(text: string): Promise<void> {
+  await browser.execute((t: string) => {
+    const data = new DataTransfer();
+    data.setData("text/plain", t);
+    activeDocument.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  }, text);
+}
