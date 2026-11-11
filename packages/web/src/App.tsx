@@ -2,7 +2,7 @@
 // ABOUTME: Hosts the SVG canvas with a demo mind map.
 
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Editor, AutoSaveController, compressToUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "@limn/core";
+import { Editor, AutoSaveController, getHost, compressToUrl, prepareForShare, MAX_SHARE_URL_LENGTH } from "@limn/core";
 import type { MindMapFileFormat } from "@limn/core";
 import { EditorContext } from "./hooks/useEditor";
 import { PersistenceContext } from "./hooks/usePersistence";
@@ -14,6 +14,7 @@ import { ToolbarOverlay } from "./components/ToolbarOverlay";
 import { KeystrokeOverlay } from "./components/KeystrokeOverlay";
 import { FileStatusBar } from "./components/FileStatusBar";
 import { useKeyboardHandler } from "./input/useKeyboardHandler";
+import { useClipboard } from "./input/clipboard";
 import { WebPersistenceProvider } from "./persistence/WebPersistenceProvider";
 import { DesktopPersistenceProvider } from "./persistence/desktop-persistence";
 import { isDesktop, postToSwift } from "./persistence/desktop-bridge";
@@ -22,7 +23,6 @@ import { exportSvg, serializeSvg } from "./export/svg";
 import { domTextMeasurer } from "./text/DomTextMeasurer";
 import { applyThemeFromMeta } from "./theme/themes";
 import { limnWindow, type AssetAddedDetail } from "./limn-window";
-import { attachImageFile, imageFileFromTransfer, pastedImageName } from "./assets/attachImage";
 
 const DEMO_MAP: MindMapFileFormat = {
   version: 1,
@@ -499,6 +499,7 @@ export function App({ docId, initialData }: AppProps) {
   const clearFlash = useCallback(() => setFlash(null), []);
 
   useKeyboardHandler(editor);
+  useClipboard(editor, provider, getHost().doc);
 
   const [showKeystrokeOverlay, setShowKeystrokeOverlay] = useState(false);
   useEffect(() => {
@@ -522,25 +523,6 @@ export function App({ docId, initialData }: AppProps) {
     window.addEventListener("limn:asset-added", handleAssetAdded);
     return () => window.removeEventListener("limn:asset-added", handleAssetAdded);
   }, [handleAssetAdded]);
-
-  // Handle paste from clipboard
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const file = imageFileFromTransfer(e.clipboardData);
-      if (!file) return;
-      e.preventDefault();
-      const selectedId = editor.getSelectedId();
-      attachImageFile(
-        editor, provider, file, pastedImageName(file.type, new Date()),
-        selectedId ? { nodeId: selectedId } : { x: 0, y: 0 },
-      ).catch((err: unknown) => {
-        console.error("Failed to attach image:", err);
-      });
-    };
-
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [editor, provider]);
 
   if (!loaded) {
     return <div style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>Loading...</div>;

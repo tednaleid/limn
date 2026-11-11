@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Editor, stubTextMeasurer } from "@limn/core";
-import type { PersistenceProvider } from "@limn/core";
+import { fakeProvider } from "./fakeProvider";
 
 const g = globalThis as Record<string, unknown>;
 if (typeof g.window === "undefined") g.window = globalThis;
@@ -26,19 +26,6 @@ class FakeImage {
 g.Image = FakeImage;
 
 const { attachImageFile, fitDisplaySize, pastedImageName } = await import("../assets/attachImage");
-
-function fakeProvider(overrides: Partial<PersistenceProvider> = {}): PersistenceProvider {
-  return {
-    load: () => Promise.resolve(null),
-    save: () => Promise.resolve(),
-    saveAsset: vi.fn(() => Promise.resolve()),
-    loadAsset: () => Promise.resolve(undefined),
-    loadAssetUrls: () => Promise.resolve(new Map()),
-    onExternalChange: () => () => {},
-    dispose: () => {},
-    ...overrides,
-  };
-}
 
 describe("fitDisplaySize", () => {
   it("shrinks wide images to 300 wide keeping the aspect ratio", () => {

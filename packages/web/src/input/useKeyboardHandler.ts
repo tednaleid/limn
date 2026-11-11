@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { dispatch } from "@limn/core";
 import type { Editor, Modifiers } from "@limn/core";
+import { isForeignInput } from "./foreignInput";
 
 /** Keys that should always be prevented from browser default behavior. */
 const ALWAYS_PREVENT = new Set(["Tab"]);
@@ -27,14 +28,7 @@ export function useKeyboardHandler(editor: Editor, isActive?: () => boolean): vo
 
       // Don't intercept if a non-canvas input element has focus
       // (e.g., a dialog text field, contenteditable editor, but NOT our edit textarea)
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !target.dataset.limnEdit) ||
-        target.isContentEditable
-      ) {
-        return;
-      }
+      if (isForeignInput(e.target)) return;
 
       // Ctrl+Shift+K toggles keystroke overlay
       if (e.key === "K" && e.ctrlKey && e.shiftKey && !e.metaKey && !e.altKey) {
