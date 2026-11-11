@@ -109,8 +109,8 @@ the map writes the size.
 with the same behavior as the web app: the selected subtree travels as a Markdown bullet list,
 and a pasted list becomes children of the selected node, or roots when nothing is selected. An
 image embed is kept on paste only if the map already has that image. In a `.limn` file a pasted
-embed without a size is stored at the size it draws at; in a note it stays unsized, so the note
-is not rewritten with a size.
+embed without a size is stored at the size it draws at, or as written when the image's natural
+size is not known; in a note it stays unsized, so the note is not rewritten with a size.
 
 ### Two panes
 
@@ -202,14 +202,17 @@ Specs are in `packages/obsidian/e2e/specs/`:
   being edited; image paste creates an attachment that shows after reopening; collapsing writes
   `*`; Cmd+Enter opens a wikilink in a new tab; a rule and a math block survive an edit; a note
   the map cannot round-trip is refused with a notice and left untouched
-- `clipboard`: copy, cut, and paste of subtrees as Markdown in a `.limn` map (including with
-  the real keys) and in a Markdown-backed map; paste reaches only the active pane
+- `clipboard`: copy, cut, and paste of subtrees as Markdown in a `.limn` map and in a
+  Markdown-backed map, where a cut takes the node's lines out of the note and a paste writes
+  them under another item; one `.limn` test copies and pastes with the real keys; paste reaches
+  only the active pane
 - `plugin-lifecycle`: disabling the plugin turns map panes into Markdown panes, with an edit
   made just before; turning it back on restores the map, drawn and editable
 
 Things the specs do through Obsidian's API where a person would use the mouse: opening files in
 splits, toggling the plugin and the setting, and editing in the Markdown pane. Image paste is a
-synthetic clipboard event.
+synthetic clipboard event, and so is every copy, cut, and paste in the `clipboard` spec except
+the one test that uses the real keys.
 
 ### Manual checks
 
@@ -218,8 +221,9 @@ After `just obsidian-install <vault>`, look at what the tests cannot judge:
 - [ ] A map and a `.limn` file look right in the light and dark themes
 - [ ] Reading view of a note with a collapsed `*` item among `-` siblings renders one list
 - [ ] Paste an image from the real clipboard into a map node
-- [ ] Cmd+C, Cmd+X, Cmd+V with the real keys in both map views (the end-to-end spec drives
-      `.limn` maps with real keys; the Markdown-backed view and your own vault are unchecked)
+- [ ] Cmd+C, Cmd+X, Cmd+V with the real keys in both map views (one end-to-end test copies and
+      pastes in a `.limn` map with the real keys and the rest raise synthetic clipboard events;
+      cut with the real keys, the Markdown-backed view, and your own vault are unchecked)
 - [ ] Copy, cut, and paste in the desktop app (the Edit menu's pasteboard commands are not
       overridden by `MenuCommands.swift`, so the events should arrive; unverified)
 - [ ] Update the plugin (re-run `just obsidian-install`, then "Reload app without saving") with

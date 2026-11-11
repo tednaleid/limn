@@ -168,9 +168,9 @@ The format uses integer versions. When a file is opened, the migration pipeline 
 
 ## Copy and paste
 
-`Cmd+C` copies the selected node and its descendants to the clipboard as a Markdown bullet list, so it pastes into any text editor. `Cmd+X` copies the same list and then deletes the node. `Cmd+V` turns a Markdown bullet list on the clipboard into nodes: they become the last children of the selected node, or roots when nothing is selected. Text with no bullets pastes as one node. Copy, cut, and paste do nothing while a node is being edited.
+`Cmd+C` copies the selected node and its descendants to the clipboard as a Markdown bullet list, so it pastes into any text editor. `Cmd+X` copies the same list and then deletes the node. `Cmd+V` turns a Markdown bullet list on the clipboard into nodes: they become the last children of the selected node, or roots when nothing is selected. Text with no bullets pastes as one node. Copy, cut, and text paste do nothing while a node is being edited.
 
-Images go on the clipboard as `![[image.png|WxH]]` embeds. They come back as images only when pasted into a map that already holds that image, so images survive inside one map but not between maps or into other apps. Pasting an image from the system clipboard attaches it to the selected node.
+Images go on the clipboard as `![[image.png|WxH]]` embeds. A pasted embed comes back as an image only when the map already holds an image with the id the embed names; otherwise the node keeps its text and the image is dropped. Pasting an image from the system clipboard attaches it to the selected node, or to a new root when nothing is selected.
 
 ## Obsidian plugin
 
