@@ -250,8 +250,11 @@ What the local lint cannot see, and how it is covered:
   `document.createElement` in `packages/web` and `packages/core`, where the local typed rule is
   silent. A `no-restricted-syntax` entry in `eslint.obsidian.config.js` reports the same calls.
   Shared code creates elements with `getHost().newElement(tag)`. The web host implements it with
-  the two-argument `createElement(tag, {})`, which the rule does not report; the scanner reports
-  the one-argument call even inside a function named `createEl`.
+  the two-argument `createElement(tag, {})`, which the rule does not report.
+- The scanner can run an older release of `eslint-plugin-obsidianmd` than the newest on npm. Its
+  0.10.1 scan matched 0.5.0 when 0.5.1 was current, and reported a call that 0.5.1 exempts. Do
+  not rely on an exemption that only the newest release has; when a fix depends on how a rule
+  decides, install the previous release as well and lint with it.
 - The scanner lints `packages/obsidian/e2e`. The preset treats that folder as tests and skips
   its Obsidian-runtime rules, so the config switches them back on there.
 - Never silence an `obsidianmd/*` rule with an `eslint-disable` comment: the scanner counts the
