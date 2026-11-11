@@ -587,13 +587,21 @@ export class Editor {
     return this.version;
   }
 
-  /** Notify all subscribers that state has changed.
-   *  Documents without free positioning are laid out canonically first, except mid-drag
-   *  so reorder and reparent detection can follow the pointer. */
+  /** Lay out the document and notify all subscribers that state has changed. */
   protected notify(): void {
+    this.layoutCanonically();
+    this.notifyListeners();
+  }
+
+  /** Lay out a document without free positioning canonically, except mid-drag so reorder and
+   *  reparent detection can follow the pointer. */
+  private layoutCanonically(): void {
     if (!this.capabilities.freePosition && !this.drag.active) {
       relayoutAllTrees(this.store);
     }
+  }
+
+  private notifyListeners(): void {
     this.version++;
     for (const listener of this.listeners) {
       listener();
@@ -778,11 +786,7 @@ export class Editor {
 
   addChild(parentId: string, text = "", direction?: number): string {
     this.pushUndo("add-child");
-    const parent = this.store.getNode(parentId);
-    if (parent.collapsed) {
-      this.store.toggleCollapse(parentId);
-      relayoutFromNode(this.store, parentId);
-    }
+    this.expandToShowNewChild(parentId);
     const id = this.store.addChild(parentId, text);
     this.remeasureNode(id);
     const sideHint = this.capabilities.sides ? direction : 1;
@@ -1570,10 +1574,7 @@ export class Editor {
 
     this.pushUndo("paste");
     const parentId = this.selectedId;
-    if (parentId !== null && this.store.getNode(parentId).collapsed) {
-      this.store.toggleCollapse(parentId);
-      relayoutFromNode(this.store, parentId);
-    }
+    if (parentId !== null) this.expandToShowNewChild(parentId);
 
     const pasted = parentId !== null
       ? this.pasteAsChildren(parentId, outline)
@@ -1581,9 +1582,17 @@ export class Editor {
 
     this.selectedId = pasted[0] ?? null;
     this.editing = false;
+    this.layoutCanonically();
     if (this.selectedId !== null) this.ensureNodeVisible(this.selectedId);
-    this.notify();
+    this.notifyListeners();
     return pasted;
+  }
+
+  /** Expand a collapsed parent so a child added to it is visible. */
+  private expandToShowNewChild(parentId: string): void {
+    if (!this.store.getNode(parentId).collapsed) return;
+    this.store.toggleCollapse(parentId);
+    relayoutFromNode(this.store, parentId);
   }
 
   /** Add outline nodes as the parent's last children, each subtree placed the way addChild places a child. */

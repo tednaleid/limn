@@ -285,6 +285,46 @@ describe("pasteMarkdown", () => {
     expect(editor.getNode(pic).image).toEqual({ assetId: "known.png", width: 20, height: 15 });
   });
 
+  /** A Markdown-outline editor with an 800x600 viewport whose one root has 60 children. */
+  function tallOutline(): TestEditor {
+    const editor = new TestEditor();
+    editor.setCapabilities(OUTLINE_CAPABILITIES);
+    editor.setViewportSize(800, 600);
+    const root = editor.addRoot("Root");
+    editor.exitEditMode();
+    editor.select(root);
+    editor.pasteMarkdown(Array.from({ length: 60 }, (_, i) => `- child ${i}`).join("\n"));
+    return editor;
+  }
+
+  function expectOnScreen(editor: TestEditor, id: string): void {
+    const node = editor.getNode(id);
+    const { x, y, zoom } = editor.getCamera();
+    const { width, height } = editor.getViewportSize();
+    const left = node.x * zoom + x;
+    const top = node.y * zoom + y;
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(left + node.width * zoom).toBeLessThanOrEqual(width);
+    expect(top + node.height * zoom).toBeLessThanOrEqual(height);
+  }
+
+  it("brings a root pasted below a tall tree in a Markdown outline into view", () => {
+    const editor = tallOutline();
+    editor.deselect();
+    const [pasted] = editor.pasteMarkdown("- Pasted") as [string];
+    expectOnScreen(editor, pasted);
+  });
+
+  it("brings children pasted under a root below a tall tree in a Markdown outline into view", () => {
+    const editor = tallOutline();
+    editor.deselect();
+    const [second] = editor.pasteMarkdown("- Second") as [string];
+    editor.select(second);
+    const [pasted] = editor.pasteMarkdown(Array.from({ length: 30 }, (_, i) => `- p${i}\n  - q${i}`).join("\n")) as [string];
+    expectOnScreen(editor, pasted);
+  });
+
   it("undoes and redoes a root paste as one step", () => {
     const editor = new TestEditor();
     sampleMap(editor);
