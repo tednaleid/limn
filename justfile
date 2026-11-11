@@ -59,9 +59,10 @@ install-hooks:
     echo '#!/bin/sh\njust check' > .git/hooks/pre-commit
     chmod +x .git/hooks/pre-commit
 
-# Type-check with TypeScript (builds core declarations, checks web)
+# Type-check with TypeScript (builds core declarations, checks web, then the Obsidian end-to-end specs)
 typecheck:
     bunx tsc -b
+    bunx tsc -p packages/obsidian/e2e
 
 # Build the Obsidian plugin (production)
 obsidian-build:

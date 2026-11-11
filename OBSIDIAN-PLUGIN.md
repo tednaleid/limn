@@ -31,6 +31,14 @@ Key classes:
   Editor; `ObsidianOutlineAssetProvider` stores images as vault attachments; routing lives in
   `markdown/routing.ts` and `markdown/leafRouting.ts` (a `WorkspaceLeaf.setViewState` wrapper,
   removed on unload).
+- **Unload** hands map panes back to the Markdown editor. Obsidian closes the panes of a view
+  type as it unregisters the type, so each map view reports a different type for the rest of
+  the unload and is switched to `markdown` just after (`handBackMapLeaves` in `main.ts`).
+- **Key chords Obsidian also binds** (Cmd+Enter) are claimed for the map by a view scope in
+  `mapKeys.ts`; without it Obsidian's hotkey handling consumes the key before the map sees it.
+- **The stylesheet arrives after the code** when the plugin is enabled or updated, so a map
+  restored during load is measured without it; `stylesLoaded.ts` reports when it is in force
+  and the Markdown-backed view measures and lays out again.
 
 ## File format
 
@@ -127,6 +135,7 @@ just obsidian-build     # Production build (minified)
 just obsidian-dev       # Dev build with watch mode
 just obsidian-install <vault>  # Symlink dist/ into vault
 just obsidian-test      # Run obsidian package unit tests
+just obsidian-e2e       # Run end-to-end tests against a real Obsidian
 just check              # Run all tests + lint + typecheck (includes obsidian)
 ```
 
@@ -149,31 +158,47 @@ Tests are in `packages/obsidian/src/__tests__/` and cover:
 - Commands
 - Settings
 
-### Manual testing checklist
+### End-to-end tests (WebdriverIO, real Obsidian)
 
-After `just obsidian-install <vault>`:
+```bash
+just obsidian-e2e
+```
 
-- [ ] Create new `.limn` file in vault, verify it opens with mind map view
-- [ ] Edit mind map (add nodes, move, delete), close file, reopen -- verify persistence
-- [ ] Cmd+Z / Cmd+Shift+Z undo/redo works
-- [ ] Keyboard navigation (arrows, Enter, Tab) works
-- [ ] Open same file in two panes, verify no conflicts
-- [ ] File renamed in vault sidebar -- verify view updates
-- [ ] Click a note with `limn-plugin: true`: opens as a map. Click an unmarked note: opens as Markdown.
-- [ ] Pane menu "Open as Markdown" and editor context menu "Open as mind map" switch the same pane both ways; the choice sticks for that note in that pane
-- [ ] Two panes on one note (map + Markdown): edit in each, see the other update within ~2 s
-- [ ] While editing a node in the map, edit a different line in the Markdown pane: both edits survive
-- [ ] Paste an image into a map node: attachment created, note gets the embed, image shows after reload
-- [ ] Collapse a node: note line switches `-` to `*`; reading view still renders one list
-- [ ] A node containing `[[Another note]]`: shows as a link; Cmd+Enter opens that note in a new tab
-- [ ] Setting "Open notes with limn-plugin: true as: Markdown": marked notes open as Markdown; "Open as mind map" still works
-- [ ] Disable the plugin: open map panes turn back into Markdown panes
-- [ ] Open a hand-formatted marked note, close the pane without editing: the file is byte-identical
-- [ ] Open a note with a numbered list inside a bullet as a mind map: a notice appears, the note opens as Markdown, the file is byte-identical
-- [ ] With "open marked notes as: Markdown", use "Open as mind map" on note A, then click marked note B in the same pane: B opens as Markdown
-- [ ] With a map open and an edit made less than two seconds ago, disable the plugin: the pane becomes a Markdown pane (not blank) and the edit is in the file
-- [ ] Update the plugin (re-run `just obsidian-install`, reload) with a map pane open: the pane is usable afterwards
-- [ ] A note with `* * *` between paragraphs and a `$$` block containing `- x`: open as a map, edit a node, the rule and the math block are unchanged
+Builds the plugin, downloads Obsidian on the first run (about 600 MB, cached in
+`packages/obsidian/.obsidian-cache`), and drives it with
+[wdio-obsidian-service](https://github.com/jesse-r-s-hines/wdio-obsidian-service). Each spec
+file gets its own Obsidian on a throwaway copy of `packages/obsidian/e2e/vaults/basic`, with
+the plugin loaded from `packages/obsidian/dist`. The run takes about half a minute and is not
+part of `just check`.
+
+Specs are in `packages/obsidian/e2e/specs/`:
+
+- `limn-files`: create a `.limn` file; add, edit, and delete nodes with the keyboard, close,
+  reopen; undo and redo; arrow-key navigation; two panes on one file; rename under an open view
+- `markdown-routing`: marked notes open as maps and unmarked ones as Markdown; the pane menu,
+  editor menu, and file browser menu items; a choice sticks for that note in that pane; the
+  "open marked notes as" setting; a choice does not carry over to the next note
+- `markdown-map`: viewing never rewrites a note, hand-formatted or not; a keyboard edit reaches
+  the note; a map and a Markdown editor on one note stay in step, including while a node is
+  being edited; image paste creates an attachment that shows after reopening; collapsing writes
+  `*`; Cmd+Enter opens a wikilink in a new tab; a rule and a math block survive an edit; a note
+  the map cannot round-trip is refused with a notice and left untouched
+- `plugin-lifecycle`: disabling the plugin turns map panes into Markdown panes, with an edit
+  made just before; turning it back on restores the map, drawn and editable
+
+Things the specs do through Obsidian's API where a person would use the mouse: opening files in
+splits, toggling the plugin and the setting, and editing in the Markdown pane. Image paste is a
+synthetic clipboard event.
+
+### Manual checks
+
+After `just obsidian-install <vault>`, look at what the tests cannot judge:
+
+- [ ] A map and a `.limn` file look right in the light and dark themes
+- [ ] Reading view of a note with a collapsed `*` item among `-` siblings renders one list
+- [ ] Paste an image from the real clipboard into a map node
+- [ ] Update the plugin (re-run `just obsidian-install`, then "Reload app without saving") with
+      a map pane open: the map comes back
 
 ## Building for distribution
 

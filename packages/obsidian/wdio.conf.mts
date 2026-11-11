@@ -7,7 +7,8 @@ export const config: WebdriverIO.Config = {
   runner: "local",
   framework: "mocha",
   specs: ["./e2e/specs/**/*.e2e.ts"],
-  maxInstances: 1,
+  // One Obsidian per spec file, run side by side.
+  maxInstances: 4,
   capabilities: [{
     browserName: "obsidian",
     browserVersion: "latest",
