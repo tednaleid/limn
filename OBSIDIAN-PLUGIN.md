@@ -224,8 +224,8 @@ After `just obsidian-install <vault>`, look at what the tests cannot judge:
 - [ ] Cmd+C, Cmd+X, Cmd+V with the real keys in both map views (one end-to-end test copies and
       pastes in a `.limn` map with the real keys and the rest raise synthetic clipboard events;
       cut with the real keys, the Markdown-backed view, and your own vault are unchecked)
-- [ ] Copy, cut, and paste in the desktop app (the Edit menu's pasteboard commands are not
-      overridden by `MenuCommands.swift`, so the events should arrive; unverified)
+- [ ] Copy, cut, and paste in the desktop app (no automated test presses the keys there; the
+      Edit menu's pasteboard commands, which `MenuCommands.swift` leaves alone, deliver them)
 - [ ] Update the plugin (re-run `just obsidian-install`, then "Reload app without saving") with
       a map pane open: the map comes back
 
