@@ -118,6 +118,11 @@ The same note can be open as Markdown and as a map at once. Changes made on one 
 to the other after that side saves (2 s debounce). Undo in the map is separate from the editor's
 undo, and is cleared whenever an external change arrives from the other pane.
 
+Each pane saves two seconds after its own last edit, and a pane merges the other's save into its
+unsaved edits when that save arrives. Two panes that write the note in the same instant do not
+merge: the later write replaces the earlier one, in the note and in both panes. That takes edits
+in both panes within a few milliseconds of each other.
+
 ## Local development setup
 
 Prerequisites: [Bun](https://bun.sh), [just](https://github.com/casey/just), Obsidian.

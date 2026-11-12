@@ -78,6 +78,9 @@ describe("Editing a Markdown-backed map", function () {
     await browser.keys("Enter");
     await typeIntoNodeWithoutLeaving(" edited");
     await replaceEditorLine(1, "Second", "  - Second from Markdown");
+    // Saved here, ahead of the map: each pane saves two seconds after its own last edit, and two panes
+    // that write the note in the same instant do not merge; the later write replaces the earlier one.
+    await savePane(1);
     await browser.waitUntil(async () => (await mapTexts(0)).includes("Second from Markdown"), {
       timeout: 10000, timeoutMsg: "the Markdown edit never reached the map while a node was being edited",
     });
