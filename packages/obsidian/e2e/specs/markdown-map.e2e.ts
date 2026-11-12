@@ -3,8 +3,9 @@
 
 import { browser, expect, $, $$ } from "@wdio/globals";
 import {
-  MAP_VIEW, MARKDOWN_VIEW, MOD, resetState, viewTypes, panePaths, openNote, openNoteInSplit, focusPane, closePane, readNote,
-  fileExists, paneSelector, mapTexts, savePane, clickNode, addChild, typeIntoNodeWithoutLeaving, editorText, replaceEditorLine, waitForNote,
+  MAP_VIEW, MARKDOWN_VIEW, MOD, resetState, viewTypes, panePaths, openNote, openNoteInSplit, focusPane, closePane,
+  readNote, fileExists, paneSelector, mapTexts, savePane, clickNode, addChild, typeIntoNodeWithoutLeaving, editorText,
+  replaceEditorLine, waitForNote, waitForMapTexts, waitForViewTypes, waitForPanePaths,
 } from "../helpers";
 
 /**
@@ -18,7 +19,7 @@ async function openMapBesideMarkdown(path: string): Promise<void> {
   await browser.waitUntil(async () => (await viewTypes())[1] === MARKDOWN_VIEW, { timeoutMsg: "second pane never became Markdown" });
   await focusPane(0);
   await openNote(path);
-  expect(await viewTypes()).toEqual([MAP_VIEW, MARKDOWN_VIEW]);
+  await waitForViewTypes([MAP_VIEW, MARKDOWN_VIEW]);
 }
 
 /** Obsidian's global for the document of the focused window; used inside code run in the app. */
@@ -41,8 +42,8 @@ describe("Editing a Markdown-backed map", function () {
   it("leaves a hand-formatted note byte-identical when it is opened and closed", async function () {
     const before = await readNote("hand-formatted.md");
     await openNote("hand-formatted.md");
-    expect(await viewTypes()).toEqual([MAP_VIEW]);
-    expect(await mapTexts()).toEqual(["Plus bullet", "Four space child", "Another child"]);
+    await waitForViewTypes([MAP_VIEW]);
+    await waitForMapTexts(["Plus bullet", "Four space child", "Another child"]);
     await clickNode("Plus bullet");
     await savePane(0);
     await closePane(0);
@@ -68,7 +69,7 @@ describe("Editing a Markdown-backed map", function () {
     await browser.waitUntil(async () => (await mapTexts(0)).includes("Second from Markdown"), {
       timeout: 10000, timeoutMsg: "the Markdown edit never reached the map",
     });
-    expect(await mapTexts(0)).toEqual(["Root", "First", "Second from Markdown", "from the map"]);
+    await waitForMapTexts(["Root", "First", "Second from Markdown", "from the map"], 0);
   });
 
   it("keeps both edits when a node is being edited while another line changes in the Markdown editor", async function () {
@@ -132,13 +133,13 @@ describe("Editing a Markdown-backed map", function () {
     await clickNode("See [[Another note]]");
     await browser.keys([MOD, "Enter"]);
     await browser.waitUntil(async () => (await panePaths()).includes("Another note.md"), { timeoutMsg: "the linked note never opened" });
-    expect(await panePaths()).toEqual(["links.md", "Another note.md"]);
-    expect(await viewTypes()).toEqual([MAP_VIEW, MARKDOWN_VIEW]);
+    await waitForPanePaths(["links.md", "Another note.md"]);
+    await waitForViewTypes([MAP_VIEW, MARKDOWN_VIEW]);
   });
 
   it("leaves a rule and a math block alone when a node is edited", async function () {
     await openNote("rule-math.md");
-    expect(await mapTexts()).toEqual(["Root", "First"]);
+    await waitForMapTexts(["Root", "First"]);
     await addChild("Root", "from e2e");
     const text = await waitForNote("rule-math.md", (t) => t.includes("from e2e"), "the new node never reached the note");
     expect(text).toBe(

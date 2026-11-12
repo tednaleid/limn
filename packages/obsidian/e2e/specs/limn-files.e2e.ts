@@ -5,7 +5,7 @@ import { browser, expect, $ } from "@wdio/globals";
 import { Key } from "webdriverio";
 import {
   LIMN_VIEW, MOD, resetState, viewTypes, panePaths, openNote, openNoteInSplit, closePane, fileExists, paneSelector,
-  mapTexts, selectedText, clickNode, typeIntoNode, addChild,
+  mapTexts, selectedText, clickNode, typeIntoNode, addChild, waitForMapTexts, waitForViewTypes, waitForPanePaths,
 } from "../helpers";
 
 const FILE = "Untitled.limn";
@@ -49,40 +49,42 @@ describe(".limn files", function () {
   it("creates a file that opens as a mind map", async function () {
     await browser.executeObsidianCommand("limn:create-new");
     await browser.waitUntil(async () => (await viewTypes())[0] === LIMN_VIEW, { timeoutMsg: "the new file never opened as a map" });
-    expect(await panePaths()).toEqual([FILE]);
+    await waitForPanePaths([FILE]);
     expect(await fileExists(FILE)).toBe(true);
     await expect($(`${await paneSelector(0)} [data-limn-canvas]`)).toExist();
   });
 
   it("creates a second file beside the first", async function () {
+    // The command returns before the file it creates has opened, so each step waits for its pane.
     await browser.executeObsidianCommand("limn:create-new");
-    await browser.waitUntil(() => fileExists(FILE), { timeoutMsg: "the first file was never created" });
+    await waitForPanePaths([FILE]);
     await browser.executeObsidianCommand("limn:create-new");
-    await browser.waitUntil(() => fileExists("Untitled 1.limn"), { timeoutMsg: "the second file was never created" });
-    expect(await panePaths()).toEqual(["Untitled 1.limn"]);
+    await waitForPanePaths(["Untitled 1.limn"]);
+    expect(await fileExists(FILE)).toBe(true);
   });
 
   it("keeps nodes added, edited, and deleted with the keyboard after the file is closed and reopened", async function () {
     await createMap();
-    expect(await mapTexts()).toEqual(["Root", "One", "Two"]);
+    await waitForMapTexts(["Root", "One", "Two"]);
 
     await clickNode("One");
     await browser.keys(Key.Backspace);
     await clickNode("Two");
     await browser.keys("Enter");
     await typeIntoNode(" more");
-    expect(await mapTexts()).toEqual(["Root", "Two more"]);
+    await waitForMapTexts(["Root", "Two more"]);
 
     await reopen();
-    expect(await mapTexts()).toEqual(["Root", "Two more"]);
+    await waitForMapTexts(["Root", "Two more"]);
   });
 
   it("undoes and redoes with the keyboard", async function () {
     await createMap();
     await browser.keys([MOD, "z"]);
-    expect(await mapTexts()).not.toContain("Two");
+    // One undo takes back the last node's text; the node itself is a step of its own.
+    await waitForMapTexts(["Root", "One", ""]);
     await browser.keys([MOD, Key.Shift, "z"]);
-    expect(await mapTexts()).toEqual(["Root", "One", "Two"]);
+    await waitForMapTexts(["Root", "One", "Two"]);
   });
 
   it("moves the selection with the arrow keys", async function () {
@@ -100,7 +102,7 @@ describe(".limn files", function () {
   it("shows an edit made in one pane in a second pane on the same file", async function () {
     await createMap();
     await openNoteInSplit(FILE);
-    expect(await viewTypes()).toEqual([LIMN_VIEW, LIMN_VIEW]);
+    await waitForViewTypes([LIMN_VIEW, LIMN_VIEW]);
     await browser.waitUntil(async () => (await mapTexts(1)).length === 3, { timeoutMsg: "the second pane never showed the map" });
 
     await addChild("Root", "Three", 1);
@@ -126,7 +128,7 @@ describe(".limn files", function () {
     await openNote("Renamed.limn");
     await browser.waitUntil(async () => (await viewTypes())[0] === LIMN_VIEW, { timeoutMsg: "the renamed file never reopened as a map" });
     await browser.waitUntil(async () => (await mapTexts()).length > 0, { timeoutMsg: "the saved map never appeared" });
-    expect(await mapTexts()).toEqual(["Root", "One", "Two", "After rename"]);
+    await waitForMapTexts(["Root", "One", "Two", "After rename"]);
   });
 
   it("leaves a file deleted when it is deleted while open with unsaved edits", async function () {

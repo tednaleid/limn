@@ -180,13 +180,39 @@ export function mapTexts(pane = 0): Promise<string[]> {
   }, pane);
 }
 
+/**
+ * Poll `read` until it returns `expected`. The failure message is built when the wait gives up, so it
+ * reports the last value read.
+ */
+async function waitForValue<T>(read: () => Promise<T>, expected: T, describe: (last: T) => string): Promise<void> {
+  const want = JSON.stringify(expected);
+  let last = await read();
+  try {
+    await browser.waitUntil(async () => {
+      last = await read();
+      return JSON.stringify(last) === want;
+    });
+  } catch {
+    throw new Error(describe(last));
+  }
+}
+
+/** Wait until the main area's panes show exactly these view types, in order. */
+export function waitForViewTypes(expected: string[]): Promise<void> {
+  return waitForValue(viewTypes, expected, (last) => `the panes never became ${JSON.stringify(expected)}; they were ${JSON.stringify(last)}`);
+}
+
+/** Wait until the main area's panes show exactly these files, in order. */
+export function waitForPanePaths(expected: (string | undefined)[]): Promise<void> {
+  return waitForValue(panePaths, expected, (last) => `the panes never showed ${JSON.stringify(expected)}; they showed ${JSON.stringify(last)}`);
+}
+
 /** Wait until a pane's map holds exactly the given node texts, depth first. */
-export async function waitForMapTexts(expected: string[], pane = 0): Promise<void> {
-  let texts: string[] = [];
-  await browser.waitUntil(async () => {
-    texts = await mapTexts(pane);
-    return JSON.stringify(texts) === JSON.stringify(expected);
-  }, { timeoutMsg: `pane ${pane} never showed ${JSON.stringify(expected)}; it showed ${JSON.stringify(texts)}` });
+export function waitForMapTexts(expected: string[], pane = 0): Promise<void> {
+  return waitForValue(
+    () => mapTexts(pane), expected,
+    (last) => `pane ${pane} never showed ${JSON.stringify(expected)}; it showed ${JSON.stringify(last)}`,
+  );
 }
 
 /** How a pane's map is drawn: the zoom, the widest node as laid out, and how many nodes are in the DOM. */

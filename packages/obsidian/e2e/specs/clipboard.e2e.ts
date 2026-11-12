@@ -3,8 +3,9 @@
 
 import { browser, expect, $ } from "@wdio/globals";
 import {
-  LIMN_VIEW, MAP_VIEW, CLIPBOARD_MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector, mapTexts,
-  waitForMapTexts, clickNode, typeIntoNode, addChild, readNote, waitForNote, copyFromMap, pasteTextIntoMap,
+  LIMN_VIEW, MAP_VIEW, CLIPBOARD_MOD, resetState, viewTypes, openNote, openNoteInSplit, closePane, paneSelector,
+  mapTexts, waitForMapTexts, clickNode, typeIntoNode, addChild, readNote, waitForNote, copyFromMap, pasteTextIntoMap,
+  waitForViewTypes,
 } from "../helpers";
 
 const FILE = "Untitled.limn";
@@ -42,7 +43,7 @@ describe("Copy, cut, and paste in a .limn file", function () {
     await waitForMapTexts(["Root", "A", "A1", "A", "A1"]);
 
     await reopen();
-    expect(await mapTexts()).toEqual(["Root", "A", "A1", "A", "A1"]);
+    await waitForMapTexts(["Root", "A", "A1", "A", "A1"]);
   });
 
   it("cuts a subtree and brings it back with a paste", async function () {
@@ -109,13 +110,13 @@ describe("Copy, cut, and paste in a Markdown-backed map", function () {
   it("pastes only into the active pane", async function () {
     await openNote("marked.md");
     await openNoteInSplit("marked-b.md");
-    expect(await viewTypes()).toEqual([MAP_VIEW, MAP_VIEW]);
+    await waitForViewTypes([MAP_VIEW, MAP_VIEW]);
     await browser.waitUntil(async () => (await mapTexts(1)).length > 0, { timeoutMsg: "the second map never appeared" });
     const before = await mapTexts(0);
     await clickNode("Root", 0);
     await clickNode("Other map", 1);
     await pasteTextIntoMap("- Only here");
     await browser.waitUntil(async () => (await mapTexts(1)).includes("Only here"), { timeoutMsg: "the paste never reached the active pane" });
-    expect(await mapTexts(0)).toEqual(before);
+    await waitForMapTexts(before, 0);
   });
 });

@@ -3,7 +3,8 @@
 
 import { browser, expect, $, $$ } from "@wdio/globals";
 import {
-  MAP_VIEW, MARKDOWN_VIEW, resetState, setOpenMarkedNotesAs, viewTypes, panePaths, openNote, paneSelector, mapTexts,
+  MAP_VIEW, MARKDOWN_VIEW, resetState, setOpenMarkedNotesAs, viewTypes, panePaths, openNote, paneSelector,
+  waitForMapTexts, waitForViewTypes, waitForPanePaths,
 } from "../helpers";
 
 /**
@@ -67,11 +68,11 @@ describe("Routing Markdown notes", function () {
 
   it("opens a marked note as a map and an unmarked note as Markdown", async function () {
     await clickInFileBrowser("marked.md");
-    expect(await viewTypes()).toEqual([MAP_VIEW]);
-    expect(await mapTexts()).toEqual(["Root", "First", "Second"]);
+    await waitForViewTypes([MAP_VIEW]);
+    await waitForMapTexts(["Root", "First", "Second"]);
 
     await clickInFileBrowser("plain.md");
-    expect(await viewTypes()).toEqual([MARKDOWN_VIEW]);
+    await waitForViewTypes([MARKDOWN_VIEW]);
   });
 
   it("switches a pane both ways from the menus and keeps the choice for that note in that pane", async function () {
@@ -85,7 +86,7 @@ describe("Routing Markdown notes", function () {
 
     await clickInFileBrowser("plain.md");
     await clickInFileBrowser("marked.md");
-    expect(await viewTypes()).toEqual([MARKDOWN_VIEW]);
+    await waitForViewTypes([MARKDOWN_VIEW]);
 
     await $(`${pane} .cm-content`).click({ button: "right" });
     await chooseMenuItem("Open as mind map");
@@ -93,7 +94,7 @@ describe("Routing Markdown notes", function () {
 
     await clickInFileBrowser("plain.md");
     await clickInFileBrowser("marked.md");
-    expect(await viewTypes()).toEqual([MAP_VIEW]);
+    await waitForViewTypes([MAP_VIEW]);
   });
 
   it("offers both views for a marked note in the file browser menu, and only the map for an unmarked one", async function () {
@@ -110,17 +111,17 @@ describe("Routing Markdown notes", function () {
     expect(plain).not.toContain("Open as Markdown");
     await chooseMenuItem("Open as mind map");
     await waitForViewType(MAP_VIEW);
-    expect(await panePaths()).toEqual(["plain.md"]);
+    await waitForPanePaths(["plain.md"]);
   });
 
   it("opens marked notes as Markdown when the setting says so, and still opens them as a map on request", async function () {
     await setOpenMarkedNotesAs("markdown");
     await clickInFileBrowser("marked.md");
-    expect(await viewTypes()).toEqual([MARKDOWN_VIEW]);
+    await waitForViewTypes([MARKDOWN_VIEW]);
 
     await browser.executeObsidianCommand("limn:open-as-mindmap");
     await waitForViewType(MAP_VIEW);
-    expect(await mapTexts()).toEqual(["Root", "First", "Second"]);
+    await waitForMapTexts(["Root", "First", "Second"]);
   });
 
   it("does not carry an \"Open as mind map\" choice over to the next note opened in that pane", async function () {
@@ -130,6 +131,6 @@ describe("Routing Markdown notes", function () {
     await waitForViewType(MAP_VIEW);
 
     await clickInFileBrowser("marked-b.md");
-    expect(await viewTypes()).toEqual([MARKDOWN_VIEW]);
+    await waitForViewTypes([MARKDOWN_VIEW]);
   });
 });

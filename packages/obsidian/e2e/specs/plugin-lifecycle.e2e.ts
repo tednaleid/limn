@@ -4,8 +4,8 @@
 import { browser, expect, $ } from "@wdio/globals";
 import { obsidianPage } from "wdio-obsidian-service";
 import {
-  MAP_VIEW, MARKDOWN_VIEW, resetState, viewTypes, openNote, readNote, paneSelector, mapTexts, mapDrawing, addChild, editorText,
-  waitForNote,
+  MAP_VIEW, MARKDOWN_VIEW, resetState, viewTypes, openNote, readNote, paneSelector, mapDrawing, addChild, editorText,
+  waitForNote, waitForMapTexts, waitForViewTypes,
 } from "../helpers";
 
 async function waitForViewType(type: string): Promise<void> {
@@ -25,7 +25,7 @@ describe("Disabling and reloading the plugin", function () {
   it("turns an open map pane back into a Markdown pane showing the note", async function () {
     const before = await readNote("marked.md");
     await openNote("marked.md");
-    expect(await viewTypes()).toEqual([MAP_VIEW]);
+    await waitForViewTypes([MAP_VIEW]);
 
     await obsidianPage.disablePlugin("limn");
     await waitForViewType(MARKDOWN_VIEW);
@@ -53,7 +53,7 @@ describe("Disabling and reloading the plugin", function () {
 
     await obsidianPage.enablePlugin("limn");
     await waitForViewType(MAP_VIEW);
-    expect(await mapTexts()).toEqual(["Root", "First", "Second"]);
+    await waitForMapTexts(["Root", "First", "Second"]);
     // The plugin's styles load after its code, so the map is first measured and sized without them.
     let drawing = await mapDrawing();
     await browser.waitUntil(async () => {
