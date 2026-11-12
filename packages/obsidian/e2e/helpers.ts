@@ -29,13 +29,24 @@ interface MapViewLike {
   };
 }
 
+/** A pane as far as closing it goes. Emptying a pane resolves once its view has closed and saved. */
+interface ClosableLeaf {
+  setViewState(state: { type: string }): Promise<void>;
+  detach(): void;
+}
+
 /** Close every pane, restore the fixture vault, and put the plugin's settings back to their defaults. */
 export async function resetState(): Promise<void> {
   await browser.executeObsidian(async ({ app, plugins }) => {
     // Collected first: detaching while iterating skips panes.
-    const leaves: { detach(): void }[] = [];
+    const leaves: ClosableLeaf[] = [];
     app.workspace.iterateRootLeaves((leaf) => { leaves.push(leaf); });
-    leaves.forEach((leaf) => leaf.detach());
+    // Emptied one at a time and awaited: a closing view saves its file, and restoring the vault while
+    // that write is under way would let it land on the restored files.
+    for (const leaf of leaves) {
+      await leaf.setViewState({ type: "empty" });
+      leaf.detach();
+    }
     // Menus drawn by the operating system are invisible to the test driver.
     (app.vault as unknown as { setConfig(key: string, value: unknown): void }).setConfig("nativeMenus", false);
     const limn = plugins.limn as unknown as {
@@ -48,8 +59,6 @@ export async function resetState(): Promise<void> {
     limn.leafChoices = new WeakMap();
     await limn.saveSettings();
   });
-  // A closing pane saves its file on the way out; restoring the vault under it would race that write.
-  await browser.pause(300);
   await obsidianPage.resetVault();
 }
 
@@ -111,11 +120,26 @@ export async function focusPane(index: number): Promise<void> {
   }, index);
 }
 
+/** Close a pane and wait for its view to finish closing, which includes the save it makes on the way out. */
 export async function closePane(index: number): Promise<void> {
-  await browser.executeObsidian(({ app }, i) => {
-    const leaves: { detach(): void }[] = [];
+  await browser.executeObsidian(async ({ app }, i) => {
+    const leaves: ClosableLeaf[] = [];
     app.workspace.iterateRootLeaves((leaf) => { leaves.push(leaf); });
-    leaves[i]?.detach();
+    const leaf = leaves[i];
+    if (!leaf) return;
+    await leaf.setViewState({ type: "empty" });
+    leaf.detach();
+  }, index);
+}
+
+/** Save a pane's file now, as its view does by itself a moment after an edit. Writes nothing when nothing changed. */
+export async function savePane(index: number): Promise<void> {
+  await browser.executeObsidian(async ({ app }, i) => {
+    const views: unknown[] = [];
+    app.workspace.iterateRootLeaves((leaf) => { views.push(leaf.view); });
+    const view = views[i] as { save?: () => Promise<void> } | undefined;
+    if (typeof view?.save !== "function") throw new Error(`Pane ${i} has nothing to save`);
+    await view.save();
   }, index);
 }
 

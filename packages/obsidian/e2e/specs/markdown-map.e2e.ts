@@ -4,11 +4,8 @@
 import { browser, expect, $, $$ } from "@wdio/globals";
 import {
   MAP_VIEW, MARKDOWN_VIEW, MOD, resetState, viewTypes, panePaths, openNote, openNoteInSplit, focusPane, closePane, readNote,
-  fileExists, paneSelector, mapTexts, clickNode, addChild, typeIntoNodeWithoutLeaving, editorText, replaceEditorLine, waitForNote,
+  fileExists, paneSelector, mapTexts, savePane, clickNode, addChild, typeIntoNodeWithoutLeaving, editorText, replaceEditorLine, waitForNote,
 } from "../helpers";
-
-/** Longer than Obsidian's two second save delay, so a save that was going to happen has happened. */
-const PAST_SAVE_DELAY = 3000;
 
 /**
  * Open the marked note as a map in pane 0 and as Markdown in pane 1. The map is opened last, so it is
@@ -37,7 +34,7 @@ describe("Editing a Markdown-backed map", function () {
     const before = await readNote("marked.md");
     await openNote("marked.md");
     await clickNode("First");
-    await browser.pause(PAST_SAVE_DELAY);
+    await savePane(0);
     expect(await readNote("marked.md")).toBe(before);
   });
 
@@ -47,7 +44,7 @@ describe("Editing a Markdown-backed map", function () {
     expect(await viewTypes()).toEqual([MAP_VIEW]);
     expect(await mapTexts()).toEqual(["Plus bullet", "Four space child", "Another child"]);
     await clickNode("Plus bullet");
-    await browser.pause(PAST_SAVE_DELAY);
+    await savePane(0);
     await closePane(0);
     expect(await readNote("hand-formatted.md")).toBe(before);
   });
@@ -81,7 +78,9 @@ describe("Editing a Markdown-backed map", function () {
     await browser.keys("Enter");
     await typeIntoNodeWithoutLeaving(" edited");
     await replaceEditorLine(1, "Second", "  - Second from Markdown");
-    await browser.pause(PAST_SAVE_DELAY);
+    await browser.waitUntil(async () => (await mapTexts(0)).includes("Second from Markdown"), {
+      timeout: 10000, timeoutMsg: "the Markdown edit never reached the map while a node was being edited",
+    });
     await browser.keys("Escape");
 
     const text = await waitForNote("marked.md", (t) => t.includes("First edited"), "the node edit never reached the note");
@@ -155,7 +154,7 @@ describe("Editing a Markdown-backed map", function () {
     expect(notice).toContain("Line 5: a list item contains a numbered list");
     await browser.waitUntil(async () => (await viewTypes())[0] === MARKDOWN_VIEW, { timeoutMsg: "the note never opened as Markdown" });
     expect(await editorText(0)).toBe(before);
-    await browser.pause(PAST_SAVE_DELAY);
+    await savePane(0);
     expect(await readNote("numbered.md")).toBe(before);
     expect(await fileExists("numbered.md")).toBe(true);
   });

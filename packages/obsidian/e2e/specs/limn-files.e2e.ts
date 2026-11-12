@@ -10,6 +10,16 @@ import {
 
 const FILE = "Untitled.limn";
 
+/** The part of a file view that runs as its file is unloaded. */
+interface UnloadingView {
+  onUnloadFile(file: unknown): Promise<void>;
+}
+
+/** Where a test keeps a view's unload, between two pieces of code run inside Obsidian. */
+interface UnloadWatch {
+  limnUnloaded?: Promise<void>;
+}
+
 /** Create a .limn file with the plugin's command and build Root -> (One, Two) with the keyboard. */
 async function createMap(): Promise<void> {
   await browser.executeObsidianCommand("limn:create-new");
@@ -124,13 +134,17 @@ describe(".limn files", function () {
     await browser.executeObsidian(async ({ app }, path) => {
       const file = app.vault.getFileByPath(path);
       if (!file) throw new Error(`No such file: ${path}`);
+      // The view saves as it unloads its file; keep that work so the test can wait for it to finish.
+      const view = app.workspace.getMostRecentLeaf()?.view as unknown as UnloadingView;
+      const unload = view.onUnloadFile.bind(view);
+      const shared = window as unknown as UnloadWatch;
+      view.onUnloadFile = (unloaded) => (shared.limnUnloaded = unload(unloaded));
       await app.fileManager.trashFile(file);
     }, FILE);
     await browser.waitUntil(async () => (await viewTypes()).every((type) => type !== LIMN_VIEW), {
       timeoutMsg: "the map pane stayed open on a deleted file",
     });
-    // Longer than the closing view takes to write a pending save.
-    await browser.pause(1000);
+    await browser.executeObsidian(async () => { await (window as unknown as UnloadWatch).limnUnloaded; });
     expect(await fileExists(FILE)).toBe(false);
     expect(await browser.executeObsidian(({ app }, path) => app.vault.adapter.exists(path), FILE)).toBe(false);
   });

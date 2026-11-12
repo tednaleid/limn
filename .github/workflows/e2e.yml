@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions: {}
 
@@ -40,7 +41,13 @@ jobs:
         run: |
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
           Xvfb :99 -screen 0 1280x1024x24 +extension GLX -noreset &
-          sleep 1
+          # The display is ready once its socket exists.
+          for _ in $(seq 1 100); do
+            [ -S /tmp/.X11-unix/X99 ] && exit 0
+            sleep 0.1
+          done
+          echo "Xvfb did not start" >&2
+          exit 1
 
       - name: Run end-to-end tests
         run: just obsidian-e2e

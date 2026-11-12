@@ -10,6 +10,7 @@ import { ObsidianPersistenceProvider } from "./ObsidianPersistenceProvider";
 import { createDomTextMeasurer } from "./ObsidianTextMeasurer";
 import type { Root } from "react-dom/client";
 import { mountLimnRoot } from "./LimnViewRoot";
+import { writeIfCurrent } from "./limnFileWrite";
 import { applyThemeToContainer } from "./viewTheme";
 import { openLinkFromMap } from "./openLink";
 import { claimMapKeys } from "./mapKeys";
@@ -135,18 +136,21 @@ export class LimnView extends FileView {
 
   /** Save the current document as a ZIP to the vault. */
   async saveToDisk(): Promise<void> {
-    if (!this.file) return;
-    // A deleted file's view saves once more as it closes; writing then would bring the file back.
-    if (this.app.vault.getAbstractFileByPath(this.file.path) !== this.file) return;
-    const data = this.editor.toJSON();
-    const assetBlobs = this.provider.getAssetBlobs();
-    const zipBlob = await buildLimnZip(data, assetBlobs);
-    const arrayBuf = await zipBlob.arrayBuffer();
-    this.isSaving = true;
-    try {
-      await this.app.vault.modifyBinary(this.file, arrayBuf);
-    } finally {
-      this.isSaving = false;
-    }
+    const file = this.file;
+    if (!file) return;
+    // A view saves once more as it closes, including when its file has just been deleted.
+    await writeIfCurrent(
+      this.app.vault,
+      file,
+      async () => (await buildLimnZip(this.editor.toJSON(), this.provider.getAssetBlobs())).arrayBuffer(),
+      async (bytes) => {
+        this.isSaving = true;
+        try {
+          await this.app.vault.modifyBinary(file, bytes);
+        } finally {
+          this.isSaving = false;
+        }
+      },
+    );
   }
 }

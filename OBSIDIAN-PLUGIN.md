@@ -209,6 +209,12 @@ Specs are in `packages/obsidian/e2e/specs/`:
 - `plugin-lifecycle`: disabling the plugin turns map panes into Markdown panes, with an edit
   made just before; turning it back on restores the map, drawn and editable
 
+The specs never wait a fixed time. They wait for the state they need: a map's node texts
+(`waitForMapTexts`), a note's text (`waitForNote`), or a pane that has finished closing. A closing
+view saves its file, so `closePane` and `resetState` empty each pane and wait for that before going
+on; a test that needs a save to have happened calls `savePane`. A fixed delay in its place passes
+on a fast machine and fails on a slow one.
+
 Things the specs do through Obsidian's API where a person would use the mouse: opening files in
 splits, toggling the plugin and the setting, and editing in the Markdown pane. Image paste is a
 synthetic clipboard event, and so is every copy, cut, and paste in the `clipboard` spec except
