@@ -1,0 +1,5 @@
+# ABOUTME: Bun install settings for this repo.
+# ABOUTME: Holds back package versions published less than 7 days ago, as a supply-chain guard.
+[install]
+# 7 days, in seconds
+minimumReleaseAge = 604800
