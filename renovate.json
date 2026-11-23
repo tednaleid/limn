@@ -24,6 +24,13 @@
       "description": "Hold majors for focused, one-at-a-time review via the dependency dashboard.",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "0.x minor bumps can be breaking; hold them for approval like majors.",
+      "matchUpdateTypes": ["minor"],
+      "matchCurrentVersion": "/^0\\./",
+      "groupName": null,
+      "dependencyDashboardApproval": true
     }
   ]
 }
