@@ -8,10 +8,10 @@
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
   "semanticCommits": "disabled",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["* * * * 0,1,6"],
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "schedule": ["* * * * 0,1,6"]
   },
   "packageRules": [
     {
