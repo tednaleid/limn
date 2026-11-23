@@ -3,3 +3,6 @@
 [install]
 # 7 days, in seconds
 minimumReleaseAge = 604800
+# The web build and typecheck rely on packages hoisted to the root node_modules,
+# such as vite and workbox-window, which the isolated layout does not expose.
+linker = "hoisted"
